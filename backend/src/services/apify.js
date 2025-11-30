@@ -268,7 +268,224 @@ function getMockPosts(username, platform, limit) {
   return posts.slice(0, limit);
 }
 
+/**
+ * Recherche des profils similaires sur Instagram
+ * @param {string} query - Nom d'utilisateur ou hashtag
+ * @param {string} platform - Plateforme (instagram/tiktok)
+ * @param {number} limit - Nombre de résultats
+ */
+export async function searchSimilarProfiles(query, platform = 'instagram', limit = 20) {
+  if (!APIFY_API_TOKEN) {
+    console.log('APIFY_API_TOKEN non configuré, utilisation des données mock');
+    return getMockProfiles(query, platform, limit);
+  }
+
+  try {
+    // Pour la recherche de profils similaires, on utilise un actor différent
+    const actorId = platform === 'tiktok'
+      ? 'clockworks/tiktok-profile-scraper'
+      : 'apify/instagram-profile-scraper';
+
+    const runResponse = await fetch(
+      `https://api.apify.com/v2/acts/${actorId}/runs?token=${APIFY_API_TOKEN}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          search: query,
+          resultsLimit: limit,
+        }),
+      }
+    );
+
+    if (!runResponse.ok) {
+      throw new Error(`Apify run failed: ${runResponse.status}`);
+    }
+
+    const runData = await runResponse.json();
+    const runId = runData.data.id;
+
+    // Polling pour le résultat
+    let status = 'RUNNING';
+    let attempts = 0;
+    const maxAttempts = 60;
+
+    while (status === 'RUNNING' && attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const statusResponse = await fetch(
+        `https://api.apify.com/v2/actor-runs/${runId}?token=${APIFY_API_TOKEN}`
+      );
+      const statusData = await statusResponse.json();
+      status = statusData.data.status;
+      attempts++;
+    }
+
+    if (status !== 'SUCCEEDED') {
+      throw new Error(`Apify run failed with status: ${status}`);
+    }
+
+    const resultsResponse = await fetch(
+      `https://api.apify.com/v2/actor-runs/${runId}/dataset/items?token=${APIFY_API_TOKEN}`
+    );
+    const results = await resultsResponse.json();
+
+    return formatProfiles(results.slice(0, limit), platform);
+  } catch (error) {
+    console.error('Erreur recherche profils:', error);
+    return getMockProfiles(query, platform, limit);
+  }
+}
+
+/**
+ * Récupère les détails d'un profil
+ */
+export async function getProfileDetails(username, platform = 'instagram') {
+  if (!APIFY_API_TOKEN) {
+    return getMockProfileDetails(username, platform);
+  }
+
+  try {
+    const actorId = platform === 'tiktok'
+      ? 'clockworks/tiktok-profile-scraper'
+      : 'apify/instagram-profile-scraper';
+
+    const runResponse = await fetch(
+      `https://api.apify.com/v2/acts/${actorId}/runs?token=${APIFY_API_TOKEN}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          usernames: [username],
+        }),
+      }
+    );
+
+    const runData = await runResponse.json();
+    const runId = runData.data.id;
+
+    // Wait for completion
+    let status = 'RUNNING';
+    let attempts = 0;
+    while (status === 'RUNNING' && attempts < 30) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const statusResponse = await fetch(
+        `https://api.apify.com/v2/actor-runs/${runId}?token=${APIFY_API_TOKEN}`
+      );
+      const statusData = await statusResponse.json();
+      status = statusData.data.status;
+      attempts++;
+    }
+
+    const resultsResponse = await fetch(
+      `https://api.apify.com/v2/actor-runs/${runId}/dataset/items?token=${APIFY_API_TOKEN}`
+    );
+    const results = await resultsResponse.json();
+
+    if (results.length > 0) {
+      return formatProfile(results[0], platform);
+    }
+
+    throw new Error('Profile not found');
+  } catch (error) {
+    console.error('Erreur récupération profil:', error);
+    return getMockProfileDetails(username, platform);
+  }
+}
+
+function formatProfiles(profiles, platform) {
+  return profiles.map(p => formatProfile(p, platform));
+}
+
+function formatProfile(profile, platform) {
+  if (platform === 'tiktok') {
+    return {
+      id: profile.id || profile.uniqueId,
+      username: profile.uniqueId || profile.username,
+      platform: 'tiktok',
+      fullName: profile.nickname || profile.name,
+      bio: profile.signature || profile.bio,
+      avatar: profile.avatarThumb || profile.avatar,
+      followers: profile.followerCount || profile.fans,
+      following: profile.followingCount || profile.following,
+      posts: profile.videoCount || profile.posts,
+      engagement: calculateEngagement(profile),
+      score: calculateScore(profile),
+    };
+  }
+
+  return {
+    id: profile.id || profile.pk,
+    username: profile.username,
+    platform: 'instagram',
+    fullName: profile.fullName || profile.full_name,
+    bio: profile.biography || profile.bio,
+    avatar: profile.profilePicUrl || profile.profile_pic_url,
+    followers: profile.followersCount || profile.follower_count,
+    following: profile.followsCount || profile.following_count,
+    posts: profile.postsCount || profile.media_count,
+    engagement: calculateEngagement(profile),
+    score: calculateScore(profile),
+  };
+}
+
+function calculateEngagement(profile) {
+  const followers = profile.followersCount || profile.followerCount || profile.fans || 1;
+  const avgLikes = profile.avgLikes || (profile.postsCount ? profile.totalLikes / profile.postsCount : 0) || followers * 0.03;
+  return ((avgLikes / followers) * 100).toFixed(1);
+}
+
+function calculateScore(profile) {
+  // Score basé sur engagement, activité, et taille de communauté
+  const followers = profile.followersCount || profile.followerCount || 1000;
+  const engagement = parseFloat(calculateEngagement(profile));
+
+  let score = 50;
+  if (followers > 1000 && followers < 100000) score += 20; // Sweet spot
+  if (engagement > 3) score += 15;
+  if (engagement > 5) score += 10;
+  if (profile.isVerified) score += 5;
+
+  return Math.min(99, Math.max(50, score));
+}
+
+function getMockProfiles(query, platform, limit) {
+  const names = ['Emma', 'Léa', 'Marie', 'Julie', 'Sarah', 'Lucas', 'Thomas', 'Alex'];
+  const suffixes = ['coaching', 'fit', 'business', 'mindset', 'lifestyle'];
+
+  return Array.from({ length: limit }, (_, i) => ({
+    id: `mock_${i}`,
+    username: `${names[i % names.length].toLowerCase()}_${suffixes[i % suffixes.length]}`,
+    platform,
+    fullName: names[i % names.length],
+    bio: 'Coach | Entrepreneur | Helping you grow',
+    avatar: `https://i.pravatar.cc/150?img=${i + 1}`,
+    followers: Math.floor(Math.random() * 50000) + 5000,
+    following: Math.floor(Math.random() * 1000) + 100,
+    posts: Math.floor(Math.random() * 500) + 50,
+    engagement: (Math.random() * 5 + 2).toFixed(1),
+    score: Math.floor(Math.random() * 30) + 70,
+    recentPosts: getMockPosts(`${names[i % names.length]}`, platform, 3),
+  }));
+}
+
+function getMockProfileDetails(username, platform) {
+  return {
+    username,
+    platform,
+    fullName: username.split('_')[0],
+    bio: 'Profile loaded in demo mode',
+    avatar: `https://i.pravatar.cc/150?u=${username}`,
+    followers: Math.floor(Math.random() * 50000) + 1000,
+    following: Math.floor(Math.random() * 1000) + 100,
+    posts: Math.floor(Math.random() * 500) + 50,
+    engagement: (Math.random() * 5 + 2).toFixed(1),
+    score: Math.floor(Math.random() * 30) + 70,
+  };
+}
+
 export default {
   scrapeInstagramPosts,
   scrapeTikTokPosts,
+  searchSimilarProfiles,
+  getProfileDetails,
 };

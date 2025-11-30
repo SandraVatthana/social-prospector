@@ -1,0 +1,336 @@
+import { Router } from 'express';
+import Anthropic from '@anthropic-ai/sdk';
+import { requireAuth } from '../middleware/auth.js';
+import { formatResponse, formatError } from '../utils/helpers.js';
+import { supabaseAdmin } from '../utils/supabase.js';
+
+const router = Router();
+
+// Initialize Anthropic client
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
+
+/**
+ * GET /api/messages
+ * Liste tous les messages de l'utilisateur
+ */
+router.get('/', requireAuth, async (req, res) => {
+  try {
+    const { status, prospect_id, limit = 50, offset = 0 } = req.query;
+
+    let query = supabaseAdmin
+      .from('messages')
+      .select(`
+        *,
+        prospect:prospects(id, username, platform, full_name, avatar_url)
+      `)
+      .eq('user_id', req.user.id)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    if (prospect_id) {
+      query = query.eq('prospect_id', prospect_id);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) throw error;
+
+    res.json(formatResponse({
+      messages: data,
+      total: count,
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+    }));
+
+  } catch (error) {
+    console.error('Error fetching messages:', error);
+    res.status(500).json(formatError('Erreur lors de la récupération des messages', 'FETCH_ERROR'));
+  }
+});
+
+/**
+ * POST /api/messages/generate
+ * Génère un message personnalisé avec Claude
+ */
+router.post('/generate', requireAuth, async (req, res) => {
+  try {
+    const { prospect, posts, voice_profile } = req.body;
+
+    if (!prospect) {
+      return res.status(400).json(formatError('Données du prospect requises', 'VALIDATION_ERROR'));
+    }
+
+    // Récupérer le profil voix de l'utilisateur si non fourni
+    let voiceData = voice_profile;
+    if (!voiceData) {
+      const { data: savedVoice } = await supabaseAdmin
+        .from('voice_profiles')
+        .select('*')
+        .eq('user_id', req.user.id)
+        .eq('is_active', true)
+        .single();
+      voiceData = savedVoice;
+    }
+
+    // Construire le prompt
+    const systemPrompt = buildSystemPrompt(voiceData);
+    const userPrompt = buildUserPrompt(prospect, posts);
+
+    // Appeler Claude
+    const message = await anthropic.messages.create({
+      model: 'claude-3-haiku-20240307',
+      max_tokens: 500,
+      system: systemPrompt,
+      messages: [
+        { role: 'user', content: userPrompt }
+      ],
+    });
+
+    const generatedMessage = message.content[0].text;
+
+    // Analyser le message pour extraire le hook
+    const analysis = analyzeGeneratedMessage(generatedMessage, prospect);
+
+    res.json(formatResponse({
+      message: generatedMessage,
+      analysis,
+      model: 'claude-3-haiku',
+      tokens_used: message.usage.input_tokens + message.usage.output_tokens,
+    }));
+
+  } catch (error) {
+    console.error('Error generating message:', error);
+    res.status(500).json(formatError('Erreur lors de la génération du message', 'GENERATION_ERROR'));
+  }
+});
+
+/**
+ * POST /api/messages
+ * Sauvegarde un message
+ */
+router.post('/', requireAuth, async (req, res) => {
+  try {
+    const { prospect_id, content, status = 'draft', generated_by = 'ai' } = req.body;
+
+    if (!content) {
+      return res.status(400).json(formatError('Contenu du message requis', 'VALIDATION_ERROR'));
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('messages')
+      .insert({
+        user_id: req.user.id,
+        prospect_id,
+        content,
+        status,
+        generated_by,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.status(201).json(formatResponse(data, 'Message sauvegardé'));
+
+  } catch (error) {
+    console.error('Error saving message:', error);
+    res.status(500).json(formatError('Erreur lors de la sauvegarde', 'SAVE_ERROR'));
+  }
+});
+
+/**
+ * PATCH /api/messages/:id
+ * Met à jour un message
+ */
+router.patch('/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { content, status } = req.body;
+
+    const updates = {};
+    if (content !== undefined) updates.content = content;
+    if (status !== undefined) updates.status = status;
+
+    const { data, error } = await supabaseAdmin
+      .from('messages')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', req.user.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    if (!data) {
+      return res.status(404).json(formatError('Message non trouvé', 'NOT_FOUND'));
+    }
+
+    res.json(formatResponse(data, 'Message mis à jour'));
+
+  } catch (error) {
+    console.error('Error updating message:', error);
+    res.status(500).json(formatError('Erreur lors de la mise à jour', 'UPDATE_ERROR'));
+  }
+});
+
+/**
+ * DELETE /api/messages/:id
+ * Supprime un message
+ */
+router.delete('/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { error } = await supabaseAdmin
+      .from('messages')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', req.user.id);
+
+    if (error) throw error;
+
+    res.json(formatResponse({ deleted: true }));
+
+  } catch (error) {
+    console.error('Error deleting message:', error);
+    res.status(500).json(formatError('Erreur lors de la suppression', 'DELETE_ERROR'));
+  }
+});
+
+/**
+ * POST /api/messages/:id/mark-sent
+ * Marque un message comme envoyé
+ */
+router.post('/:id/mark-sent', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { data, error } = await supabaseAdmin
+      .from('messages')
+      .update({
+        status: 'sent',
+        sent_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .eq('user_id', req.user.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Mettre à jour le statut du prospect si lié
+    if (data.prospect_id) {
+      await supabaseAdmin
+        .from('prospects')
+        .update({ status: 'contacted', last_contacted_at: new Date().toISOString() })
+        .eq('id', data.prospect_id);
+    }
+
+    // Incrémenter le compteur de DMs du jour
+    await incrementDailyDMCount(req.user.id);
+
+    res.json(formatResponse(data, 'Message marqué comme envoyé'));
+
+  } catch (error) {
+    console.error('Error marking message as sent:', error);
+    res.status(500).json(formatError('Erreur', 'UPDATE_ERROR'));
+  }
+});
+
+// ============ Helper Functions ============
+
+function buildSystemPrompt(voiceProfile) {
+  const basePrompt = `Tu es un expert en copywriting pour DMs Instagram/TikTok. Tu dois générer des messages de prospection personnalisés, authentiques et engageants.
+
+Règles importantes:
+- Maximum 300 caractères
+- Ton décontracté mais professionnel
+- Commence par un hook personnalisé basé sur leur contenu récent
+- Pose une question ouverte à la fin
+- Évite le spam et les phrases génériques
+- Sois spécifique et montre que tu as vraiment regardé leur profil`;
+
+  if (voiceProfile) {
+    return `${basePrompt}
+
+STYLE DE L'UTILISATEUR (MA VOIX):
+- Ton: ${voiceProfile.tone || 'amical'}
+- Style: ${voiceProfile.style || 'décontracté'}
+- Signature: ${voiceProfile.signature || ''}
+- Exemples de messages qu'il aime: ${voiceProfile.examples || ''}
+- Mots à utiliser: ${voiceProfile.keywords?.join(', ') || ''}
+- Mots à éviter: ${voiceProfile.avoid_words?.join(', ') || ''}`;
+  }
+
+  return basePrompt;
+}
+
+function buildUserPrompt(prospect, posts) {
+  let prompt = `Génère un DM personnalisé pour ce prospect:
+
+PROFIL:
+- Username: @${prospect.username}
+- Plateforme: ${prospect.platform}
+- Bio: ${prospect.bio || 'Non disponible'}
+- Followers: ${prospect.followers || 'Inconnu'}`;
+
+  if (posts && posts.length > 0) {
+    prompt += `\n\nPOSTS RÉCENTS ANALYSÉS:`;
+    posts.slice(0, 3).forEach((post, idx) => {
+      prompt += `\n${idx + 1}. "${post.caption?.slice(0, 100) || 'Sans caption'}..." (${post.likes || 0} likes)`;
+    });
+    prompt += `\n\nUtilise le contenu de leurs posts pour personnaliser le message et montrer que tu as vraiment regardé leur profil.`;
+  }
+
+  prompt += `\n\nGénère UNIQUEMENT le message, sans explication ni guillemets.`;
+
+  return prompt;
+}
+
+function analyzeGeneratedMessage(message, prospect) {
+  // Extraire le hook (première phrase)
+  const firstSentence = message.split(/[.!?]/)[0];
+
+  return {
+    hook: firstSentence,
+    length: message.length,
+    hasQuestion: message.includes('?'),
+    mentionsContent: message.toLowerCase().includes('post') ||
+                     message.toLowerCase().includes('contenu') ||
+                     message.toLowerCase().includes('vu'),
+    prospectTone: detectTone(prospect.bio),
+  };
+}
+
+function detectTone(bio) {
+  if (!bio) return 'neutre';
+  const bioLower = bio.toLowerCase();
+  if (bioLower.includes('coach') || bioLower.includes('mentor')) return 'inspirant';
+  if (bioLower.includes('fun') || bioLower.includes('😂')) return 'décontracté';
+  if (bioLower.includes('ceo') || bioLower.includes('founder')) return 'professionnel';
+  return 'authentique';
+}
+
+async function incrementDailyDMCount(userId) {
+  const today = new Date().toISOString().split('T')[0];
+
+  // Upsert le compteur journalier
+  await supabaseAdmin
+    .from('analytics_daily')
+    .upsert({
+      user_id: userId,
+      date: today,
+      dms_sent: 1,
+    }, {
+      onConflict: 'user_id,date',
+      count: 'exact',
+    });
+}
+
+export default router;
