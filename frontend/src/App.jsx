@@ -1,6 +1,7 @@
 import { useState, useEffect, createContext, useContext } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Routes, Route, useNavigate, Navigate, useLocation } from 'react-router-dom';
 import { Sidebar, Header } from './components/layout';
+import LegalFooter from './components/layout/LegalFooter';
 import Dashboard from './pages/Dashboard';
 import Analytics from './pages/Analytics';
 import Voice from './pages/Voice';
@@ -9,9 +10,23 @@ import Search from './pages/Search';
 import Prospects from './pages/Prospects';
 import Messages from './pages/Messages';
 import Billing from './pages/Billing';
+import AnalyticsAgence from './pages/AnalyticsAgence';
+import LoginPage from './pages/LoginPage';
+import Conversation from './pages/Conversation';
+import Clients from './pages/Clients';
 import OnboardingProfond from './components/onboarding/OnboardingProfond';
 import GuidedTour, { useTour, STORAGE_KEY } from './components/tour/GuidedTour';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ClientProvider } from './contexts/ClientContext';
+import { ToastProvider } from './components/ui/Toast';
+
+// Pages légales et publiques
+import OptOut from './pages/OptOut';
+import Privacy from './pages/legal/Privacy';
+import Terms from './pages/legal/Terms';
+import Legal from './pages/legal/Legal';
+import Admin from './pages/Admin';
+import Landing from './pages/Landing';
 
 // Contexte pour le tour guidé
 const TourContext = createContext(null);
@@ -25,19 +40,18 @@ const mockUser = {
   days_until_renewal: 23,
 };
 
+// Routes publiques qui ne nécessitent pas d'authentification
+const PUBLIC_ROUTES = ['/opt-out', '/privacy', '/terms', '/legal', '/landing', '/login'];
+
 function AppContent() {
   const { needsOnboarding, completeOnboarding, skipOnboardingDemo, user, loginDemo, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { isOpen: isTourOpen, startTour, closeTour, isTourCompleted, resetTour } = useTour();
   const [hasCheckedTour, setHasCheckedTour] = useState(false);
 
-  // En mode démo, auto-login si pas d'utilisateur
-  // Commenter ces lignes pour tester l'onboarding
-  // useEffect(() => {
-  //   if (!loading && !user) {
-  //     loginDemo(mockUser);
-  //   }
-  // }, [loading, user]);
+  // Vérifier si on est sur une route publique
+  const isPublicRoute = PUBLIC_ROUTES.includes(location.pathname);
 
   // Pour la démo : afficher un bouton pour lancer l'onboarding
   const handleDemoLogin = () => {
@@ -60,7 +74,7 @@ function AppContent() {
 
   // Lancer le tour guidé à la première visite (après l'onboarding)
   useEffect(() => {
-    if (!loading && user && !needsOnboarding && !hasCheckedTour) {
+    if (!loading && user && !needsOnboarding && !hasCheckedTour && !isPublicRoute) {
       setHasCheckedTour(true);
       // Petit délai pour laisser l'UI se charger
       const timer = setTimeout(() => {
@@ -70,7 +84,7 @@ function AppContent() {
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [loading, user, needsOnboarding, hasCheckedTour, isTourCompleted, startTour]);
+  }, [loading, user, needsOnboarding, hasCheckedTour, isTourCompleted, startTour, isPublicRoute]);
 
   const handleTourClose = () => {
     closeTour();
@@ -79,6 +93,20 @@ function AppContent() {
   const handleTourNavigate = (path) => {
     navigate(path);
   };
+
+  // Routes publiques accessibles sans auth
+  if (isPublicRoute) {
+    return (
+      <Routes>
+        <Route path="/opt-out" element={<OptOut />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/legal" element={<Legal />} />
+        <Route path="/landing" element={<Landing />} />
+        <Route path="/login" element={<LoginPage onDemoLogin={handleDemoLogin} />} />
+      </Routes>
+    );
+  }
 
   // État de chargement
   if (loading) {
@@ -92,30 +120,9 @@ function AppContent() {
     );
   }
 
-  // Si pas d'utilisateur, afficher page de connexion démo
+  // Si pas d'utilisateur, afficher la landing page
   if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-brand-50 via-white to-accent-50">
-        <div className="bg-white rounded-3xl shadow-2xl shadow-brand-500/10 p-8 max-w-md w-full mx-4 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-brand-100 flex items-center justify-center mx-auto mb-6">
-            <svg className="w-8 h-8 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-          </div>
-          <h1 className="font-display text-2xl font-bold text-warm-900 mb-2">Bienvenue sur Social Prospector</h1>
-          <p className="text-warm-500 mb-8">La prospection qui parle avec ta vraie voix</p>
-          <button
-            onClick={handleDemoLogin}
-            className="w-full px-6 py-3 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl transition-colors shadow-lg shadow-brand-500/25"
-          >
-            Démarrer la démo
-          </button>
-          <p className="text-xs text-warm-400 mt-4">
-            Mode démo — aucune inscription requise
-          </p>
-        </div>
-      </div>
-    );
+    return <Landing />;
   }
 
   // Si l'utilisateur n'a pas complété l'onboarding, afficher l'onboarding
@@ -125,6 +132,16 @@ function AppContent() {
         onComplete={handleOnboardingComplete}
         onSkip={handleOnboardingSkip}
       />
+    );
+  }
+
+  // Page admin (layout différent sans sidebar)
+  if (location.pathname === '/admin') {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Admin />
+        <LegalFooter />
+      </div>
     );
   }
 
@@ -140,18 +157,27 @@ function AppContent() {
         />
 
         {/* Main content */}
-        <main className="flex-1 ml-64">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/voice" element={<Voice />} />
-            <Route path="/search" element={<Search />} />
-            <Route path="/prospects" element={<Prospects />} />
-            <Route path="/messages" element={<Messages />} />
-            <Route path="/billing" element={<Billing />} />
-            <Route path="/settings" element={<Settings />} />
-          </Routes>
-        </main>
+        <div className="flex-1 ml-64 flex flex-col min-h-screen">
+          <main className="flex-1">
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/analytics" element={<Analytics />} />
+              <Route path="/analytics-agence" element={<AnalyticsAgence />} />
+              <Route path="/voice" element={<Voice />} />
+              <Route path="/search" element={<Search />} />
+              <Route path="/prospects" element={<Prospects />} />
+              <Route path="/messages" element={<Messages />} />
+              <Route path="/billing" element={<Billing />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/clients" element={<Clients />} />
+              <Route path="/conversation/:prospectId" element={<Conversation />} />
+              {/* Redirections et catch-all */}
+              <Route path="/dashboard" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </main>
+          <LegalFooter />
+        </div>
 
         {/* Tour guidé */}
         <GuidedTour
@@ -167,7 +193,11 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <ClientProvider>
+        <ToastProvider>
+          <AppContent />
+        </ToastProvider>
+      </ClientProvider>
     </AuthProvider>
   );
 }

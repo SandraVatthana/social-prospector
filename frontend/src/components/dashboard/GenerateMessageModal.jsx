@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Copy, Check, Loader2, Sparkles, RefreshCw, Send, Instagram, Play, Heart, MessageSquare, Zap, Eye, Edit3 } from 'lucide-react';
+import { Copy, Check, Loader2, Sparkles, RefreshCw, Send, Instagram, Play, Heart, MessageSquare, Zap, Eye, Edit3, Target, ChevronLeft } from 'lucide-react';
+
 import Modal from '../ui/Modal';
+import { ConversationGoalSelector } from '../conversations';
 
 // Icône TikTok
 const TikTokIcon = ({ className }) => (
@@ -23,21 +25,22 @@ export default function GenerateMessageModal({ isOpen, onClose, prospect, posts 
   const [copied, setCopied] = useState(false);
   const [messageSaved, setMessageSaved] = useState(false);
 
-  // Réinitialiser et générer automatiquement à l'ouverture
+  // Nouvelles variables pour les séquences de conversation
+  const [step, setStep] = useState('goal'); // 'goal' | 'generate'
+  const [conversationGoal, setConversationGoal] = useState(null);
+
+  // Réinitialiser à l'ouverture
   useEffect(() => {
     if (isOpen && prospect) {
-      // Toujours réinitialiser et régénérer quand le modal s'ouvre
+      // Toujours réinitialiser quand le modal s'ouvre
       setGeneratedMessage('');
       setEditedMessage('');
       setIsEditing(false);
       setAnalysis(null);
       setCopied(false);
       setMessageSaved(false);
-      // Petit délai pour que le state soit réinitialisé
-      const timer = setTimeout(() => {
-        handleGenerate();
-      }, 50);
-      return () => clearTimeout(timer);
+      setStep('goal'); // Commencer par le choix de l'objectif
+      setConversationGoal(prospect.conversation_goal || null); // Récupérer l'objectif existant si présent
     }
   }, [isOpen, prospect?.id]);
 
@@ -93,11 +96,11 @@ export default function GenerateMessageModal({ isOpen, onClose, prospect, posts 
         }
       }
 
-      // Étape 2: Générer le message personnalisé
-      setLoadingStep('Génération du message personnalisé...');
+      // Étape 2: Générer le message personnalisé avec Claude
+      setLoadingStep('Génération du message avec IA...');
 
       try {
-        const generateResponse = await fetch('/api/prospects/generate-message', {
+        const generateResponse = await fetch('/api/messages/generate', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -111,17 +114,20 @@ export default function GenerateMessageModal({ isOpen, onClose, prospect, posts 
               followers: prospect.followers,
             },
             posts,
-            analysis: postAnalysis,
           }),
         });
 
         if (generateResponse.ok) {
           const generateData = await generateResponse.json();
           setGeneratedMessage(generateData.data?.message);
+          if (generateData.data?.analysis) {
+            setAnalysis(generateData.data.analysis);
+          }
         } else {
           throw new Error('API error');
         }
       } catch (err) {
+        console.log('API Claude non disponible, utilisation du mode démo');
         // Mode démo - générer un message exemple basé sur l'analyse
         const demoMessage = generateDemoMessage(prospect, posts, postAnalysis || analysis);
         setGeneratedMessage(demoMessage);
@@ -186,19 +192,90 @@ export default function GenerateMessageModal({ isOpen, onClose, prospect, posts 
     return `il y a ${Math.floor(days / 7)} sem`;
   };
 
+  // Handler pour sélectionner un objectif et passer à l'étape suivante
+  const handleGoalSelect = (goalId) => {
+    setConversationGoal(goalId);
+  };
+
+  // Handler pour confirmer l'objectif et générer le message
+  const handleConfirmGoal = async () => {
+    if (!conversationGoal) return;
+    setStep('generate');
+    // Générer automatiquement le premier message
+    handleGenerate();
+  };
+
   if (!prospect) return null;
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Message personnalisé"
-      description="Basé sur l'analyse de ses posts récents"
+      title={step === 'goal' ? "Objectif de conversation" : "Message personnalisé"}
+      description={step === 'goal' ? "Choisis ton objectif avant de démarrer" : "Basé sur l'analyse de ses posts récents"}
       size="large"
     >
       <div className="space-y-6">
-        {/* Info prospect */}
-        <div className="flex items-center gap-4 p-4 bg-warm-50 rounded-xl">
+        {/* Étape 1: Choix de l'objectif */}
+        {step === 'goal' && (
+          <>
+            {/* Info prospect compacte */}
+            <div className="flex items-center gap-3 p-3 bg-warm-50 rounded-xl">
+              <div className="relative">
+                <img
+                  src={prospect.avatar}
+                  alt={prospect.username}
+                  className="w-10 h-10 rounded-lg object-cover"
+                />
+                <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center ${
+                  prospect.platform === 'instagram'
+                    ? 'bg-gradient-to-br from-purple-500 to-pink-500'
+                    : 'bg-black'
+                }`}>
+                  {prospect.platform === 'instagram'
+                    ? <Instagram className="w-2.5 h-2.5 text-white" />
+                    : <TikTokIcon className="w-2.5 h-2.5 text-white" />
+                  }
+                </div>
+              </div>
+              <div>
+                <p className="font-medium text-warm-800">@{prospect.username}</p>
+                <p className="text-xs text-warm-500">{prospect.fullName}</p>
+              </div>
+            </div>
+
+            {/* Sélecteur d'objectif */}
+            <ConversationGoalSelector
+              selectedGoal={conversationGoal}
+              onSelect={handleGoalSelect}
+            />
+
+            {/* Bouton de confirmation */}
+            <button
+              onClick={handleConfirmGoal}
+              disabled={!conversationGoal}
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-brand-500 to-brand-600 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg"
+            >
+              <Sparkles className="w-5 h-5" />
+              Générer le 1er message
+            </button>
+          </>
+        )}
+
+        {/* Étape 2: Génération du message */}
+        {step === 'generate' && (
+          <>
+            {/* Bouton retour */}
+            <button
+              onClick={() => setStep('goal')}
+              className="flex items-center gap-1 text-sm text-warm-500 hover:text-warm-700 transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Changer d'objectif
+            </button>
+
+            {/* Info prospect */}
+            <div className="flex items-center gap-4 p-4 bg-warm-50 rounded-xl">
           <div className="relative">
             <img
               src={prospect.avatar}
@@ -410,6 +487,8 @@ export default function GenerateMessageModal({ isOpen, onClose, prospect, posts 
             </p>
           </>
         )}
+          </>
+        )}
       </div>
     </Modal>
   );
@@ -475,9 +554,13 @@ function generateDemoAnalysis(posts, prospect) {
 
 /**
  * Génère un message de démo basé sur les posts et l'analyse
+ * Utilise le timestamp pour garantir des messages différents à chaque génération
  */
 function generateDemoMessage(prospect, posts, analysis) {
   const { username, platform } = prospect;
+
+  // Utiliser un index basé sur le temps pour varier les messages
+  const timeIndex = Date.now() % 10;
 
   // Si on a une analyse basée sur les posts
   if (analysis && analysis.suggestedHook) {
@@ -487,9 +570,23 @@ function generateDemoMessage(prospect, posts, analysis) {
       `Salut ${username} !\n\n${analysis.suggestedHook} - ça m'a vraiment inspiré.\n\nJe développe quelque chose qui pourrait matcher avec ce que tu fais. Rien de commercial, juste un échange.\n\nDispo pour un call rapide ?`,
 
       `${username} !\n\n${analysis.suggestedHook}. J'ai tellement reconnu certaines galères que j'ai vécues.\n\nJe bosse sur un projet qui aide les créateurs comme toi à trouver les bonnes opportunités sans y passer des heures.\n\nIntéressé(e) ?`,
+
+      `Yo ${username} !\n\n${analysis.suggestedHook}. Franchement, c'est rare de voir du contenu aussi authentique.\n\nJ'aimerais te présenter un projet sur lequel je bosse - ça pourrait vraiment t'intéresser.\n\nT'es chaud(e) pour un échange ?`,
+
+      `Hello ${username} !\n\n${analysis.suggestedHook}. Ton approche est vraiment unique.\n\nJe pense qu'on pourrait créer quelque chose d'intéressant ensemble.\n\nOn se cale un call de 10 min ?`,
+
+      `Coucou ${username} !\n\n${analysis.suggestedHook}. J'adore ta vibe !\n\nJ'ai un projet qui pourrait booster ton activité de façon organique.\n\nCurieux(se) d'en savoir plus ?`,
+
+      `Hey ${username} !\n\n${analysis.suggestedHook}. Je suis fan de ta façon de créer du lien avec ta communauté.\n\nJ'ai quelque chose qui pourrait amplifier ça.\n\nOn en parle autour d'un café virtuel ?`,
+
+      `${username}, salut !\n\n${analysis.suggestedHook}. Tu dégages une énergie que j'apprécie vraiment.\n\nJe travaille sur un outil fait pour les créateurs comme toi.\n\n5 min pour t'en parler ?`,
+
+      `Hey ${username} !\n\n${analysis.suggestedHook}. Ton contenu mérite vraiment plus de visibilité.\n\nJ'ai peut-être une solution pour ça - sans spammer ni tricher.\n\nOn s'appelle ?`,
+
+      `Salut ${username} !\n\n${analysis.suggestedHook}. C'est le genre de contenu qui fait la diff sur ${platform === 'tiktok' ? 'TikTok' : 'Insta'}.\n\nJ'aimerais te montrer quelque chose qui pourrait t'aider à scaler.\n\nDisponible cette semaine ?`,
     ];
 
-    return hooks[Math.floor(Math.random() * hooks.length)];
+    return hooks[timeIndex];
   }
 
   // Si on a des posts mais pas d'analyse détaillée
@@ -497,22 +594,81 @@ function generateDemoMessage(prospect, posts, analysis) {
     const latestPost = posts[0];
     const shortCaption = latestPost.caption?.substring(0, 50) || 'ton dernier contenu';
 
-    return `Hey ${username} !\n\nJe viens de voir ton post "${shortCaption}..." - vraiment top !\n\nJe travaille sur quelque chose qui pourrait t'intéresser pour développer ton activité.\n\nOn en parle ?`;
+    const postMessages = [
+      `Hey ${username} !\n\nJe viens de voir ton post "${shortCaption}..." - vraiment top !\n\nJe travaille sur quelque chose qui pourrait t'intéresser pour développer ton activité.\n\nOn en parle ?`,
+
+      `Salut ${username} !\n\nTon post "${shortCaption}..." m'a accroché direct.\n\nJe bosse sur un projet qui aide les créateurs à trouver leur audience idéale.\n\nÇa te parle ?`,
+
+      `${username} !\n\nJ'ai adoré "${shortCaption}..." - du contenu de qualité comme ça, c'est rare.\n\nJ'ai quelque chose qui pourrait multiplier ton impact.\n\nOn se call ?`,
+
+      `Hey ${username} !\n\n"${shortCaption}..." - c'est exactement ce que j'aime voir sur mon feed.\n\nJe pense pouvoir t'aider à toucher plus de monde.\n\nIntéressé(e) ?`,
+
+      `Yo ${username} !\n\nTon post "${shortCaption}..." c'est du lourd.\n\nJ'ai un truc qui pourrait matcher avec ta stratégie de contenu.\n\nDispo pour 5 min ?`,
+    ];
+
+    return postMessages[timeIndex % postMessages.length];
   }
 
-  // Fallback sans posts
+  // Fallback sans posts - messages génériques variés
   const bio = prospect.bio || '';
   const isCoach = bio.toLowerCase().includes('coach');
-  const isFitness = bio.toLowerCase().includes('fitness');
-  const isEntrepreneur = bio.toLowerCase().includes('entrepreneur');
+  const isFitness = bio.toLowerCase().includes('fitness') || bio.toLowerCase().includes('sport');
+  const isEntrepreneur = bio.toLowerCase().includes('entrepreneur') || bio.toLowerCase().includes('business');
+  const isCreator = bio.toLowerCase().includes('créateur') || bio.toLowerCase().includes('creator') || bio.toLowerCase().includes('influenc');
+
+  const genericMessages = [
+    `Hey ${username} !\n\nJe viens de découvrir ton profil ${platform === 'tiktok' ? 'TikTok' : 'Instagram'} et j'aime vraiment ce que tu partages.\n\nJe travaille sur un projet qui pourrait matcher avec ton activité.\n\nIntéressé(e) pour en parler ?`,
+
+    `Salut ${username} !\n\nTon profil ${platform === 'tiktok' ? 'TikTok' : 'Instagram'} a retenu mon attention.\n\nJ'ai quelque chose qui pourrait t'aider à développer ta présence en ligne.\n\nOn en discute ?`,
+
+    `${username} !\n\nJ'adore ta vibe sur ${platform === 'tiktok' ? 'TikTok' : 'Instagram'}.\n\nJe bosse sur un outil qui aide les créateurs comme toi.\n\nÇa te dit d'en savoir plus ?`,
+
+    `Hey ${username} !\n\nTon contenu m'a tapé dans l'œil - vraiment quali.\n\nJ'aurais un projet à te présenter qui pourrait t'intéresser.\n\nDispo pour un call rapide ?`,
+
+    `Salut ${username} !\n\nJe suis tombé sur ton profil et j'ai direct accroché.\n\nJe pense qu'on pourrait faire quelque chose d'intéressant ensemble.\n\nOn en parle ?`,
+  ];
 
   if (isCoach) {
-    return `Hey ${username} !\n\nTa bio m'a directement parlé - j'adore ton approche du coaching.\n\nJe développe un outil qui aide les coachs à trouver des clients qualifiés sans y passer des heures.\n\nÇa te dirait d'en discuter ?`;
-  } else if (isFitness) {
-    return `Salut ${username} !\n\nTon contenu fitness est vraiment quali ! J'aime l'énergie que tu dégages.\n\nJ'ai quelque chose qui pourrait t'aider à monétiser ton expertise différemment.\n\nOn en parle ?`;
-  } else if (isEntrepreneur) {
-    return `${username} !\n\nTon parcours entrepreneur me parle. On a sûrement des galères en commun.\n\nJe bosse sur un projet de prospection automatisée - ça pourrait t'intéresser.\n\nDispo pour un call ?`;
+    const coachMessages = [
+      `Hey ${username} !\n\nTa bio m'a directement parlé - j'adore ton approche du coaching.\n\nJe développe un outil qui aide les coachs à trouver des clients qualifiés sans y passer des heures.\n\nÇa te dirait d'en discuter ?`,
+
+      `Salut ${username} !\n\nEn tant que coach, tu sais à quel point c'est dur de trouver les bons clients.\n\nJ'ai créé quelque chose pour simplifier ça.\n\nIntéressé(e) ?`,
+
+      `${username} !\n\nTon approche du coaching est vraiment unique.\n\nJ'ai un projet qui pourrait t'aider à toucher plus de personnes qui ont vraiment besoin de toi.\n\nOn se call ?`,
+    ];
+    return coachMessages[timeIndex % coachMessages.length];
   }
 
-  return `Hey ${username} !\n\nJe viens de découvrir ton profil ${platform === 'tiktok' ? 'TikTok' : 'Instagram'} et j'aime vraiment ce que tu partages.\n\nJe travaille sur un projet qui pourrait matcher avec ton activité.\n\nIntéressé(e) pour en parler ?`;
+  if (isFitness) {
+    const fitnessMessages = [
+      `Salut ${username} !\n\nTon contenu fitness est vraiment quali ! J'aime l'énergie que tu dégages.\n\nJ'ai quelque chose qui pourrait t'aider à monétiser ton expertise différemment.\n\nOn en parle ?`,
+
+      `Hey ${username} !\n\nTon énergie sur ${platform === 'tiktok' ? 'TikTok' : 'Instagram'} est contagieuse !\n\nJe bosse sur un projet fait pour les passionnés de fitness comme toi.\n\nCurieux(se) ?`,
+
+      `${username} !\n\nTon contenu inspire vraiment. Le fitness, c'est ta zone de génie.\n\nJ'ai quelque chose qui pourrait multiplier ton impact.\n\nDispo pour 5 min ?`,
+    ];
+    return fitnessMessages[timeIndex % fitnessMessages.length];
+  }
+
+  if (isEntrepreneur) {
+    const entrepreneurMessages = [
+      `${username} !\n\nTon parcours entrepreneur me parle. On a sûrement des galères en commun.\n\nJe bosse sur un projet de prospection automatisée - ça pourrait t'intéresser.\n\nDispo pour un call ?`,
+
+      `Hey ${username} !\n\nEntre entrepreneurs, on sait ce que c'est de chercher des clients.\n\nJ'ai créé un outil pour simplifier ça radicalement.\n\nOn en discute ?`,
+
+      `Salut ${username} !\n\nTon état d'esprit entrepreneur me parle direct.\n\nJ'ai quelque chose qui pourrait accélérer ta croissance.\n\nIntéressé(e) ?`,
+    ];
+    return entrepreneurMessages[timeIndex % entrepreneurMessages.length];
+  }
+
+  if (isCreator) {
+    const creatorMessages = [
+      `Hey ${username} !\n\nEn tant que créateur, tu sais l'importance d'une communauté engagée.\n\nJ'ai un outil qui pourrait t'aider à trouver ton audience idéale.\n\nÇa te parle ?`,
+
+      `${username} !\n\nTon contenu de créateur est vraiment inspirant.\n\nJ'ai quelque chose qui pourrait booster ta visibilité de façon authentique.\n\nOn en parle ?`,
+    ];
+    return creatorMessages[timeIndex % creatorMessages.length];
+  }
+
+  return genericMessages[timeIndex % genericMessages.length];
 }

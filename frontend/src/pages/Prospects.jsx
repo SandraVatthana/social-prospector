@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Users,
   Search,
@@ -24,7 +25,8 @@ import {
   Image,
   Play,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  MessagesSquare
 } from 'lucide-react';
 import Header from '../components/layout/Header';
 import GenerateMessageModal from '../components/dashboard/GenerateMessageModal';
@@ -755,22 +757,33 @@ function ProspectDetailPanel({ prospect, onClose, onStatusChange, onGenerateMess
       </div>
 
       {/* Actions */}
-      <div className="flex gap-3">
-        <button
-          onClick={() => onGenerateMessage(posts)}
-          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-xl transition-colors"
+      <div className="space-y-3">
+        <div className="flex gap-3">
+          <button
+            onClick={() => onGenerateMessage(posts)}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-xl transition-colors"
+          >
+            <Sparkles className="w-4 h-4" />
+            Generer message
+          </button>
+          <a
+            href={`https://${prospect.platform}.com/${prospect.username}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-2 border border-warm-200 hover:bg-warm-50 rounded-xl transition-colors"
+          >
+            <ExternalLink className="w-5 h-5 text-warm-500" />
+          </a>
+        </div>
+
+        {/* Lien vers la conversation */}
+        <Link
+          to={`/conversation/${prospect.id}`}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-accent-500 hover:bg-accent-600 text-white font-medium rounded-xl transition-colors"
         >
-          <Sparkles className="w-4 h-4" />
-          Generer message
-        </button>
-        <a
-          href={`https://${prospect.platform}.com/${prospect.username}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="p-2 border border-warm-200 hover:bg-warm-50 rounded-xl transition-colors"
-        >
-          <ExternalLink className="w-5 h-5 text-warm-500" />
-        </a>
+          <MessagesSquare className="w-4 h-4" />
+          Voir la conversation
+        </Link>
       </div>
     </div>
   );

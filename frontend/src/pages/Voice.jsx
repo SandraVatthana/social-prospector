@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Mic,
   Edit3,
@@ -18,6 +19,8 @@ import {
 } from 'lucide-react';
 import Header from '../components/layout/Header';
 import TestVoiceModal from '../components/dashboard/TestVoiceModal';
+import ConfigureVoiceModal from '../components/dashboard/ConfigureVoiceModal';
+import OnboardingProfond from '../components/onboarding/OnboardingProfond';
 
 // Données mock pour la démo
 const mockVoiceProfile = {
@@ -100,10 +103,13 @@ const emojiFrequencyOptions = [
 const popularEmojis = ['🚀', '✨', '💪', '🔥', '💫', '🎯', '💜', '⚡', '🌟', '👋', '😊', '🙌', '💡', '🎉', '❤️', '👀'];
 
 export default function Voice() {
+  const navigate = useNavigate();
   const [profile, setProfile] = useState(mockVoiceProfile);
   const [isEditing, setIsEditing] = useState(false);
   const [editedProfile, setEditedProfile] = useState(mockVoiceProfile);
   const [showTestModal, setShowTestModal] = useState(false);
+  const [showConfigureModal, setShowConfigureModal] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -177,6 +183,51 @@ export default function Voice() {
     isActive: profile.isActive,
   };
 
+  // Gérer la completion de l'onboarding
+  const handleOnboardingComplete = (data, voiceProfile, redirectTo) => {
+    if (voiceProfile) {
+      setProfile({
+        ...profile,
+        nom: voiceProfile.nom || `MA VOIX — ${data.prenom}`,
+        ton_dominant: voiceProfile.ton_dominant || data.ton?.[0] || 'decontracte',
+        tons_secondaires: voiceProfile.tons_secondaires || data.ton?.slice(1) || [],
+        tutoiement: data.tutoiement || 'parfois',
+        utilisation_emojis: voiceProfile.utilisation_emojis || {
+          frequence: data.utilisation_emojis || 'parfois',
+          favoris: data.emojis_favoris || [],
+        },
+        expressions_cles: voiceProfile.expressions_cles || (data.expressions ? data.expressions.split(',').map(e => e.trim()) : []),
+        contexte_business: {
+          activite: data.activite,
+          cible: data.cible_description,
+          proposition_valeur: data.resultat_promis,
+          differentiation: data.differentiation || '',
+          lead_magnet: data.lead_magnet || '',
+        },
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    }
+    setShowOnboarding(false);
+
+    // Naviguer vers la page demandée
+    if (redirectTo === 'search') {
+      navigate('/search');
+    } else if (redirectTo === 'dashboard') {
+      navigate('/');
+    }
+  };
+
+  // Si l'onboarding est affiché, le retourner
+  if (showOnboarding) {
+    return (
+      <OnboardingProfond
+        onComplete={handleOnboardingComplete}
+        onSkip={() => setShowOnboarding(false)}
+      />
+    );
+  }
+
   return (
     <>
       <Header
@@ -220,11 +271,18 @@ export default function Voice() {
             ) : (
               <>
                 <button
-                  onClick={() => setShowTestModal(true)}
+                  onClick={() => setShowConfigureModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 font-semibold rounded-xl transition-colors border-2 border-purple-200"
+                >
+                  <MessageSquare className="w-5 h-5" />
+                  Analyser mes textes
+                </button>
+                <button
+                  onClick={() => setShowOnboarding(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-brand-500 to-accent-500 hover:from-brand-600 hover:to-accent-600 text-white font-semibold rounded-xl transition-all shadow-lg shadow-brand-500/25"
                 >
-                  <FlaskConical className="w-5 h-5" />
-                  Tester ma voix
+                  <Settings className="w-5 h-5" />
+                  Reconfigurer ma voix
                 </button>
                 <button
                   onClick={handleEdit}
@@ -828,6 +886,15 @@ export default function Voice() {
                 </div>
               </div>
             </div>
+
+            {/* Bouton tester ma voix */}
+            <button
+              onClick={() => setShowTestModal(true)}
+              className="w-full flex items-center justify-center gap-2 p-4 bg-gradient-to-r from-brand-50 to-accent-50 hover:from-brand-100 hover:to-accent-100 text-brand-700 font-medium rounded-xl transition-colors border-2 border-brand-200"
+            >
+              <FlaskConical className="w-5 h-5" />
+              Tester ma voix
+            </button>
           </div>
         </div>
       </div>
@@ -837,6 +904,23 @@ export default function Voice() {
         isOpen={showTestModal}
         onClose={() => setShowTestModal(false)}
         voiceProfile={voiceProfileForTest}
+      />
+
+      {/* Modal pour analyser les textes */}
+      <ConfigureVoiceModal
+        isOpen={showConfigureModal}
+        onClose={() => setShowConfigureModal(false)}
+        onComplete={(newProfile) => {
+          if (newProfile) {
+            setProfile({
+              ...profile,
+              ...newProfile,
+              nom: newProfile.nom || profile.nom,
+            });
+            setSaved(true);
+            setTimeout(() => setSaved(false), 3000);
+          }
+        }}
       />
     </>
   );

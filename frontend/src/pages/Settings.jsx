@@ -3,35 +3,34 @@ import {
   User,
   Bell,
   Shield,
-  Palette,
-  Globe,
   Download,
   Trash2,
   LogOut,
-  Moon,
-  Sun,
   Check,
   Loader2,
   ExternalLink,
-  Key,
-  Mail,
   AlertTriangle,
   Send,
-  Info
+  Info,
+  Building2,
+  Users
 } from 'lucide-react';
 import Header from '../components/layout/Header';
 import Modal from '../components/ui/Modal';
 import { useAuth } from '../contexts/AuthContext';
+import { useClient } from '../contexts/ClientContext';
 import { api } from '../lib/api';
 import { useToast } from '../components/ui/Toast';
 
 export default function Settings() {
   const { user, logout } = useAuth();
+  const { isAgencyMode, hasAgencyPlan, agencyOverride, toggleAgencyMode, agencyName } = useClient();
   const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [tempAgencyName, setTempAgencyName] = useState(agencyOverride?.name || '');
 
   const [settings, setSettings] = useState({
     full_name: '',
@@ -169,6 +168,116 @@ export default function Settings() {
           </div>
         </section>
 
+        {/* Mode Agence */}
+        <section className="card">
+          <div className="p-6 border-b border-warm-100">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-100 to-accent-100 flex items-center justify-center">
+                <Building2 className="w-5 h-5 text-brand-600" />
+              </div>
+              <div>
+                <h2 className="font-display font-semibold text-warm-900">Mode Agence</h2>
+                <p className="text-sm text-warm-500">Gerez plusieurs clients depuis un seul compte</p>
+              </div>
+              {isAgencyMode && (
+                <span className="ml-auto px-3 py-1 text-xs font-semibold bg-gradient-to-r from-brand-500 to-accent-500 text-white rounded-full">
+                  ACTIF
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="p-6 space-y-4">
+            {hasAgencyPlan ? (
+              <div className="flex items-start gap-3 p-4 bg-green-50 border border-green-200 rounded-xl">
+                <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-green-800">
+                  <p className="font-medium">Plan Agence actif</p>
+                  <p className="text-green-700">Votre abonnement inclut le mode agence multi-clients.</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-start gap-3 p-4 bg-warm-50 border border-warm-200 rounded-xl">
+                  <Info className="w-5 h-5 text-warm-500 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-warm-600">
+                    <p className="font-medium text-warm-800">Mode demonstration</p>
+                    <p>Activez le mode agence pour tester les fonctionnalites multi-clients. En production, ce mode necessite un abonnement Agence ou Agence+.</p>
+                  </div>
+                </div>
+
+                <label className="flex items-center justify-between cursor-pointer">
+                  <div>
+                    <p className="font-medium text-warm-900">Activer le mode Agence</p>
+                    <p className="text-sm text-warm-500">Pour tester les fonctionnalites multi-clients</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (agencyOverride?.enabled) {
+                        toggleAgencyMode(false);
+                        setTempAgencyName('');
+                        toast.success('Mode Agence desactive');
+                      }
+                    }}
+                    className={`relative w-12 h-6 rounded-full transition-colors ${
+                      agencyOverride?.enabled ? 'bg-brand-500' : 'bg-warm-300'
+                    }`}
+                    disabled={!agencyOverride?.enabled}
+                  >
+                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                      agencyOverride?.enabled ? 'translate-x-7' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </label>
+
+                {!agencyOverride?.enabled && (
+                  <div className="pt-2 space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-warm-700 mb-1">
+                        Nom de votre agence
+                      </label>
+                      <input
+                        type="text"
+                        value={tempAgencyName}
+                        onChange={(e) => setTempAgencyName(e.target.value)}
+                        placeholder="Ex: Studio Digital, Agence Marketing..."
+                        className="w-full px-4 py-2 border border-warm-200 rounded-xl focus:border-brand-500 focus:ring-0 outline-none transition-colors"
+                      />
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (tempAgencyName.trim()) {
+                          toggleAgencyMode(true, tempAgencyName.trim());
+                          toast.success('Mode Agence active !', `Bienvenue ${tempAgencyName.trim()}`);
+                        } else {
+                          toast.error('Nom requis', 'Veuillez entrer un nom d\'agence');
+                        }
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-brand-600 to-accent-600 hover:from-brand-700 hover:to-accent-700 text-white font-medium rounded-xl transition-all"
+                    >
+                      <Building2 className="w-4 h-4" />
+                      Activer le mode Agence
+                    </button>
+                  </div>
+                )}
+
+                {agencyOverride?.enabled && agencyName && (
+                  <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-brand-50 to-accent-50 border border-brand-200 rounded-xl">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center text-white font-bold">
+                      {agencyName.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-warm-900">{agencyName}</p>
+                      <p className="text-sm text-warm-500">Mode demonstration actif</p>
+                    </div>
+                    <Users className="w-5 h-5 text-brand-500" />
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </section>
+
         {/* Notifications */}
         <section className="card">
           <div className="p-6 border-b border-warm-100">
@@ -220,48 +329,6 @@ export default function Settings() {
           </div>
         </section>
 
-        {/* Apparence */}
-        <section className="card">
-          <div className="p-6 border-b border-warm-100">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
-                <Palette className="w-5 h-5 text-purple-600" />
-              </div>
-              <div>
-                <h2 className="font-display font-semibold text-warm-900">Apparence</h2>
-                <p className="text-sm text-warm-500">Personnalisez l'interface</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-6">
-            <label className="block text-sm font-medium text-warm-700 mb-3">
-              Thème
-            </label>
-            <div className="flex gap-3">
-              {[
-                { id: 'light', label: 'Clair', icon: Sun },
-                { id: 'dark', label: 'Sombre', icon: Moon },
-              ].map(theme => (
-                <button
-                  key={theme.id}
-                  onClick={() => setSettings(s => ({ ...s, theme: theme.id }))}
-                  className={`flex items-center gap-2 px-4 py-3 rounded-xl border-2 transition-all ${
-                    settings.theme === theme.id
-                      ? 'border-brand-500 bg-brand-50'
-                      : 'border-warm-200 hover:border-warm-300'
-                  }`}
-                >
-                  <theme.icon className="w-5 h-5" />
-                  <span className="font-medium">{theme.label}</span>
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-warm-400 mt-2">
-              Le mode sombre sera bientôt disponible
-            </p>
-          </div>
-        </section>
 
         {/* Données */}
         <section className="card">

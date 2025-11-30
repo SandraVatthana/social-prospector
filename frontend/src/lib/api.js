@@ -101,10 +101,38 @@ class API {
     return this.request(`/messages${query ? `?${query}` : ''}`);
   }
 
-  async generateMessage(prospectId) {
+  async generateMessage(prospectId, approachMethod = 'mini_aida') {
     return this.request('/messages/generate', {
       method: 'POST',
-      body: { prospect_id: prospectId },
+      body: { prospect_id: prospectId, approach_method: approachMethod },
+    });
+  }
+
+  async getApproachMethods() {
+    return this.request('/messages/approach-methods');
+  }
+
+  async getApproachRecommendation() {
+    return this.request('/messages/approach-recommendation');
+  }
+
+  async saveMessage(messageData) {
+    return this.request('/messages', {
+      method: 'POST',
+      body: messageData,
+    });
+  }
+
+  async markMessageSent(messageId) {
+    return this.request(`/messages/${messageId}/mark-sent`, {
+      method: 'POST',
+    });
+  }
+
+  async updateMessage(messageId, updates) {
+    return this.request(`/messages/${messageId}`, {
+      method: 'PATCH',
+      body: updates,
     });
   }
 
@@ -116,9 +144,46 @@ class API {
     });
   }
 
-  // Usage
+  // Billing
   async getUsage() {
     return this.request('/billing/usage');
+  }
+
+  async getBillingPlans() {
+    return this.request('/billing/plans');
+  }
+
+  async getBillingStatus() {
+    return this.request('/billing/status');
+  }
+
+  async getBillingUsage() {
+    return this.request('/billing/usage');
+  }
+
+  async createCheckout(planId) {
+    return this.request('/billing/checkout', {
+      method: 'POST',
+      body: { plan_id: planId },
+    });
+  }
+
+  async getPortalUrl() {
+    return this.request('/billing/portal', {
+      method: 'POST',
+    });
+  }
+
+  async cancelSubscription() {
+    return this.request('/billing/cancel', {
+      method: 'POST',
+    });
+  }
+
+  async resumeSubscription() {
+    return this.request('/billing/resume', {
+      method: 'POST',
+    });
   }
 
   // Onboarding
@@ -165,6 +230,39 @@ class API {
   async saveOnboarding(onboardingData, voiceProfile) {
     // Alias pour completeOnboarding pour compatibilité
     return this.completeOnboarding(onboardingData, voiceProfile);
+  }
+
+  // === Agency Clients ===
+  async getClients() {
+    return this.request('/clients');
+  }
+
+  async getClient(id) {
+    return this.request(`/clients/${id}`);
+  }
+
+  async createClient(clientData) {
+    return this.request('/clients', {
+      method: 'POST',
+      body: clientData,
+    });
+  }
+
+  async updateClient(id, updates) {
+    return this.request(`/clients/${id}`, {
+      method: 'PATCH',
+      body: updates,
+    });
+  }
+
+  async deleteClient(id) {
+    return this.request(`/clients/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getClientStats(id) {
+    return this.request(`/clients/${id}/stats`);
   }
 }
 

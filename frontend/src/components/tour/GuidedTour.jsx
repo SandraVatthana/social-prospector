@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ChevronLeft, ChevronRight, Mic, Search, Users, MessageSquare, AlertTriangle, PartyPopper } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Mic, Search, Users, MessageSquare, AlertTriangle, PartyPopper, Reply } from 'lucide-react';
 
 const STORAGE_KEY = 'social_prospector_tour_completed';
 
@@ -12,7 +12,7 @@ const TOUR_STEPS = [
     id: 'voice',
     target: '[data-tour="voice"]',
     title: 'MA VOIX',
-    content: 'Commence par configurer ta voix ! Colle 2-10 textes que tu as écrits et l\'IA analysera ton style. Tous tes messages sonneront comme TOI.',
+    content: 'Ton profil stylistique ! Clique sur "Reconfigurer ma voix" pour répondre à quelques questions, ou "Analyser mes textes" pour que l\'IA analyse ton style à partir de tes écrits. Tu peux modifier ton profil à tout moment.',
     icon: Mic,
     position: 'right',
   },
@@ -38,7 +38,7 @@ const TOUR_STEPS = [
     title: 'Statuts',
     content: 'Les statuts se mettent à jour automatiquement quand tu génères un message. MAIS quand le prospect répond, c\'est à toi de changer le statut manuellement (on n\'a pas accès à tes DMs 😉).',
     icon: AlertTriangle,
-    position: 'bottom',
+    position: 'right',
     important: true,
   },
   {
@@ -47,15 +47,24 @@ const TOUR_STEPS = [
     title: 'Quota DMs',
     content: 'Pour protéger ton compte, on track tes envois. Instagram recommande max 5 DMs/heure et 40/jour. On t\'alerte avant les limites !',
     icon: AlertTriangle,
-    position: 'top',
+    position: 'right',
   },
   {
     id: 'messages',
     target: '[data-tour="messages"]',
     title: 'Messages',
-    content: 'Tous tes messages générés. Copie-les, envoie-les manuellement sur Instagram/TikTok, puis reviens cliquer \'Envoyé\'.',
+    content: 'Tous tes messages générés. Utilise le bouton "Copier & ouvrir Instagram" pour copier le message et ouvrir directement les DMs du prospect !',
     icon: MessageSquare,
     position: 'right',
+  },
+  {
+    id: 'response',
+    target: '[data-tour="prospects"]',
+    title: 'Quand le prospect répond',
+    content: 'Clique sur "Le prospect a répondu", colle sa réponse, puis appuie sur "Analyser". L\'IA analysera son message et te proposera des relances que tu peux modifier avant d\'envoyer.',
+    icon: Reply,
+    position: 'right',
+    important: true,
   },
 ];
 
@@ -247,7 +256,7 @@ function TourCompletionModal({ onConfigureVoice, onExplore }) {
 
         {/* Message */}
         <p className="text-warm-600 mb-8">
-          Commence par configurer <strong>MA VOIX</strong> pour des messages qui sonnent vraiment comme toi.
+          Va dans <strong>MA VOIX</strong> et clique sur "Reconfigurer ma voix" pour créer ton profil stylistique. Tous tes messages sonneront vraiment comme toi !
         </p>
 
         {/* Actions */}
@@ -257,7 +266,7 @@ function TourCompletionModal({ onConfigureVoice, onExplore }) {
             className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl transition-colors"
           >
             <Mic className="w-5 h-5" />
-            Configurer MA VOIX
+            Aller vers MA VOIX
           </button>
           <button
             onClick={onExplore}

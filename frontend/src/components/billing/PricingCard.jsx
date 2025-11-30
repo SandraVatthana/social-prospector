@@ -79,29 +79,39 @@ export default function PricingCard({
           <div className="grid grid-cols-2 gap-3 text-center">
             <div>
               <p className="text-2xl font-bold text-warm-900">
-                {plan.limits.prospects_par_mois === -1 ? '∞' : plan.limits.prospects_par_mois}
+                {plan.limits.prospects_par_mois === -1 ? '∞*' : plan.limits.prospects_par_mois}
               </p>
               <p className="text-xs text-warm-500">prospects/mois</p>
             </div>
             <div>
               <p className="text-2xl font-bold text-warm-900">
-                {plan.limits.voix === -1 ? '∞' : plan.limits.voix}
+                {plan.limits.voix === -1 ? '∞*' : plan.limits.voix}
               </p>
               <p className="text-xs text-warm-500">profils MA VOIX</p>
             </div>
             <div>
               <p className="text-2xl font-bold text-warm-900">
-                {plan.limits.comptes_sociaux}
+                {plan.limits.comptes_sociaux === -1 ? '∞*' : plan.limits.comptes_sociaux}
               </p>
               <p className="text-xs text-warm-500">comptes sociaux</p>
             </div>
             <div>
               <p className="text-2xl font-bold text-warm-900">
-                {plan.limits.prospects_par_jour}
+                {plan.limits.prospects_par_jour === -1 ? '∞*' : plan.limits.prospects_par_jour}
               </p>
               <p className="text-xs text-warm-500">/jour</p>
             </div>
           </div>
+
+          {/* Note Fair Use pour Agency+ */}
+          {plan.id === 'agency_plus' && (
+            <p className="text-xs text-warm-400 mt-3 text-center">
+              *Fair use : jusqu'à 10 000/mois.{' '}
+              <a href="mailto:contact@socialprospector.io" className="text-brand-500 hover:underline">
+                Besoin de plus ?
+              </a>
+            </p>
+          )}
         </div>
 
         {/* Features */}

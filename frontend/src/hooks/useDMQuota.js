@@ -1,14 +1,26 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { PLAN_LIMITS, UNLIMITED_EMAILS, getUserLimits, isUnlimitedUser } from '../config/planLimits';
 
 const STORAGE_KEY = 'dm_quota_tracking';
-const HOURLY_LIMIT = 5;
-const DAILY_LIMIT = 40;
 const COOLDOWN_MINUTES = 30;
 
 /**
  * Hook pour tracker les envois de DMs et protéger contre les bans
+ * Les limites varient selon le plan de l'utilisateur
  */
 export function useDMQuota() {
+  const { user } = useAuth();
+
+  // Utiliser la config centralisée
+  const isUnlimited = isUnlimitedUser(user);
+  const userPlan = user?.plan || 'free';
+  const limits = getUserLimits(user);
+
+  // Limites pour les messages (DMs)
+  const HOURLY_LIMIT = limits.messages_per_hour;
+  const DAILY_LIMIT = limits.messages_per_day;
+
   const [quota, setQuota] = useState({
     hourly: { sent: 0, limit: HOURLY_LIMIT, resetAt: null },
     daily: { sent: 0, limit: DAILY_LIMIT, resetAt: null },
@@ -239,6 +251,8 @@ export function useDMQuota() {
     canSend: canSend(),
     timeUntilUnlock: getTimeUntilUnlock(),
     status: getStatus(),
+    isUnlimited,
+    userPlan,
     limits: {
       hourly: HOURLY_LIMIT,
       daily: DAILY_LIMIT,

@@ -34,6 +34,12 @@ import { api } from '../../lib/api';
 /**
  * Onboarding Profond — Style SOS Storytelling
  * Capture l'essence de l'utilisateur pour personnaliser les messages IA
+ *
+ * Props:
+ * - mode: 'self' (défaut) pour l'utilisateur, 'client' pour un client agence
+ * - clientName: nom du client (requis si mode='client')
+ * - onComplete: callback(data, voiceProfile, redirectTo)
+ * - onSkip: callback pour passer l'onboarding
  */
 // ============================================
 // COMPOSANTS D'ÉTAPES
@@ -42,7 +48,7 @@ import { api } from '../../lib/api';
 /**
  * Étape 1 — Identité
  */
-function StepIdentite({ data, setData }) {
+function StepIdentite({ data, setData, mode, clientName }) {
   const typesActivite = [
     { id: 'coach', label: 'Coach', icon: Target },
     { id: 'freelance', label: 'Freelance', icon: Briefcase },
@@ -60,18 +66,30 @@ function StepIdentite({ data, setData }) {
     { id: 'plus_10_ans', label: '10+ ans' },
   ];
 
+  // Adaptation du texte selon le mode
+  const isClientMode = mode === 'client';
+  const prenomLabel = isClientMode
+    ? `Quel est le prénom/nom de ${clientName} ?`
+    : "Comment tu t'appelles ?";
+  const prenomPlaceholder = isClientMode
+    ? "Marie, Jean-Pierre..."
+    : "Sandra, My Inner Quest...";
+  const activiteLabel = isClientMode
+    ? `En une phrase, ${clientName} fait quoi ?`
+    : "En une phrase, tu fais quoi ?";
+
   return (
     <div className="space-y-6">
       {/* Prénom */}
       <div>
         <label className="block text-sm font-medium text-warm-700 mb-2">
-          Comment tu t'appelles ? <span className="text-warm-400">(ou ton nom de marque)</span>
+          {prenomLabel} <span className="text-warm-400">(ou nom de marque)</span>
         </label>
         <input
           type="text"
           value={data.prenom}
           onChange={(e) => setData(d => ({ ...d, prenom: e.target.value }))}
-          placeholder="Sandra, My Inner Quest..."
+          placeholder={prenomPlaceholder}
           className="w-full px-4 py-3 text-lg border-2 border-warm-200 rounded-xl focus:border-brand-500 focus:ring-0 outline-none transition-colors"
           autoFocus
         />
@@ -80,7 +98,7 @@ function StepIdentite({ data, setData }) {
       {/* Activité */}
       <div>
         <label className="block text-sm font-medium text-warm-700 mb-2">
-          En une phrase, tu fais quoi ?
+          {activiteLabel}
         </label>
         <textarea
           value={data.activite}
@@ -692,7 +710,7 @@ function StepGeneration({ data, isGenerating, generatedProfile, onFinish }) {
 // COMPOSANT PRINCIPAL
 // ============================================
 
-export default function OnboardingProfond({ onComplete, onSkip }) {
+export default function OnboardingProfond({ mode = 'self', clientName = '', onComplete, onSkip }) {
   const [step, setStep] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedProfile, setGeneratedProfile] = useState(null);
@@ -814,11 +832,12 @@ export default function OnboardingProfond({ onComplete, onSkip }) {
       }
       // Marquer l'onboarding comme complété
       await api.saveOnboarding(data, false);
-      // Callback
-      onComplete(data, generatedProfile, redirectTo);
     } catch (error) {
       console.error('Error saving onboarding:', error);
+      // En mode démo, on continue quand même
     }
+    // Callback toujours appelé (même si les API échouent en mode démo)
+    onComplete(data, generatedProfile, redirectTo);
   };
 
   // Helper pour toggle une valeur dans un array
@@ -865,7 +884,7 @@ export default function OnboardingProfond({ onComplete, onSkip }) {
 
             {/* Contenu dynamique */}
             <div className="px-8 pb-6">
-              {step === 0 && <StepIdentite data={data} setData={setData} toggleArrayValue={toggleArrayValue} />}
+              {step === 0 && <StepIdentite data={data} setData={setData} toggleArrayValue={toggleArrayValue} mode={mode} clientName={clientName} />}
               {step === 1 && <StepCible data={data} setData={setData} toggleArrayValue={toggleArrayValue} />}
               {step === 2 && <StepTransformation data={data} setData={setData} toggleArrayValue={toggleArrayValue} />}
               {step === 3 && <StepStyle data={data} setData={setData} toggleArrayValue={toggleArrayValue} />}

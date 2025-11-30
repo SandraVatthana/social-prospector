@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Send, Clock, AlertTriangle, Info, X } from 'lucide-react';
 import { useDMQuota } from '../../hooks/useDMQuota';
+import QuotaAlertModal from './QuotaAlertModal';
 
 /**
  * Widget affichant le quota de DMs pour protection anti-ban
@@ -134,6 +135,13 @@ export default function QuotaWidget() {
       {warning && (
         <QuotaWarningToast warning={warning} onClose={clearWarning} />
       )}
+
+      {/* Modal d'alerte proactif */}
+      <QuotaAlertModal
+        quota={quota}
+        limits={limits}
+        timeUntilUnlock={timeUntilUnlock}
+      />
     </div>
   );
 }

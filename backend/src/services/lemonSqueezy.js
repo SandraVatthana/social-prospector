@@ -40,7 +40,7 @@ export const PLANS = {
   solo: {
     id: 'solo',
     name: 'Solo',
-    price: 79,
+    price: 55,
     variant_id: process.env.LEMON_VARIANT_SOLO, // À configurer
     limits: {
       prospects_par_heure: 20,

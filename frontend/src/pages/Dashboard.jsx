@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users,
@@ -10,10 +10,13 @@ import {
   PenLine,
   BarChart3,
   Zap,
+  Sparkles,
+  X,
 } from 'lucide-react';
 import Header from '../components/layout/Header';
 import { GoalCard, VoiceWidget } from '../components/dashboard';
 import { ProspectCard } from '../components/prospects';
+import { useAuth } from '../contexts/AuthContext';
 
 // Données mock pour la démo
 const mockStats = {
@@ -86,6 +89,8 @@ const mockUser = {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [showWelcome, setShowWelcome] = useState(false);
   const [goals, setGoals] = useState({
     monthly_goal_responses: 20,
     monthly_goal_meetings: 5,
@@ -93,14 +98,86 @@ export default function Dashboard() {
     current_meetings: 3,
   });
 
+  // Afficher le message de bienvenue pour les nouveaux utilisateurs
+  useEffect(() => {
+    const welcomeKey = 'social-prospector-welcome-shown';
+    const hasSeenWelcome = localStorage.getItem(welcomeKey);
+    if (!hasSeenWelcome) {
+      setShowWelcome(true);
+      localStorage.setItem(welcomeKey, 'true');
+    }
+  }, []);
+
   const handleSaveGoals = async (newGoals) => {
     setGoals((prev) => ({ ...prev, ...newGoals }));
   };
 
+  // Récupérer le prénom de l'utilisateur
+  const getUserFirstName = () => {
+    if (user?.user_metadata?.full_name) {
+      return user.user_metadata.full_name.split(' ')[0];
+    }
+    if (user?.email) {
+      return user.email.split('@')[0];
+    }
+    if (user?.name) {
+      return user.name;
+    }
+    return 'there';
+  };
+
+  const firstName = getUserFirstName();
+
   return (
     <>
+      {/* Message de bienvenue pour les nouveaux utilisateurs */}
+      {showWelcome && (
+        <div className="mx-6 mt-6 lg:mx-8 lg:mt-8">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-brand-500 via-brand-600 to-accent-500 p-6 text-white shadow-xl">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2"></div>
+
+            <button
+              onClick={() => setShowWelcome(false)}
+              className="absolute top-4 right-4 p-1 hover:bg-white/20 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="relative flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-6 h-6" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold mb-2">
+                  Bienvenue sur Social Prospector, {firstName} !
+                </h2>
+                <p className="text-white/90 mb-4">
+                  Vous venez de faire le premier pas vers une prospection Instagram & TikTok
+                  vraiment efficace. Voici comment commencer :
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={() => { setShowWelcome(false); navigate('/voice'); }}
+                    className="px-4 py-2 bg-white text-brand-600 rounded-lg font-semibold hover:bg-white/90 transition-colors"
+                  >
+                    Configurer ma voix
+                  </button>
+                  <button
+                    onClick={() => { setShowWelcome(false); navigate('/search'); }}
+                    className="px-4 py-2 bg-white/20 text-white rounded-lg font-semibold hover:bg-white/30 transition-colors"
+                  >
+                    Lancer une recherche
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Header
-        title={`Bonjour ${mockUser.name} !`}
+        title={`Bonjour ${firstName} !`}
         subtitle="Voici un aperçu de votre activité"
         action={
           <button

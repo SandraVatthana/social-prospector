@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { requireAuth } from '../middleware/auth.js';
 import { formatResponse, formatError } from '../utils/helpers.js';
 import { supabaseAdmin } from '../utils/supabase.js';
+import messageGenerator from '../services/messageGenerator.js';
 
 const router = Router();
 
@@ -55,10 +56,126 @@ router.get('/', requireAuth, async (req, res) => {
 });
 
 /**
+ * GET /api/messages/approach-methods
+ * Liste les méthodes d'approche disponibles
+ */
+router.get('/approach-methods', requireAuth, (req, res) => {
+  res.json(formatResponse(messageGenerator.getAvailableMethods()));
+});
+
+/**
+ * GET /api/messages/approach-recommendation
+ * Obtient la méthode recommandée basée sur les stats de l'utilisateur
+ */
+router.get('/approach-recommendation', requireAuth, async (req, res) => {
+  try {
+    // Récupérer les stats par méthode pour les 3 derniers mois
+    const { data: stats } = await supabaseAdmin
+      .from('approach_analytics')
+      .select('*')
+      .eq('user_id', req.user.id)
+      .gte('month', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
+
+    // Agréger par méthode
+    const aggregated = {};
+    if (stats) {
+      stats.forEach(s => {
+        if (!aggregated[s.approach_method]) {
+          aggregated[s.approach_method] = {
+            messages_sent: 0,
+            responses: 0,
+            conversions: 0,
+          };
+        }
+        aggregated[s.approach_method].messages_sent += s.messages_sent || 0;
+        aggregated[s.approach_method].responses += s.responses || 0;
+        aggregated[s.approach_method].conversions += s.conversions || 0;
+      });
+
+      // Calculer les taux
+      Object.keys(aggregated).forEach(method => {
+        const m = aggregated[method];
+        m.response_rate = m.messages_sent > 0 ? (m.responses / m.messages_sent) * 100 : 0;
+      });
+    }
+
+    const recommendation = messageGenerator.getRecommendedMethod(aggregated);
+
+    res.json(formatResponse({
+      recommendation,
+      stats: aggregated,
+    }));
+  } catch (error) {
+    console.error('Error getting recommendation:', error);
+    res.json(formatResponse({
+      recommendation: messageGenerator.getRecommendedMethod(null),
+      stats: {},
+    }));
+  }
+});
+
+/**
  * POST /api/messages/generate
- * Génère un message personnalisé avec Claude
+ * Génère un message personnalisé avec Claude et méthode d'approche
  */
 router.post('/generate', requireAuth, async (req, res) => {
+  try {
+    const { prospect_id, prospect, posts, voice_profile, approach_method = 'mini_aida' } = req.body;
+
+    // Si prospect_id fourni, récupérer le prospect depuis la DB
+    let prospectData = prospect;
+    if (prospect_id && !prospect) {
+      const { data: dbProspect } = await supabaseAdmin
+        .from('prospects')
+        .select('*')
+        .eq('id', prospect_id)
+        .eq('user_id', req.user.id)
+        .single();
+
+      if (!dbProspect) {
+        return res.status(404).json(formatError('Prospect non trouvé', 'NOT_FOUND'));
+      }
+      prospectData = dbProspect;
+    }
+
+    if (!prospectData) {
+      return res.status(400).json(formatError('Données du prospect requises', 'VALIDATION_ERROR'));
+    }
+
+    // Récupérer le profil voix de l'utilisateur si non fourni
+    let voiceData = voice_profile;
+    if (!voiceData) {
+      const { data: savedVoice } = await supabaseAdmin
+        .from('voice_profiles')
+        .select('*')
+        .eq('user_id', req.user.id)
+        .eq('is_active', true)
+        .single();
+      voiceData = savedVoice;
+    }
+
+    // Utiliser le nouveau service de génération avec méthodes d'approche
+    const result = await messageGenerator.generateMessage(prospectData, voiceData, approach_method);
+
+    res.json(formatResponse({
+      message: result.message,
+      approach_method: result.approach_method,
+      hook_type: result.hook_type,
+      variables_used: result.variables_used,
+      model: 'claude-3-haiku',
+    }));
+
+  } catch (error) {
+    console.error('Error generating message:', error);
+    res.status(500).json(formatError('Erreur lors de la génération du message', 'GENERATION_ERROR'));
+  }
+});
+
+/**
+ * POST /api/messages/generate-legacy
+ * Génère un message (ancienne méthode, pour compatibilité)
+ */
+router.post('/generate-legacy', requireAuth, async (req, res) => {
   try {
     const { prospect, posts, voice_profile } = req.body;
 
@@ -116,7 +233,7 @@ router.post('/generate', requireAuth, async (req, res) => {
  */
 router.post('/', requireAuth, async (req, res) => {
   try {
-    const { prospect_id, content, status = 'draft', generated_by = 'ai' } = req.body;
+    const { prospect_id, content, status = 'draft', generated_by = 'ai', approach_method, hook_type } = req.body;
 
     if (!content) {
       return res.status(400).json(formatError('Contenu du message requis', 'VALIDATION_ERROR'));
@@ -130,6 +247,8 @@ router.post('/', requireAuth, async (req, res) => {
         content,
         status,
         generated_by,
+        approach_method,
+        hook_type,
       })
       .select()
       .single();

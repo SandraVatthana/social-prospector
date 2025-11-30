@@ -20,8 +20,54 @@ import {
   X,
   Play,
   RefreshCw,
-  Eye
+  Eye,
+  MapPin
 } from 'lucide-react';
+
+// Liste des départements français
+const DEPARTEMENTS = [
+  { code: '', label: 'Tous les départements' },
+  { code: '75', label: '75 - Paris' },
+  { code: '13', label: '13 - Bouches-du-Rhône' },
+  { code: '69', label: '69 - Rhône (Lyon)' },
+  { code: '33', label: '33 - Gironde (Bordeaux)' },
+  { code: '31', label: '31 - Haute-Garonne (Toulouse)' },
+  { code: '59', label: '59 - Nord (Lille)' },
+  { code: '44', label: '44 - Loire-Atlantique (Nantes)' },
+  { code: '67', label: '67 - Bas-Rhin (Strasbourg)' },
+  { code: '06', label: '06 - Alpes-Maritimes (Nice)' },
+  { code: '34', label: '34 - Hérault (Montpellier)' },
+  { code: '35', label: '35 - Ille-et-Vilaine (Rennes)' },
+  { code: '76', label: '76 - Seine-Maritime (Rouen)' },
+  { code: '54', label: '54 - Meurthe-et-Moselle (Nancy)' },
+  { code: '21', label: '21 - Côte-d\'Or (Dijon)' },
+  { code: '38', label: '38 - Isère (Grenoble)' },
+  { code: '42', label: '42 - Loire (Saint-Étienne)' },
+  { code: '51', label: '51 - Marne (Reims)' },
+  { code: '14', label: '14 - Calvados (Caen)' },
+  { code: '29', label: '29 - Finistère (Brest)' },
+  { code: '87', label: '87 - Haute-Vienne (Limoges)' },
+  { code: '63', label: '63 - Puy-de-Dôme (Clermont-Ferrand)' },
+  { code: '45', label: '45 - Loiret (Orléans)' },
+  { code: '37', label: '37 - Indre-et-Loire (Tours)' },
+  { code: '49', label: '49 - Maine-et-Loire (Angers)' },
+  { code: '80', label: '80 - Somme (Amiens)' },
+  { code: '57', label: '57 - Moselle (Metz)' },
+  { code: '25', label: '25 - Doubs (Besançon)' },
+  { code: '30', label: '30 - Gard (Nîmes)' },
+  { code: '84', label: '84 - Vaucluse (Avignon)' },
+  { code: '83', label: '83 - Var (Toulon)' },
+  { code: '64', label: '64 - Pyrénées-Atlantiques (Pau)' },
+  { code: '66', label: '66 - Pyrénées-Orientales (Perpignan)' },
+  { code: '17', label: '17 - Charente-Maritime (La Rochelle)' },
+  { code: '92', label: '92 - Hauts-de-Seine' },
+  { code: '93', label: '93 - Seine-Saint-Denis' },
+  { code: '94', label: '94 - Val-de-Marne' },
+  { code: '78', label: '78 - Yvelines' },
+  { code: '91', label: '91 - Essonne' },
+  { code: '95', label: '95 - Val-d\'Oise' },
+  { code: '77', label: '77 - Seine-et-Marne' },
+];
 import Header from '../components/layout/Header';
 import GenerateMessageModal from '../components/dashboard/GenerateMessageModal';
 import InfoTooltip from '../components/ui/InfoTooltip';
@@ -34,8 +80,26 @@ const TikTokIcon = ({ className }) => (
   </svg>
 );
 
+// Villes par département pour les données mock
+const VILLES_PAR_DEPT = {
+  '75': ['Paris'],
+  '13': ['Marseille', 'Aix-en-Provence'],
+  '69': ['Lyon', 'Villeurbanne'],
+  '33': ['Bordeaux', 'Mérignac'],
+  '31': ['Toulouse', 'Blagnac'],
+  '59': ['Lille', 'Roubaix', 'Tourcoing'],
+  '44': ['Nantes', 'Saint-Nazaire'],
+  '67': ['Strasbourg', 'Haguenau'],
+  '06': ['Nice', 'Cannes', 'Antibes'],
+  '34': ['Montpellier', 'Béziers'],
+  '35': ['Rennes', 'Saint-Malo'],
+  '92': ['Boulogne-Billancourt', 'Neuilly-sur-Seine', 'Nanterre'],
+  '93': ['Saint-Denis', 'Montreuil', 'Bobigny'],
+  '94': ['Créteil', 'Vitry-sur-Seine', 'Ivry-sur-Seine'],
+};
+
 // Générateur de prospects mock basé sur la recherche
-function generateMockProspects(query, platform, count = 20) {
+function generateMockProspects(query, platform, count = 20, departement = '') {
   const categories = {
     coach: [
       { suffix: 'coaching', bio: 'Coach certifié | Accompagnement personnalisé', tags: ['coaching', 'développement'] },
@@ -88,6 +152,9 @@ function generateMockProspects(query, platform, count = 20) {
   const names = ['Emma', 'Léa', 'Marie', 'Julie', 'Sarah', 'Lucas', 'Thomas', 'Alex', 'Hugo', 'Nathan', 'Chloé', 'Camille', 'Laura', 'Manon', 'Océane', 'Antoine', 'Maxime', 'Théo', 'Romain', 'Arthur'];
   const lastNames = ['Martin', 'Bernard', 'Dubois', 'Petit', 'Durand', 'Leroy', 'Moreau', 'Simon', 'Laurent', 'Michel', 'Garcia', 'David', 'Bertrand', 'Roux', 'Vincent', 'Fournier', 'Morel', 'Girard', 'André', 'Lefebvre'];
 
+  // Départements disponibles pour la simulation
+  const availableDepts = Object.keys(VILLES_PAR_DEPT);
+
   const prospects = [];
   for (let i = 0; i < count; i++) {
     const template = templates[i % templates.length];
@@ -96,6 +163,11 @@ function generateMockProspects(query, platform, count = 20) {
     const followers = Math.floor(Math.random() * 45000) + 5000;
     const engagement = (Math.random() * 6 + 2).toFixed(1);
     const score = Math.floor(Math.random() * 25) + 75;
+
+    // Générer une localisation
+    const deptCode = departement || availableDepts[i % availableDepts.length];
+    const villes = VILLES_PAR_DEPT[deptCode] || ['France'];
+    const ville = villes[i % villes.length];
 
     prospects.push({
       id: i + 1,
@@ -113,6 +185,8 @@ function generateMockProspects(query, platform, count = 20) {
       score,
       tags: template.tags,
       recentPosts: generateMockPosts(template.tags, platform),
+      location: ville,
+      departement: deptCode,
     });
   }
 
@@ -193,6 +267,7 @@ export default function Search() {
     minEngagement: '',
     hasEmail: false,
     isActive: true,
+    departement: '',
   });
 
   // Sauvegarder l'état quand il change
@@ -214,6 +289,7 @@ export default function Search() {
     if (filters.minFollowers && p.followers < parseInt(filters.minFollowers)) return false;
     if (filters.maxFollowers && p.followers > parseInt(filters.maxFollowers)) return false;
     if (filters.minEngagement && p.engagement < parseFloat(filters.minEngagement)) return false;
+    if (filters.departement && p.departement !== filters.departement) return false;
     return true;
   });
 
@@ -250,7 +326,7 @@ export default function Search() {
     } catch (err) {
       // Mode démo avec données générées
       await new Promise(resolve => setTimeout(resolve, 1500));
-      const mockData = generateMockProspects(searchQuery, platform, 20);
+      const mockData = generateMockProspects(searchQuery, platform, 20, filters.departement);
       setAllProspects(mockData);
     } finally {
       setIsSearching(false);
@@ -377,54 +453,76 @@ export default function Search() {
 
             {/* Filtres avancés */}
             {showFilters && (
-              <div className="pt-4 border-t border-warm-100 grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="pt-4 border-t border-warm-100 space-y-4">
+                {/* Première ligne : Département (pleine largeur) */}
                 <div>
                   <label className="block text-sm font-medium text-warm-700 mb-1">
-                    Abonnés min
+                    <MapPin className="w-4 h-4 inline-block mr-1 text-brand-500" />
+                    Département
                   </label>
-                  <input
-                    type="number"
-                    value={filters.minFollowers}
-                    onChange={(e) => setFilters(f => ({ ...f, minFollowers: e.target.value }))}
-                    placeholder="1000"
-                    className="w-full px-3 py-2 border border-warm-200 rounded-lg text-sm focus:border-brand-500 outline-none"
-                  />
+                  <select
+                    value={filters.departement}
+                    onChange={(e) => setFilters(f => ({ ...f, departement: e.target.value }))}
+                    className="w-full px-3 py-2 border border-warm-200 rounded-lg text-sm focus:border-brand-500 outline-none bg-white"
+                  >
+                    {DEPARTEMENTS.map(dept => (
+                      <option key={dept.code} value={dept.code}>
+                        {dept.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-warm-700 mb-1">
-                    Abonnés max
-                  </label>
-                  <input
-                    type="number"
-                    value={filters.maxFollowers}
-                    onChange={(e) => setFilters(f => ({ ...f, maxFollowers: e.target.value }))}
-                    placeholder="100000"
-                    className="w-full px-3 py-2 border border-warm-200 rounded-lg text-sm focus:border-brand-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-warm-700 mb-1">
-                    Engagement min (%)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={filters.minEngagement}
-                    onChange={(e) => setFilters(f => ({ ...f, minEngagement: e.target.value }))}
-                    placeholder="2.0"
-                    className="w-full px-3 py-2 border border-warm-200 rounded-lg text-sm focus:border-brand-500 outline-none"
-                  />
-                </div>
-                <div className="flex flex-col justify-end">
-                  <label className="flex items-center gap-2 cursor-pointer">
+
+                {/* Deuxième ligne : Autres filtres */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-warm-700 mb-1">
+                      Abonnés min
+                    </label>
                     <input
-                      type="checkbox"
-                      checked={filters.isActive}
-                      onChange={(e) => setFilters(f => ({ ...f, isActive: e.target.checked }))}
-                      className="w-4 h-4 rounded border-warm-300 text-brand-600 focus:ring-brand-500"
+                      type="number"
+                      value={filters.minFollowers}
+                      onChange={(e) => setFilters(f => ({ ...f, minFollowers: e.target.value }))}
+                      placeholder="1000"
+                      className="w-full px-3 py-2 border border-warm-200 rounded-lg text-sm focus:border-brand-500 outline-none"
                     />
-                    <span className="text-sm text-warm-700">Actifs récemment</span>
-                  </label>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-warm-700 mb-1">
+                      Abonnés max
+                    </label>
+                    <input
+                      type="number"
+                      value={filters.maxFollowers}
+                      onChange={(e) => setFilters(f => ({ ...f, maxFollowers: e.target.value }))}
+                      placeholder="100000"
+                      className="w-full px-3 py-2 border border-warm-200 rounded-lg text-sm focus:border-brand-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-warm-700 mb-1">
+                      Engagement min (%)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={filters.minEngagement}
+                      onChange={(e) => setFilters(f => ({ ...f, minEngagement: e.target.value }))}
+                      placeholder="2.0"
+                      className="w-full px-3 py-2 border border-warm-200 rounded-lg text-sm focus:border-brand-500 outline-none"
+                    />
+                  </div>
+                  <div className="flex flex-col justify-end">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={filters.isActive}
+                        onChange={(e) => setFilters(f => ({ ...f, isActive: e.target.checked }))}
+                        className="w-4 h-4 rounded border-warm-300 text-brand-600 focus:ring-brand-500"
+                      />
+                      <span className="text-sm text-warm-700">Actifs récemment</span>
+                    </label>
+                  </div>
                 </div>
               </div>
             )}
@@ -666,7 +764,7 @@ function ProspectCard({ prospect, isSelected, onToggle, onGenerateMessage, forma
           <p className="text-sm text-warm-600 mt-1 line-clamp-2">{prospect.bio}</p>
 
           {/* Stats */}
-          <div className="flex items-center gap-4 mt-2 text-sm">
+          <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mt-2 text-sm">
             <div className="flex items-center gap-1 text-warm-500">
               <Users className="w-4 h-4" />
               <span>{formatNumber(prospect.followers)}</span>
@@ -679,6 +777,12 @@ function ProspectCard({ prospect, isSelected, onToggle, onGenerateMessage, forma
               <MessageCircle className="w-4 h-4" />
               <span>{prospect.posts} posts</span>
             </div>
+            {prospect.location && (
+              <div className="flex items-center gap-1 text-brand-600">
+                <MapPin className="w-4 h-4" />
+                <span>{prospect.location}</span>
+              </div>
+            )}
             <span className="text-warm-400">Actif {prospect.lastActive}</span>
             {prospect.recentPosts?.length > 0 && (
               <button

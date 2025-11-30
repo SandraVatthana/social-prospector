@@ -10,6 +10,15 @@ import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/auth.js';
 import searchRoutes from './routes/search.js';
 import messagesRoutes from './routes/messages.js';
+import billingRoutes from './routes/billing.js';
+import voiceRoutes from './routes/voice.js';
+import prospectsRoutes from './routes/prospects.js';
+import onboardingRoutes from './routes/onboarding.js';
+import analyticsRoutes from './routes/analytics.js';
+import adminRoutes from './routes/admin.js';
+import optoutRoutes from './routes/optout.js';
+import conversationsRoutes from './routes/conversations.js';
+import clientsRoutes from './routes/clients.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -19,7 +28,7 @@ app.use(helmet());
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
     ? ['https://social-prospector.com']
-    : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
+    : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5177', 'http://localhost:3000'],
   credentials: true,
 }));
 
@@ -44,6 +53,15 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/messages', messagesRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/billing', billingRoutes);
+app.use('/api/voice', voiceRoutes);
+app.use('/api/prospects', prospectsRoutes);
+app.use('/api/onboarding', onboardingRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/opt-out', optoutRoutes);
+app.use('/api/conversations', conversationsRoutes);
+app.use('/api/clients', clientsRoutes);
 
 // 404 handler
 app.use((req, res) => {

@@ -28,13 +28,23 @@ export default function TestVoiceModal({ isOpen, onClose, voiceProfile }) {
     setError('');
     setGeneratedMessage('');
 
+    // Simuler un délai pour l'effet de génération
+    await new Promise(resolve => setTimeout(resolve, 800));
+
     try {
+      const token = localStorage.getItem('token');
+
+      // Si pas de token, passer directement en mode démo
+      if (!token) {
+        throw new Error('Mode démo');
+      }
+
       // Appel API pour générer le message de test
       const response = await fetch('/api/voice/test', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           prospect: prospectInfo,
@@ -47,7 +57,7 @@ export default function TestVoiceModal({ isOpen, onClose, voiceProfile }) {
       }
 
       const data = await response.json();
-      setGeneratedMessage(data.message);
+      setGeneratedMessage(data.data?.message || data.message);
     } catch (err) {
       // En mode démo, générer un message exemple
       const demoMessage = generateDemoMessage(prospectInfo, voiceProfile);
@@ -219,31 +229,36 @@ function generateDemoMessage(prospect, voiceProfile) {
   const { username, bio, platform } = prospect;
   const tone = voiceProfile?.tone || 'Décontracté';
   const tutoie = voiceProfile?.tutoiement !== 'Jamais';
-  const emojis = voiceProfile?.emojis || ['default'];
+
+  // Récupérer les emojis du profil, avec des fallbacks
+  let emojis = voiceProfile?.emojis || [];
+  if (!emojis.length || emojis.includes('default')) {
+    emojis = ['🚀', '✨', '💪']; // Emojis par défaut
+  }
 
   // Sélection d'emojis basée sur le profil
-  const emoji1 = emojis.includes('default') ? '' : (emojis[0] || '');
-  const emoji2 = emojis.includes('default') ? '' : (emojis[1] || '');
-  const emoji3 = emojis.includes('default') ? '' : (emojis[2] || '');
+  const emoji1 = emojis[0] || '🚀';
+  const emoji2 = emojis[1] || '✨';
+  const emoji3 = emojis[2] || '';
 
   // Construire le message selon le ton
-  let greeting = tutoie ? `Hey ${username} !` : `Bonjour ${username} !`;
+  let greeting = tutoie ? `Hey ${username} ! ${emoji1}` : `Bonjour ${username} !`;
   let hook = '';
   let pitch = '';
   let cta = '';
 
   if (bio) {
     hook = tutoie
-      ? `J'ai vu ton profil et ${bio.toLowerCase().includes('coach') ? 'j\'adore ce que tu partages sur le coaching' : 'ton contenu m\'a parlé'} ${emoji1}`
-      : `J'ai découvert votre profil et ${bio.toLowerCase().includes('coach') ? 'j\'apprécie beaucoup ce que vous partagez' : 'votre contenu m\'a interpellé'}`;
+      ? `J'ai vu ton profil et ${bio.toLowerCase().includes('coach') ? 'j\'adore ce que tu partages sur le coaching' : 'ton contenu m\'a trop parlé'} !`
+      : `J'ai découvert votre profil et ${bio.toLowerCase().includes('coach') ? 'j\'apprécie beaucoup ce que vous partagez' : 'votre contenu m\'a interpellé'}.`;
   } else {
     hook = tutoie
-      ? `Je viens de découvrir ton profil ${platform === 'tiktok' ? 'TikTok' : 'Instagram'} ${emoji1}`
-      : `Je viens de découvrir votre profil ${platform === 'tiktok' ? 'TikTok' : 'Instagram'}`;
+      ? `Je viens de découvrir ton profil ${platform === 'tiktok' ? 'TikTok' : 'Instagram'} et j'adore ton univers !`
+      : `Je viens de découvrir votre profil ${platform === 'tiktok' ? 'TikTok' : 'Instagram'}.`;
   }
 
   pitch = tutoie
-    ? `Je travaille avec des créatrices comme toi sur l'automatisation et le gain de temps. ${emoji2}`
+    ? `Je bosse avec des créatrices comme toi sur l'automatisation et le gain de temps ${emoji2}`
     : 'Je travaille avec des créatrices sur l\'automatisation et le gain de temps.';
 
   cta = tutoie

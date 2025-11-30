@@ -6,8 +6,10 @@ const APIFY_API_TOKEN = process.env.APIFY_API_TOKEN;
 
 // Actors Apify pour chaque plateforme
 const APIFY_ACTORS = {
-  instagram: 'apify/instagram-post-scraper',
+  instagram: 'apify/instagram-scraper',
+  instagramProfile: 'apify/instagram-scraper',
   tiktok: 'clockworks/tiktok-scraper',
+  tiktokProfile: 'clockworks/tiktok-scraper',
 };
 
 /**
@@ -23,7 +25,7 @@ export async function scrapeInstagramPosts(username, limit = 3) {
   }
 
   try {
-    // Lancer l'actor Apify
+    // Lancer l'actor Apify - apify/instagram-scraper
     const runResponse = await fetch(
       `https://api.apify.com/v2/acts/${APIFY_ACTORS.instagram}/runs?token=${APIFY_API_TOKEN}`,
       {
@@ -33,6 +35,7 @@ export async function scrapeInstagramPosts(username, limit = 3) {
           directUrls: [`https://www.instagram.com/${username}/`],
           resultsLimit: limit,
           resultsType: 'posts',
+          addParentData: false,
         }),
       }
     );
@@ -281,20 +284,31 @@ export async function searchSimilarProfiles(query, platform = 'instagram', limit
   }
 
   try {
-    // Pour la recherche de profils similaires, on utilise un actor différent
+    // Utiliser les bons actors configurés
     const actorId = platform === 'tiktok'
-      ? 'clockworks/tiktok-profile-scraper'
-      : 'apify/instagram-profile-scraper';
+      ? APIFY_ACTORS.tiktokProfile
+      : APIFY_ACTORS.instagramProfile;
+
+    // Configuration selon la plateforme
+    const inputConfig = platform === 'tiktok'
+      ? {
+          profiles: [query],
+          resultsPerPage: limit,
+          shouldDownloadVideos: false,
+        }
+      : {
+          search: query,
+          resultsLimit: limit,
+          resultsType: 'user',
+          searchType: 'user',
+        };
 
     const runResponse = await fetch(
       `https://api.apify.com/v2/acts/${actorId}/runs?token=${APIFY_API_TOKEN}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          search: query,
-          resultsLimit: limit,
-        }),
+        body: JSON.stringify(inputConfig),
       }
     );
 
@@ -346,17 +360,28 @@ export async function getProfileDetails(username, platform = 'instagram') {
 
   try {
     const actorId = platform === 'tiktok'
-      ? 'clockworks/tiktok-profile-scraper'
-      : 'apify/instagram-profile-scraper';
+      ? APIFY_ACTORS.tiktokProfile
+      : APIFY_ACTORS.instagramProfile;
+
+    // Configuration selon la plateforme
+    const inputConfig = platform === 'tiktok'
+      ? {
+          profiles: [username],
+          resultsPerPage: 1,
+          shouldDownloadVideos: false,
+        }
+      : {
+          directUrls: [`https://www.instagram.com/${username}/`],
+          resultsLimit: 1,
+          resultsType: 'details',
+        };
 
     const runResponse = await fetch(
       `https://api.apify.com/v2/acts/${actorId}/runs?token=${APIFY_API_TOKEN}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          usernames: [username],
-        }),
+        body: JSON.stringify(inputConfig),
       }
     );
 
