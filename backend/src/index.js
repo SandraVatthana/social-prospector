@@ -1,21 +1,15 @@
+// Load environment variables FIRST
+import 'dotenv/config';
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import dotenv from 'dotenv';
-
-// Load environment variables
-dotenv.config();
 
 // Import routes
 import authRoutes from './routes/auth.js';
-import userRoutes from './routes/user.js';
-import voiceRoutes from './routes/voice.js';
-import prospectsRoutes from './routes/prospects.js';
-import messagesRoutes from './routes/messages.js';
 import searchRoutes from './routes/search.js';
-import analyticsRoutes from './routes/analytics.js';
-import billingRoutes from './routes/billing.js';
+import messagesRoutes from './routes/messages.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -48,13 +42,8 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/user', userRoutes);
-app.use('/api/voice', voiceRoutes);
-app.use('/api/prospects', prospectsRoutes);
 app.use('/api/messages', messagesRoutes);
 app.use('/api/search', searchRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/billing', billingRoutes);
 
 // 404 handler
 app.use((req, res) => {

@@ -1,56 +1,88 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 import { api } from '../lib/api';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [onboardingCompleted, setOnboardingCompleted] = useState(null);
 
-  // Vérifier l'authentification et le statut d'onboarding au chargement
+  // Vérifier l'authentification au chargement
   useEffect(() => {
-    checkAuth();
+    // Récupérer la session initiale
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session) {
+        setUser(session.user);
+        api.setToken(session.access_token);
+        checkOnboarding();
+      }
+      setLoading(false);
+    });
+
+    // Écouter les changements d'authentification
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) {
+        setUser(session.user);
+        api.setToken(session.access_token);
+      } else {
+        setUser(null);
+        api.setToken(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const checkAuth = async () => {
+  const checkOnboarding = async () => {
     try {
-      // Vérifier si un token existe
-      const token = localStorage.getItem('token');
+      const { data, error } = await supabase
+        .from('users')
+        .select('onboarding_completed')
+        .eq('id', user?.id)
+        .single();
 
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
-      // Récupérer le profil utilisateur
-      const profileResponse = await api.getProfile();
-      if (profileResponse.data) {
-        setUser(profileResponse.data);
-      }
-
-      // Vérifier le statut d'onboarding
-      const onboardingResponse = await api.getOnboardingStatus();
-      if (onboardingResponse.data) {
-        setOnboardingCompleted(onboardingResponse.data.completed);
+      if (!error && data) {
+        setOnboardingCompleted(data.onboarding_completed);
       }
     } catch (error) {
-      console.error('Error checking auth:', error);
-      // Token invalide, le supprimer
-      localStorage.removeItem('token');
-    } finally {
-      setLoading(false);
+      console.error('Error checking onboarding:', error);
     }
   };
 
-  const login = async (token) => {
-    api.setToken(token);
-    await checkAuth();
+  const signUp = async (email, password, fullName) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: fullName }
+      }
+    });
+    if (error) throw error;
+    return data;
   };
 
-  const logout = () => {
+  const signIn = async (email, password) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+    if (error) throw error;
+    if (data.session) {
+      api.setToken(data.session.access_token);
+    }
+    return data;
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
     api.setToken(null);
     setUser(null);
+    setSession(null);
     setOnboardingCompleted(null);
   };
 
@@ -70,10 +102,12 @@ export function AuthProvider({ children }) {
 
   const value = {
     user,
+    session,
     loading,
     onboardingCompleted,
-    login,
-    logout,
+    signUp,
+    signIn,
+    signOut,
     loginDemo,
     completeOnboarding,
     skipOnboardingDemo,
