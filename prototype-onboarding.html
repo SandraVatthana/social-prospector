@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Prospector — Onboarding Profond</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#fef5ee',
+              100: '#fde8d8',
+              200: '#fbcdb0',
+              300: '#f8a97d',
+              400: '#f47a48',
+              500: '#f15a24',
+              600: '#e24019',
+              700: '#bc2f16',
+              800: '#96271a',
+              900: '#792318',
+            },
+            accent: {
+              50: '#fdf4f3',
+              100: '#fce8e6',
+              200: '#f9d4d1',
+              300: '#f4b4ae',
+              400: '#ec8b82',
+              500: '#df5f54',
+              600: '#cb4437',
+              700: '#aa362b',
+              800: '#8d3028',
+              900: '#762d27',
+            },
+            warm: {
+              50: '#faf9f7',
+              100: '#f3f1ed',
+              200: '#e8e4dd',
+              300: '#d6d0c4',
+              400: '#bfb5a5',
+              500: '#a99d8a',
+              600: '#948673',
+              700: '#7c6f5f',
+              800: '#675d51',
+              900: '#564e44',
+            },
+          },
+          fontFamily: {
+            display: ['Plus Jakarta Sans', 'sans-serif'],
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    * {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    
+    /* Custom range slider */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+    }
+    
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 8px;
+      border-radius: 4px;
+      background: #e8e4dd;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #f15a24;
+      margin-top: -6px;
+      box-shadow: 0 2px 6px rgba(241, 90, 36, 0.4);
+    }
+    
+    input[type="range"]::-moz-range-track {
+      height: 8px;
+      border-radius: 4px;
+      background: #e8e4dd;
+    }
+    
+    input[type="range"]::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #f15a24;
+      border: none;
+      box-shadow: 0 2px 6px rgba(241, 90, 36, 0.4);
+    }
+    
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    
+    @keyframes progressBar {
+      0% { width: 0%; }
+      50% { width: 75%; }
+      100% { width: 100%; }
+    }
+    
+    .fade-in {
+      animation: fadeIn 0.4s ease-out;
+    }
+    
+    .pulse {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    
+    .progress-animate {
+      animation: progressBar 3s ease-in-out forwards;
+    }
+    
+    /* Chip selected state */
+    .chip-selected {
+      border-color: #f15a24 !important;
+      background-color: #fef5ee !important;
+      color: #bc2f16 !important;
+    }
+    
+    .emoji-selected {
+      border-color: #f15a24 !important;
+      background-color: #fef5ee !important;
+    }
+    
+    /* Hide steps */
+    .step-content {
+      display: none;
+    }
+    
+    .step-content.active {
+      display: block;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-brand-50 via-white to-accent-50">
+  
+  <div class="min-h-screen flex items-center justify-center p-4 py-8">
+    <div class="w-full max-w-2xl">
+      
+      <!-- Progress bar -->
+      <div class="flex items-center justify-center gap-2 mb-8" id="progressDots">
+        <div class="h-2 w-8 rounded-full bg-brand-500 transition-all duration-300" data-step="0"></div>
+        <div class="h-2 w-2 rounded-full bg-warm-200 transition-all duration-300" data-step="1"></div>
+        <div class="h-2 w-2 rounded-full bg-warm-200 transition-all duration-300" data-step="2"></div>
+        <div class="h-2 w-2 rounded-full bg-warm-200 transition-all duration-300" data-step="3"></div>
+        <div class="h-2 w-2 rounded-full bg-warm-200 transition-all duration-300" data-step="4"></div>
+      </div>
+
+      <!-- Card principale -->
+      <div class="bg-white rounded-3xl shadow-2xl shadow-brand-500/10 overflow-hidden">
+        
+        <!-- ============================================ -->
+        <!-- ÉTAPE 1 — IDENTITÉ -->
+        <!-- ============================================ -->
+        <div class="step-content active" data-step="0">
+          <div class="px-8 pt-8 pb-4 text-center">
+            <h1 class="font-display text-2xl md:text-3xl font-bold text-warm-900 mb-2">
+              👋 Faisons connaissance
+            </h1>
+            <p class="text-warm-500">Pour que tes messages sonnent vraiment comme toi</p>
+          </div>
+          
+          <div class="px-8 pb-6 space-y-6 fade-in">
+            <!-- Prénom -->
+            <div>
+              <label class="block text-sm font-medium text-warm-700 mb-2">
+                Comment tu t'appelles ? <span class="text-warm-400">(ou ton nom de marque)</span>
+              </label>
+              <input
+                type="text"
+                id="prenom"
+                placeholder="Sandra, My Inner Quest..."
+                class="w-full px-4 py-3 text-lg border-2 border-warm-200 rounded-xl focus:border-brand-500 focus:ring-0 outline-none transition-colors"
+              >
+            </div>
+
+            <!-- Activité -->
+            <div>
+              <label class="block text-sm font-medium text-warm-700 mb-2">
+                En une phrase, tu fais quoi ?
+              </label>
+              <textarea
+                id="activite"
+                placeholder="J'aide les entrepreneures à créer des expériences digitales qui convertissent..."
+                rows="2"
+                class="w-full px-4 py-3 border-2 border-warm-200 rounded-xl focus:border-brand-500 focus:ring-0 outline-none transition-colors resize-none"
+              ></textarea>
+            </div>
+
+            <!-- Type d'activité -->
+            <div>
+              <label class="block text-sm font-medium text-warm-700 mb-3">
+                💡 Tu es plutôt...
+              </label>
+              <div class="grid grid-cols-3 gap-2" id="typeActivite">
+                <button class="chip flex flex-col items-center gap-2 p-3 rounded-xl border-2 border-warm-200 hover:border-warm-300 text-warm-600 transition-all" data-value="coach">
+                  <span class="text-xl">🎯</span>
+                  <span class="text-sm font-medium">Coach</span>
+                </button>
+                <button class="chip flex flex-col items-center gap-2 p-3 rounded-xl border-2 border-warm-200 hover:border-warm-300 text-warm-600 transition-all" data-value="freelance">
+                  <span class="text-xl">💼</span>
+                  <span class="text-sm font-medium">Freelance</span>
+                </button>
+                <button class="chip flex flex-col items-center gap-2 p-3 rounded-xl border-2 border-warm-200 hover:border-warm-300 text-warm-600 transition-all" data-value="ecommerce">
+                  <span class="text-xl">🛍️</span>
+                  <span class="text-sm font-medium">E-commerce</span>
+                </button>
+                <button class="chip flex flex-col items-center gap-2 p-3 rounded-xl border-2 border-warm-200 hover:border-warm-300 text-warm-600 transition-all" data-value="formateur">
+                  <span class="text-xl">📚</span>
+                  <span class="text-sm font-medium">Formateur</span>
+                </button>
+                <button class="chip flex flex-col items-center gap-2 p-3 rounded-xl border-2 border-warm-200 hover:border-warm-300 text-warm-600 transition-all" data-value="creatif">
+                  <span class="text-xl">🎨</span>
+                  <span class="text-sm font-medium">Créatif</span>
+                </button>
+                <button class="chip flex flex-col items-center gap-2 p-3 rounded-xl border-2 border-warm-200 hover:border-warm-300 text-warm-600 transition-all" data-value="agence">
+                  <span class="text-xl">🏢</span>
+                  <span class="text-sm font-medium">Agence</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Ancienneté -->
+            <div>
+              <label class="block text-sm font-medium text-warm-700 mb-3">
+                Tu fais ça depuis...
+              </label>
+              <div class="flex flex-wrap gap-2" id="anciennete">
+                <button class="chip px-4 py-2 rounded-xl border-2 border-warm-200 hover:border-warm-300 text-warm-600 transition-all" data-value="moins_1an">< 1 an</button>
+                <button class="chip px-4 py-2 rounded-xl border-2 border-warm-200 hover:border-warm-300 text-warm-600 transition-all" data-value="1_3_ans">1-3 ans</button>
+                <button class="chip px-4 py-2 rounded-xl border-2 border-warm-200 hover:border-warm-300 text-warm-600 transition-all" data-value="3_5_ans">3-5 ans</button>
+                <button class="chip px-4 py-2 rounded-xl border-2 border-warm-200 hover:border-warm-300 text-warm-600 transition-all" data-value="5_10_ans">5-10 ans</button>
+                <button class="chip px-4 py-2 rounded-xl border-2 border-warm-200 hover:border-warm-300 text-warm-600 transition-all" data-value="plus_10_ans">10+ ans</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- ÉTAPE 2 — CLIENT IDÉAL -->
+        <!-- ============================================ -->
+        <div class="step-content" data-step="1">
+          <div class="px-8 pt-8 pb-4 text-center">
+            <h1 class="font-display text-2xl md:text-3xl font-bold text-warm-900 mb-2">
+              🎯 À qui tu parles ?
+            </h1>
+            <p class="text-warm-500">Décris la personne que tu veux attirer</p>
+          </div>
+          
+          <div class="px-8 pb-6 space-y-6 fade-in">
+            <!-- Description -->
+            <div>
+              <label class="block text-sm font-medium text-warm-700 mb-2">
+                Ton client idéal, c'est qui ?
+              </label>
+              <textarea
+                placeholder="Des femmes entrepreneures qui veulent digitaliser leur business mais qui sont perdues avec la technique..."
+                rows="3"
+                class="w-full px-4 py-3 border-2 border-warm-200 rounded-xl focus:border-brand-500 focus:ring-0 outline-none transition-colors resize-none"
+              ></textarea>
+            </div>
+
+            <!-- Genre -->
+            <div>
+              <label class="block text-sm font-medium text-warm-700 mb-3">
+                💡 C'est plutôt...
+              </label>
+              <div class="grid grid-cols-2 gap-2" id="cibleGenre">
+                <button class="chip px-4 py-3 rounded-xl border-2 border-warm-200 hover:border-warm-300 text-warm-600 transition-all text-left" data-value="femmes">👩 Des femmes</button>
+                <button class="chip px-4 py-3 rounded-xl border-2 border-warm-200 hover:border-warm-300 text-warm-600 transition-all text-left" data-value="hommes">👨 Des hommes</button>
+                <button class="chip px-4 py-3 rounded-xl border-2 border-warm-200 hover:border-warm-300 text-warm-600 transition-all text-left" data-value="tous">🌍 Tout le monde</button>
+                <button class="chip px-4 py-3 rounded-xl border-2 border-warm-200 hover:border-warm-300 text-warm-600 transition-all text-left" data-value="entreprises">🏢 Des entreprises</button>
+              </div>
+            </div>
+
+            <!-- Problèmes -->
+            <div>
+              <label class="block text-sm font-medium text-warm-700 mb-3">
+                💡 Ses problèmes courants <span class="text-warm-400">(clique pour sélectionner)</span>
+              </label>
+              <div class="flex flex-wrap gap-2" id="problemes">
+                <button class="chip-multi px-3 py-2 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-warm-600 text-sm transition-all">😩 Overwhelm</button>
+                <button class="chip-multi px-3 py-2 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-warm-600 text-sm transition-all">💸 Pas de budget</button>
+                <button class="chip-multi px-3 py-2 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-warm-600 text-sm transition-all">⏰ Manque de temps</button>
+                <button class="chip-multi px-3 py-2 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-warm-600 text-sm transition-all">🤷 Sait pas par où commencer</button>
+                <button class="chip-multi px-3 py-2 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-warm-600 text-sm transition-all">💻 Bloqué par la technique</button>
+                <button class="chip-multi px-3 py-2 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-warm-600 text-sm transition-all">👀 Manque de visibilité</button>
+                <button class="chip-multi px-3 py-2 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-warm-600 text-sm transition-all">😰 Manque de confiance</button>
+                <button class="chip-multi px-3 py-2 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-warm-600 text-sm transition-all">🧭 Pas de stratégie claire</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- ÉTAPE 3 — TRANSFORMATION -->
+        <!-- ============================================ -->
+        <div class="step-content" data-step="2">
+          <div class="px-8 pt-8 pb-4 text-center">
+            <h1 class="font-display text-2xl md:text-3xl font-bold text-warm-900 mb-2">
+              ✨ La magie que tu apportes
+            </h1>
+            <p class="text-warm-500">Ce qui te rend unique et mémorable</p>
+          </div>
+          
+          <div class="px-8 pb-6 space-y-6 fade-in">
+            <!-- Résultat promis -->
+            <div>
+              <label class="block text-sm font-medium text-warm-700 mb-2">
+                Après avoir travaillé avec toi, ton client...
+              </label>
+              <textarea
+                placeholder="A un système automatisé qui lui fait gagner 10h/semaine et génère des leads pendant qu'elle dort..."
+                rows="2"
+                class="w-full px-4 py-3 border-2 border-warm-200 rounded-xl focus:border-brand-500 focus:ring-0 outline-none transition-colors resize-none"
+              ></textarea>
+            </div>
+
+            <!-- Preuve sociale -->
+            <div>
+              <label class="block text-sm font-medium text-warm-700 mb-2">
+                Un résultat concret que tu as obtenu ? <span class="text-warm-400">(chiffres, témoignage)</span>
+              </label>
+              <textarea
+                placeholder='"Marie a triplé ses inscriptions en 2 mois grâce au funnel qu'on a créé ensemble"'
+                rows="2"
+                class="w-full px-4 py-3 border-2 border-warm-200 rounded-xl focus:border-brand-500 focus:ring-0 outline-none transition-colors resize-none"
+              ></textarea>
+            </div>
+
+            <!-- Différenciation -->
+            <div>
+              <label class="block text-sm font-medium text-warm-700 mb-2">
+                Ce qui te différencie des autres ?
+              </label>
+              <textarea
+                placeholder="Je rends la tech accessible et même fun. Pas de jargon, que du concret."
+                rows="2"
+                class="w-full px-4 py-3 border-2 border-warm-200 rounded-xl focus:border-brand-500 focus:ring-0 outline-none transition-colors resize-none"
+              ></textarea>
+            </div>
+
+            <!-- Super-pouvoirs -->
+            <div>
+              <label class="block text-sm font-medium text-warm-700 mb-3">
+                💡 Tes super-pouvoirs <span class="text-warm-400">(choisis 2-3)</span>
+              </label>
+              <div class="flex flex-wrap gap-2" id="superPouvoirs">
+                <button class="chip-multi px-3 py-2 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-warm-600 text-sm transition-all">🎯 Clarté</button>
+                <button class="chip-multi px-3 py-2 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-warm-600 text-sm transition-all">⚡ Rapidité</button>
+                <button class="chip-multi px-3 py-2 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-warm-600 text-sm transition-all">🤝 Écoute</button>
+                <button class="chip-multi px-3 py-2 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-warm-600 text-sm transition-all">🧠 Stratégie</button>
+                <button class="chip-multi px-3 py-2 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-warm-600 text-sm transition-all">🎨 Créativité</button>
+                <button class="chip-multi px-3 py-2 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-warm-600 text-sm transition-all">💪 Résultats</button>
+                <button class="chip-multi px-3 py-2 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-warm-600 text-sm transition-all">🔥 Énergie</button>
+                <button class="chip-multi px-3 py-2 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-warm-600 text-sm transition-all">💎 Qualité</button>
+                <button class="chip-multi px-3 py-2 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-warm-600 text-sm transition-all">📚 Pédagogie</button>
+                <button class="chip-multi px-3 py-2 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-warm-600 text-sm transition-all">💜 Bienveillance</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- ÉTAPE 4 — STYLE DE COMMUNICATION -->
+        <!-- ============================================ -->
+        <div class="step-content" data-step="3">
+          <div class="px-8 pt-8 pb-4 text-center">
+            <h1 class="font-display text-2xl md:text-3xl font-bold text-warm-900 mb-2">
+              🎤 Comment tu parles ?
+            </h1>
+            <p class="text-warm-500">Pour que tes messages sonnent 100% comme toi</p>
+          </div>
+          
+          <div class="px-8 pb-6 space-y-6 fade-in">
+            <!-- Tutoiement slider -->
+            <div>
+              <label class="block text-sm font-medium text-warm-700 mb-3">
+                Tu préfères...
+              </label>
+              <div class="bg-warm-50 rounded-xl p-4">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-sm text-warm-600">☀️ Tutoyer</span>
+                  <span class="text-sm text-warm-600">🎩 Vouvoyer</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="2"
+                  value="0"
+                  class="w-full"
+                >
+                <div class="flex justify-between mt-1 text-xs text-warm-400">
+                  <span>Toujours</span>
+                  <span>Ça dépend</span>
+                  <span>Jamais</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Ton -->
+            <div>
+              <label class="block text-sm font-medium text-warm-700 mb-3">
+                Ton ton général ? <span class="text-warm-400">(choisis 1-2)</span>
+              </label>
+              <div class="grid grid-cols-3 gap-2" id="tons">
+                <button class="chip-multi px-3 py-3 rounded-xl border-2 border-warm-200 hover:border-warm-300 text-warm-600 text-sm transition-all">😎 Décontracté</button>
+                <button class="chip-multi px-3 py-3 rounded-xl border-2 border-warm-200 hover:border-warm-300 text-warm-600 text-sm transition-all">💼 Pro</button>
+                <button class="chip-multi px-3 py-3 rounded-xl border-2 border-warm-200 hover:border-warm-300 text-warm-600 text-sm transition-all">🔥 Direct</button>
+                <button class="chip-multi px-3 py-3 rounded-xl border-2 border-warm-200 hover:border-warm-300 text-warm-600 text-sm transition-all">💫 Inspirant</button>
+                <button class="chip-multi px-3 py-3 rounded-xl border-2 border-warm-200 hover:border-warm-300 text-warm-600 text-sm transition-all">🤗 Chaleureux</button>
+                <button class="chip-multi px-3 py-3 rounded-xl border-2 border-warm-200 hover:border-warm-300 text-warm-600 text-sm transition-all">🧠 Expert</button>
+              </div>
+            </div>
+
+            <!-- Emojis slider -->
+            <div>
+              <label class="block text-sm font-medium text-warm-700 mb-3">
+                Les emojis, pour toi c'est...
+              </label>
+              <div class="bg-warm-50 rounded-xl p-4">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-sm text-warm-600">🚫 Jamais</span>
+                  <span class="text-sm text-warm-600">🎉 Tout le temps</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="2"
+                  value="1"
+                  id="emojiSlider"
+                  class="w-full"
+                >
+              </div>
+            </div>
+
+            <!-- Grille emojis -->
+            <div id="emojiGrid">
+              <label class="block text-sm font-medium text-warm-700 mb-3">
+                Tes emojis favoris ?
+              </label>
+              <div class="flex flex-wrap gap-2" id="emojis">
+                <button class="emoji-btn w-10 h-10 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-xl transition-all">🚀</button>
+                <button class="emoji-btn w-10 h-10 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-xl transition-all">✨</button>
+                <button class="emoji-btn w-10 h-10 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-xl transition-all">💪</button>
+                <button class="emoji-btn w-10 h-10 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-xl transition-all">🎯</button>
+                <button class="emoji-btn w-10 h-10 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-xl transition-all">🔥</button>
+                <button class="emoji-btn w-10 h-10 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-xl transition-all">💡</button>
+                <button class="emoji-btn w-10 h-10 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-xl transition-all">❤️</button>
+                <button class="emoji-btn w-10 h-10 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-xl transition-all">👋</button>
+                <button class="emoji-btn w-10 h-10 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-xl transition-all">😊</button>
+                <button class="emoji-btn w-10 h-10 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-xl transition-all">🙌</button>
+                <button class="emoji-btn w-10 h-10 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-xl transition-all">⚡</button>
+                <button class="emoji-btn w-10 h-10 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-xl transition-all">💎</button>
+                <button class="emoji-btn w-10 h-10 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-xl transition-all">🌟</button>
+                <button class="emoji-btn w-10 h-10 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-xl transition-all">👀</button>
+                <button class="emoji-btn w-10 h-10 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-xl transition-all">😉</button>
+                <button class="emoji-btn w-10 h-10 rounded-lg border-2 border-warm-200 hover:border-warm-300 text-xl transition-all">🤝</button>
+              </div>
+            </div>
+
+            <!-- Expressions -->
+            <div>
+              <label class="block text-sm font-medium text-warm-700 mb-2">
+                Une expression / mot que tu utilises souvent ?
+              </label>
+              <input
+                type="text"
+                placeholder='"C'est parti !", "On y va ?", "Let's go"...'
+                class="w-full px-4 py-3 border-2 border-warm-200 rounded-xl focus:border-brand-500 focus:ring-0 outline-none transition-colors"
+              >
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- ÉTAPE 5 — OBJECTIFS -->
+        <!-- ============================================ -->
+        <div class="step-content" data-step="4">
+          <div class="px-8 pt-8 pb-4 text-center">
+            <h1 class="font-display text-2xl md:text-3xl font-bold text-warm-900 mb-2">
+              🎯 Pourquoi tu prospectes ?
+            </h1>
+            <p class="text-warm-500">Pour générer des messages parfaitement ciblés</p>
+          </div>
+          
+          <div class="px-8 pb-6 space-y-6 fade-in">
+            <!-- Objectif -->
+            <div>
+              <label class="block text-sm font-medium text-warm-700 mb-3">
+                Tu contactes des gens pour...
+              </label>
+              <div class="grid grid-cols-2 gap-3" id="objectifs">
+                <button class="chip flex items-center gap-3 p-4 rounded-xl border-2 border-warm-200 hover:border-warm-300 transition-all text-left" data-value="clients">
+                  <span class="text-xl">🎯</span>
+                  <span class="font-medium text-warm-700">Trouver des clients</span>
+                </button>
+                <button class="chip flex items-center gap-3 p-4 rounded-xl border-2 border-warm-200 hover:border-warm-300 transition-all text-left" data-value="collabs">
+                  <span class="text-xl">🤝</span>
+                  <span class="font-medium text-warm-700">Proposer des collabs</span>
+                </button>
+                <button class="chip flex items-center gap-3 p-4 rounded-xl border-2 border-warm-200 hover:border-warm-300 transition-all text-left" data-value="influenceurs">
+                  <span class="text-xl">📣</span>
+                  <span class="font-medium text-warm-700">Contacter des influenceurs</span>
+                </button>
+                <button class="chip flex items-center gap-3 p-4 rounded-xl border-2 border-warm-200 hover:border-warm-300 transition-all text-left" data-value="reseau">
+                  <span class="text-xl">🔗</span>
+                  <span class="font-medium text-warm-700">Créer mon réseau</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Premier contact -->
+            <div>
+              <label class="block text-sm font-medium text-warm-700 mb-3">
+                En premier message, tu proposes quoi ?
+              </label>
+              <div class="grid grid-cols-2 gap-3" id="premierContact">
+                <button class="chip flex items-center gap-3 p-4 rounded-xl border-2 border-warm-200 hover:border-warm-300 transition-all text-left" data-value="appel">
+                  <span class="text-xl">📞</span>
+                  <span class="font-medium text-warm-700 text-sm">Un appel découverte</span>
+                </button>
+                <button class="chip flex items-center gap-3 p-4 rounded-xl border-2 border-warm-200 hover:border-warm-300 transition-all text-left" data-value="ressource">
+                  <span class="text-xl">🎁</span>
+                  <span class="font-medium text-warm-700 text-sm">Une ressource gratuite</span>
+                </button>
+                <button class="chip flex items-center gap-3 p-4 rounded-xl border-2 border-warm-200 hover:border-warm-300 transition-all text-left" data-value="echanger">
+                  <span class="text-xl">💬</span>
+                  <span class="font-medium text-warm-700 text-sm">Juste échanger</span>
+                </button>
+                <button class="chip flex items-center gap-3 p-4 rounded-xl border-2 border-warm-200 hover:border-warm-300 transition-all text-left" data-value="audit">
+                  <span class="text-xl">🔍</span>
+                  <span class="font-medium text-warm-700 text-sm">Un audit gratuit</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Lead magnet -->
+            <div>
+              <label class="block text-sm font-medium text-warm-700 mb-2">
+                Tu as un "cadeau" à offrir ? <span class="text-warm-400">(lead magnet)</span>
+              </label>
+              <input
+                type="text"
+                placeholder='Un guide "5 automations qui changent tout"'
+                class="w-full px-4 py-3 border-2 border-warm-200 rounded-xl focus:border-brand-500 focus:ring-0 outline-none transition-colors mb-3"
+              >
+              <div class="flex flex-wrap gap-2">
+                <button class="px-3 py-1.5 rounded-lg bg-warm-100 hover:bg-warm-200 text-warm-600 text-sm transition-colors">📘 Guide PDF</button>
+                <button class="px-3 py-1.5 rounded-lg bg-warm-100 hover:bg-warm-200 text-warm-600 text-sm transition-colors">🎥 Mini-formation</button>
+                <button class="px-3 py-1.5 rounded-lg bg-warm-100 hover:bg-warm-200 text-warm-600 text-sm transition-colors">📋 Template</button>
+                <button class="px-3 py-1.5 rounded-lg bg-warm-100 hover:bg-warm-200 text-warm-600 text-sm transition-colors">🔍 Audit gratuit</button>
+                <button class="px-3 py-1.5 rounded-lg bg-warm-100 hover:bg-warm-200 text-warm-600 text-sm transition-colors">❌ Pas encore</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- ÉTAPE 6 — GÉNÉRATION -->
+        <!-- ============================================ -->
+        <div class="step-content" data-step="5">
+          <div class="px-8 pt-8 pb-4 text-center">
+            <h1 class="font-display text-2xl md:text-3xl font-bold text-warm-900 mb-2">
+              ✨ Création de ton profil
+            </h1>
+            <p class="text-warm-500">L'IA analyse ton style unique</p>
+          </div>
+          
+          <div class="px-8 pb-6 fade-in">
+            <!-- Loading state -->
+            <div id="loadingState" class="py-8 text-center">
+              <div class="w-20 h-20 rounded-full bg-brand-100 flex items-center justify-center mx-auto mb-6">
+                <svg class="w-10 h-10 text-brand-600 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </div>
+              <h3 class="font-display text-xl font-semibold text-warm-900 mb-2">
+                Création de ton profil MA VOIX...
+              </h3>
+              <p class="text-warm-500 mb-8">L'IA analyse ton style unique</p>
+              
+              <!-- Progress bar -->
+              <div class="max-w-xs mx-auto">
+                <div class="h-2 bg-warm-100 rounded-full overflow-hidden">
+                  <div class="h-full bg-gradient-to-r from-brand-500 to-accent-500 rounded-full progress-animate"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Success state (hidden by default) -->
+            <div id="successState" class="hidden space-y-6">
+              <!-- Récap -->
+              <div class="bg-warm-50 rounded-2xl p-6">
+                <h3 class="font-display font-semibold text-warm-900 mb-4 flex items-center gap-2">
+                  <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  Récap de ton profil
+                </h3>
+                
+                <div class="space-y-3 text-sm">
+                  <div class="flex items-start gap-2">
+                    <span class="text-warm-400">👤</span>
+                    <span class="text-warm-700"><strong>Sandra</strong> — Coach</span>
+                  </div>
+                  <div class="flex items-start gap-2">
+                    <span class="text-warm-400">🎯</span>
+                    <span class="text-warm-700">J'aide les entrepreneures à créer des expériences digitales</span>
+                  </div>
+                  <div class="flex items-start gap-2">
+                    <span class="text-warm-400">👥</span>
+                    <span class="text-warm-700">Femmes entrepreneures perdues avec la technique</span>
+                  </div>
+                  <div class="flex items-start gap-2">
+                    <span class="text-warm-400">✨</span>
+                    <span class="text-warm-700">Système automatisé, 10h/semaine gagnées</span>
+                  </div>
+                  <div class="flex items-start gap-2">
+                    <span class="text-warm-400">💪</span>
+                    <span class="text-warm-700">Clarté, Rapidité, Énergie</span>
+                  </div>
+                  <div class="flex items-start gap-2">
+                    <span class="text-warm-400">🎤</span>
+                    <span class="text-warm-700">Décontracté, Direct, tutoiement 🚀✨💪🔥</span>
+                  </div>
+                  <div class="flex items-start gap-2">
+                    <span class="text-warm-400">🎁</span>
+                    <span class="text-warm-700">Guide "5 automations qui changent tout"</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Success message -->
+              <div class="bg-green-50 border border-green-200 rounded-2xl p-6 text-center">
+                <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+                  <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                  </svg>
+                </div>
+                <h3 class="font-display text-xl font-semibold text-green-800 mb-2">
+                  Ton profil MA VOIX est prêt ! 🎉
+                </h3>
+                <p class="text-green-700 mb-6">
+                  L'IA va maintenant générer des messages qui sonnent comme toi.
+                </p>
+                
+                <!-- CTAs -->
+                <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                  <button class="flex items-center justify-center gap-2 px-6 py-3 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl transition-colors shadow-lg shadow-brand-500/25">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                    Trouver mes premiers prospects
+                  </button>
+                  <button class="flex items-center justify-center gap-2 px-6 py-3 bg-warm-100 hover:bg-warm-200 text-warm-700 font-medium rounded-xl transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                    </svg>
+                    Voir le dashboard
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- FOOTER NAVIGATION -->
+        <!-- ============================================ -->
+        <div class="px-8 py-6 bg-warm-50 border-t border-warm-100 flex items-center justify-between" id="footer">
+          <div>
+            <button id="btnBack" class="hidden items-center gap-2 px-4 py-2 text-warm-600 hover:text-warm-800 font-medium transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+              </svg>
+              Retour
+            </button>
+            <button id="btnSkip" class="px-4 py-2 text-warm-400 hover:text-warm-600 text-sm transition-colors">
+              Passer pour l'instant
+            </button>
+          </div>
+
+          <button id="btnNext" class="flex items-center gap-2 px-6 py-3 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-brand-500/25">
+            Continuer
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================
+    // NAVIGATION
+    // ============================================
+    let currentStep = 0;
+    const totalSteps = 6;
+
+    const btnNext = document.getElementById('btnNext');
+    const btnBack = document.getElementById('btnBack');
+    const btnSkip = document.getElementById('btnSkip');
+    const footer = document.getElementById('footer');
+    const progressDots = document.getElementById('progressDots').children;
+
+    function updateStep(step) {
+      currentStep = step;
+      
+      // Hide all steps
+      document.querySelectorAll('.step-content').forEach(el => {
+        el.classList.remove('active');
+      });
+      
+      // Show current step
+      document.querySelector(`.step-content[data-step="${step}"]`).classList.add('active');
+      
+      // Update progress dots
+      Array.from(progressDots).forEach((dot, i) => {
+        if (i === step && step < 5) {
+          dot.classList.remove('w-2', 'bg-warm-200', 'bg-brand-300');
+          dot.classList.add('w-8', 'bg-brand-500');
+        } else if (i < step) {
+          dot.classList.remove('w-2', 'bg-warm-200', 'bg-brand-500');
+          dot.classList.add('w-8', 'bg-brand-300');
+        } else {
+          dot.classList.remove('w-8', 'bg-brand-500', 'bg-brand-300');
+          dot.classList.add('w-2', 'bg-warm-200');
+        }
+      });
+      
+      // Update buttons
+      if (step === 0) {
+        btnBack.classList.add('hidden');
+        btnBack.classList.remove('flex');
+        btnSkip.classList.remove('hidden');
+      } else {
+        btnBack.classList.remove('hidden');
+        btnBack.classList.add('flex');
+        btnSkip.classList.add('hidden');
+      }
+      
+      // Update next button text
+      if (step === 4) {
+        btnNext.innerHTML = `
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+          </svg>
+          Créer mon profil
+        `;
+      } else if (step < 5) {
+        btnNext.innerHTML = `
+          Continuer
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+          </svg>
+        `;
+      }
+      
+      // Hide footer on generation step
+      if (step === 5) {
+        footer.classList.add('hidden');
+        // Simulate generation
+        setTimeout(() => {
+          document.getElementById('loadingState').classList.add('hidden');
+          document.getElementById('successState').classList.remove('hidden');
+        }, 3000);
+      } else {
+        footer.classList.remove('hidden');
+      }
+    }
+
+    btnNext.addEventListener('click', () => {
+      if (currentStep < totalSteps - 1) {
+        updateStep(currentStep + 1);
+      }
+    });
+
+    btnBack.addEventListener('click', () => {
+      if (currentStep > 0) {
+        // Reset generation state if going back from step 5
+        if (currentStep === 5) {
+          document.getElementById('loadingState').classList.remove('hidden');
+          document.getElementById('successState').classList.add('hidden');
+        }
+        updateStep(currentStep - 1);
+      }
+    });
+
+    // ============================================
+    // CHIP SELECTION (single)
+    // ============================================
+    document.querySelectorAll('#typeActivite, #anciennete, #cibleGenre, #objectifs, #premierContact').forEach(container => {
+      container.querySelectorAll('.chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          container.querySelectorAll('.chip').forEach(c => c.classList.remove('chip-selected'));
+          chip.classList.add('chip-selected');
+        });
+      });
+    });
+
+    // ============================================
+    // CHIP SELECTION (multi)
+    // ============================================
+    document.querySelectorAll('.chip-multi').forEach(chip => {
+      chip.addEventListener('click', () => {
+        chip.classList.toggle('chip-selected');
+      });
+    });
+
+    // ============================================
+    // EMOJI SELECTION
+    // ============================================
+    document.querySelectorAll('.emoji-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        btn.classList.toggle('emoji-selected');
+      });
+    });
+
+    // ============================================
+    // EMOJI SLIDER → HIDE/SHOW GRID
+    // ============================================
+    const emojiSlider = document.getElementById('emojiSlider');
+    const emojiGrid = document.getElementById('emojiGrid');
+    
+    emojiSlider.addEventListener('input', (e) => {
+      if (e.target.value === '0') {
+        emojiGrid.classList.add('hidden');
+      } else {
+        emojiGrid.classList.remove('hidden');
+      }
+    });
+  </script>
+
+</body>
+</html>

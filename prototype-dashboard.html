@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Prospector — Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#fef5ee',
+              100: '#fde8d8',
+              200: '#fbcdb0',
+              300: '#f8a97d',
+              400: '#f47a48',
+              500: '#f15a24',
+              600: '#e24019',
+              700: '#bc2f16',
+              800: '#96271a',
+              900: '#792318',
+            },
+            accent: {
+              50: '#fdf4f3',
+              100: '#fce8e6',
+              200: '#f9d4d1',
+              300: '#f4b4ae',
+              400: '#ec8b82',
+              500: '#df5f54',
+              600: '#cb4437',
+              700: '#aa362b',
+              800: '#8d3028',
+              900: '#762d27',
+            },
+            warm: {
+              50: '#faf9f7',
+              100: '#f3f1ed',
+              200: '#e8e4dd',
+              300: '#d6d0c4',
+              400: '#bfb5a5',
+              500: '#a99d8a',
+              600: '#948673',
+              700: '#7c6f5f',
+              800: '#675d51',
+              900: '#564e44',
+            },
+          },
+          fontFamily: {
+            display: ['Plus Jakarta Sans', 'sans-serif'],
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    * { font-family: 'Plus Jakarta Sans', sans-serif; }
+    
+    .sidebar-link.active {
+      background: linear-gradient(135deg, #fef5ee 0%, #fce8e6 100%);
+      color: #bc2f16;
+      border-left: 3px solid #f15a24;
+    }
+    
+    .card {
+      background: white;
+      border-radius: 1rem;
+      border: 1px solid #e8e4dd;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    
+    .card:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    
+    .stat-card {
+      background: linear-gradient(135deg, white 0%, #faf9f7 100%);
+    }
+    
+    /* Page transitions */
+    .page-content {
+      display: none;
+      animation: fadeIn 0.3s ease-out;
+    }
+    
+    .page-content.active {
+      display: block;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    
+    .animate-pulse-slow {
+      animation: pulse 2s ease-in-out infinite;
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #d6d0c4; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #bfb5a5; }
+  </style>
+</head>
+<body class="bg-warm-50 min-h-screen">
+  
+  <div class="flex min-h-screen">
+    
+    <!-- ============================================ -->
+    <!-- SIDEBAR -->
+    <!-- ============================================ -->
+    <aside class="w-64 bg-white border-r border-warm-200 flex flex-col fixed h-full">
+      
+      <!-- Logo -->
+      <div class="p-6 border-b border-warm-100">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+            </svg>
+          </div>
+          <div>
+            <h1 class="font-display font-bold text-warm-900">Social</h1>
+            <p class="text-xs text-brand-600 font-semibold -mt-1">Prospector</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Navigation -->
+      <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+        <a href="#" class="sidebar-link active flex items-center gap-3 px-4 py-3 rounded-xl text-warm-600 hover:bg-warm-50 transition-colors" data-page="dashboard">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+          </svg>
+          <span class="font-medium">Dashboard</span>
+        </a>
+        
+        <a href="#" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-xl text-warm-600 hover:bg-warm-50 transition-colors" data-page="voice">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+          </svg>
+          <span class="font-medium">MA VOIX</span>
+          <span class="ml-auto w-2 h-2 rounded-full bg-green-500"></span>
+        </a>
+        
+        <a href="#" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-xl text-warm-600 hover:bg-warm-50 transition-colors" data-page="search">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+          <span class="font-medium">Recherche</span>
+        </a>
+        
+        <a href="#" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-xl text-warm-600 hover:bg-warm-50 transition-colors" data-page="prospects">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+          </svg>
+          <span class="font-medium">Prospects</span>
+          <span class="ml-auto px-2 py-0.5 text-xs font-semibold bg-brand-100 text-brand-700 rounded-full">127</span>
+        </a>
+        
+        <a href="#" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-xl text-warm-600 hover:bg-warm-50 transition-colors" data-page="messages">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+          </svg>
+          <span class="font-medium">Messages</span>
+          <span class="ml-auto px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded-full">12</span>
+        </a>
+        
+        <div class="pt-4 mt-4 border-t border-warm-100">
+          <p class="px-4 text-xs font-semibold text-warm-400 uppercase tracking-wider mb-2">Insights</p>
+        </div>
+        
+        <a href="#" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-xl text-warm-600 hover:bg-warm-50 transition-colors" data-page="analytics">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+          </svg>
+          <span class="font-medium">Analytics</span>
+        </a>
+        
+        <a href="#" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-xl text-warm-600 hover:bg-warm-50 transition-colors" data-page="billing">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+          </svg>
+          <span class="font-medium">Abonnement</span>
+        </a>
+      </nav>
+      
+      <!-- User -->
+      <div class="p-4 border-t border-warm-100">
+        <a href="#" class="sidebar-link flex items-center gap-3 px-4 py-3 rounded-xl text-warm-600 hover:bg-warm-50 transition-colors" data-page="settings">
+          <div class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-400 to-accent-400 flex items-center justify-center text-white font-semibold text-sm">
+            S
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="font-medium text-warm-900 text-sm truncate">Sandra</p>
+            <p class="text-xs text-warm-500 truncate">Plan Solo</p>
+          </div>
+          <svg class="w-4 h-4 text-warm-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          </svg>
+        </a>
+      </div>
+    </aside>
+    
+    <!-- ============================================ -->
+    <!-- MAIN CONTENT -->
+    <!-- ============================================ -->
+    <main class="flex-1 ml-64">
+      
+      <!-- ============================================ -->
+      <!-- PAGE: DASHBOARD -->
+      <!-- ============================================ -->
+      <div class="page-content active" data-page="dashboard">
+        <!-- Header -->
+        <header class="bg-white border-b border-warm-200 px-8 py-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h1 class="font-display text-2xl font-bold text-warm-900">Bonjour Sandra 👋</h1>
+              <p class="text-warm-500 mt-1">Voici un aperçu de votre activité</p>
+            </div>
+            <button class="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl transition-colors shadow-lg shadow-brand-500/25">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+              Nouvelle recherche
+            </button>
+          </div>
+        </header>
+        
+        <div class="p-8 space-y-8">
+          <!-- Stats -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Stat 1 -->
+            <div class="card stat-card p-5">
+              <div class="flex items-start justify-between mb-3">
+                <div class="w-10 h-10 rounded-xl bg-brand-100 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  </svg>
+                </div>
+                <span class="flex items-center gap-1 text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path>
+                  </svg>
+                  +23%
+                </span>
+              </div>
+              <p class="text-3xl font-bold text-warm-900">127</p>
+              <p class="text-sm text-warm-500">Prospects totaux</p>
+            </div>
+            
+            <!-- Stat 2 -->
+            <div class="card stat-card p-5">
+              <div class="flex items-start justify-between mb-3">
+                <div class="w-10 h-10 rounded-xl bg-accent-100 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-accent-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+                  </svg>
+                </div>
+                <span class="flex items-center gap-1 text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path>
+                  </svg>
+                  +18%
+                </span>
+              </div>
+              <p class="text-3xl font-bold text-warm-900">84</p>
+              <p class="text-sm text-warm-500">Messages générés</p>
+            </div>
+            
+            <!-- Stat 3 -->
+            <div class="card stat-card p-5">
+              <div class="flex items-start justify-between mb-3">
+                <div class="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                  </svg>
+                </div>
+                <span class="flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-100 px-2 py-1 rounded-full">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
+                  </svg>
+                  0%
+                </span>
+              </div>
+              <p class="text-3xl font-bold text-warm-900">52</p>
+              <p class="text-sm text-warm-500">Messages envoyés</p>
+            </div>
+            
+            <!-- Stat 4 -->
+            <div class="card stat-card p-5">
+              <div class="flex items-start justify-between mb-3">
+                <div class="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                </div>
+                <span class="flex items-center gap-1 text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path>
+                  </svg>
+                  +5%
+                </span>
+              </div>
+              <p class="text-3xl font-bold text-warm-900">23%</p>
+              <p class="text-sm text-warm-500">Taux de réponse</p>
+            </div>
+          </div>
+          
+          <!-- Content Grid -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Prospects récents -->
+            <div class="lg:col-span-2 card">
+              <div class="px-6 py-4 border-b border-warm-100 flex items-center justify-between">
+                <h2 class="font-display font-semibold text-warm-900">Prospects récents</h2>
+                <a href="#" class="text-sm text-brand-600 hover:text-brand-700 font-medium">Voir tout →</a>
+              </div>
+              <div class="divide-y divide-warm-100">
+                <!-- Prospect 1 -->
+                <div class="px-6 py-4 flex items-center gap-4 hover:bg-warm-50 transition-colors">
+                  <img src="https://i.pravatar.cc/100?img=1" class="w-12 h-12 rounded-full object-cover" alt="">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                      <p class="font-semibold text-warm-900">@marie_coaching</p>
+                      <span class="px-2 py-0.5 text-xs font-medium bg-pink-100 text-pink-700 rounded-full flex items-center gap-1">
+                        <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069z"/></svg>
+                        Instagram
+                      </span>
+                    </div>
+                    <p class="text-sm text-warm-500 truncate">Coach en développement personnel • 12.4K abonnés</p>
+                  </div>
+                  <span class="px-3 py-1 text-xs font-semibold bg-amber-100 text-amber-700 rounded-full">À contacter</span>
+                  <button class="p-2 hover:bg-warm-100 rounded-lg transition-colors">
+                    <svg class="w-5 h-5 text-warm-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                  </button>
+                </div>
+                
+                <!-- Prospect 2 -->
+                <div class="px-6 py-4 flex items-center gap-4 hover:bg-warm-50 transition-colors">
+                  <img src="https://i.pravatar.cc/100?img=5" class="w-12 h-12 rounded-full object-cover" alt="">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                      <p class="font-semibold text-warm-900">@julie_business</p>
+                      <span class="px-2 py-0.5 text-xs font-medium bg-pink-100 text-pink-700 rounded-full flex items-center gap-1">
+                        <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069z"/></svg>
+                        Instagram
+                      </span>
+                    </div>
+                    <p class="text-sm text-warm-500 truncate">Consultante marketing digital • 8.2K abonnés</p>
+                  </div>
+                  <span class="px-3 py-1 text-xs font-semibold bg-blue-100 text-blue-700 rounded-full">Message envoyé</span>
+                  <button class="p-2 hover:bg-warm-100 rounded-lg transition-colors">
+                    <svg class="w-5 h-5 text-warm-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                  </button>
+                </div>
+                
+                <!-- Prospect 3 -->
+                <div class="px-6 py-4 flex items-center gap-4 hover:bg-warm-50 transition-colors">
+                  <img src="https://i.pravatar.cc/100?img=9" class="w-12 h-12 rounded-full object-cover" alt="">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                      <p class="font-semibold text-warm-900">@emma.creatrice</p>
+                      <span class="px-2 py-0.5 text-xs font-medium bg-gray-900 text-white rounded-full flex items-center gap-1">
+                        <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1-.1z"/></svg>
+                        TikTok
+                      </span>
+                    </div>
+                    <p class="text-sm text-warm-500 truncate">Créatrice de contenu lifestyle • 45.6K abonnés</p>
+                  </div>
+                  <span class="px-3 py-1 text-xs font-semibold bg-green-100 text-green-700 rounded-full">A répondu ✓</span>
+                  <button class="p-2 hover:bg-warm-100 rounded-lg transition-colors">
+                    <svg class="w-5 h-5 text-warm-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                  </button>
+                </div>
+                
+                <!-- Prospect 4 -->
+                <div class="px-6 py-4 flex items-center gap-4 hover:bg-warm-50 transition-colors">
+                  <img src="https://i.pravatar.cc/100?img=12" class="w-12 h-12 rounded-full object-cover" alt="">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                      <p class="font-semibold text-warm-900">@sophie_mindset</p>
+                      <span class="px-2 py-0.5 text-xs font-medium bg-pink-100 text-pink-700 rounded-full flex items-center gap-1">
+                        <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069z"/></svg>
+                        Instagram
+                      </span>
+                    </div>
+                    <p class="text-sm text-warm-500 truncate">Coach mindset & productivité • 5.8K abonnés</p>
+                  </div>
+                  <span class="px-3 py-1 text-xs font-semibold bg-warm-100 text-warm-600 rounded-full">Nouveau</span>
+                  <button class="p-2 hover:bg-warm-100 rounded-lg transition-colors">
+                    <svg class="w-5 h-5 text-warm-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Sidebar droite -->
+            <div class="space-y-6">
+              
+              <!-- MA VOIX -->
+              <div class="card p-6">
+                <div class="flex items-center gap-3 mb-4">
+                  <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 class="font-semibold text-warm-900">MA VOIX</h3>
+                    <p class="text-sm text-warm-500">Profil actif</p>
+                  </div>
+                  <span class="ml-auto w-3 h-3 rounded-full bg-green-500"></span>
+                </div>
+                
+                <div class="space-y-3 mb-4">
+                  <div class="flex items-center justify-between text-sm">
+                    <span class="text-warm-500">Ton</span>
+                    <span class="font-medium text-warm-700">Décontracté, Direct</span>
+                  </div>
+                  <div class="flex items-center justify-between text-sm">
+                    <span class="text-warm-500">Tutoiement</span>
+                    <span class="font-medium text-warm-700">Toujours</span>
+                  </div>
+                  <div class="flex items-center justify-between text-sm">
+                    <span class="text-warm-500">Emojis</span>
+                    <span class="font-medium text-warm-700">🚀 ✨ 💪 🔥</span>
+                  </div>
+                </div>
+                
+                <button class="w-full py-2 text-sm font-medium text-brand-600 hover:text-brand-700 hover:bg-brand-50 rounded-lg transition-colors">
+                  Modifier mon profil →
+                </button>
+              </div>
+              
+              <!-- Usage -->
+              <div class="card p-6">
+                <h3 class="font-semibold text-warm-900 mb-4">Usage ce mois</h3>
+                
+                <div class="space-y-4">
+                  <div>
+                    <div class="flex items-center justify-between text-sm mb-1">
+                      <span class="text-warm-500">Prospects analysés</span>
+                      <span class="font-medium text-warm-700">127 / 500</span>
+                    </div>
+                    <div class="h-2 bg-warm-100 rounded-full overflow-hidden">
+                      <div class="h-full bg-brand-500 rounded-full" style="width: 25%"></div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div class="flex items-center justify-between text-sm mb-1">
+                      <span class="text-warm-500">Messages générés</span>
+                      <span class="font-medium text-warm-700">84 / 500</span>
+                    </div>
+                    <div class="h-2 bg-warm-100 rounded-full overflow-hidden">
+                      <div class="h-full bg-accent-500 rounded-full" style="width: 17%"></div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div class="flex items-center justify-between text-sm mb-1">
+                      <span class="text-warm-500">Recherches aujourd'hui</span>
+                      <span class="font-medium text-warm-700">3 / 50</span>
+                    </div>
+                    <div class="h-2 bg-warm-100 rounded-full overflow-hidden">
+                      <div class="h-full bg-green-500 rounded-full" style="width: 6%"></div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="mt-4 pt-4 border-t border-warm-100">
+                  <p class="text-xs text-warm-400">Plan Solo • Renouvellement dans 23 jours</p>
+                </div>
+              </div>
+              
+              <!-- Quick Tips -->
+              <div class="card p-6 bg-gradient-to-br from-brand-50 to-accent-50 border-brand-100">
+                <div class="flex items-start gap-3">
+                  <div class="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 class="font-semibold text-warm-900 mb-1">Astuce du jour</h4>
+                    <p class="text-sm text-warm-600">Les messages envoyés entre 9h et 11h ont un taux de réponse 34% plus élevé !</p>
+                  </div>
+                </div>
+              </div>
+              
+            </div>
+          </div>
+          
+          <!-- Actions rapides -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <button class="card p-4 flex items-center gap-4 hover:border-brand-300 transition-colors group">
+              <div class="w-12 h-12 rounded-xl bg-brand-100 group-hover:bg-brand-200 flex items-center justify-center transition-colors">
+                <svg class="w-6 h-6 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+              </div>
+              <div class="text-left">
+                <p class="font-semibold text-warm-900">Ajouter des prospects</p>
+                <p class="text-sm text-warm-500">Import manuel ou recherche</p>
+              </div>
+            </button>
+            
+            <button class="card p-4 flex items-center gap-4 hover:border-brand-300 transition-colors group">
+              <div class="w-12 h-12 rounded-xl bg-accent-100 group-hover:bg-accent-200 flex items-center justify-center transition-colors">
+                <svg class="w-6 h-6 text-accent-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+              </div>
+              <div class="text-left">
+                <p class="font-semibold text-warm-900">Générer des messages</p>
+                <p class="text-sm text-warm-500">Pour vos prospects en attente</p>
+              </div>
+            </button>
+            
+            <button class="card p-4 flex items-center gap-4 hover:border-brand-300 transition-colors group">
+              <div class="w-12 h-12 rounded-xl bg-purple-100 group-hover:bg-purple-200 flex items-center justify-center transition-colors">
+                <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+              </div>
+              <div class="text-left">
+                <p class="font-semibold text-warm-900">Voir les analytics</p>
+                <p class="text-sm text-warm-500">Performance de vos campagnes</p>
+              </div>
+            </button>
+          </div>
+          
+        </div>
+      </div>
+      
+      <!-- ============================================ -->
+      <!-- PAGE: MA VOIX -->
+      <!-- ============================================ -->
+      <div class="page-content" data-page="voice">
+        <header class="bg-white border-b border-warm-200 px-8 py-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h1 class="font-display text-2xl font-bold text-warm-900">MA VOIX</h1>
+              <p class="text-warm-500 mt-1">Votre profil stylistique pour des messages authentiques</p>
+            </div>
+            <button class="flex items-center gap-2 px-4 py-2 bg-warm-100 hover:bg-warm-200 text-warm-700 font-medium rounded-xl transition-colors">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+              </svg>
+              Nouveau profil
+            </button>
+          </div>
+        </header>
+        
+        <div class="p-8">
+          <!-- Profil actif -->
+          <div class="card p-8 mb-8 border-2 border-brand-200 bg-gradient-to-br from-white to-brand-50">
+            <div class="flex items-start justify-between mb-6">
+              <div class="flex items-center gap-4">
+                <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center">
+                  <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+                  </svg>
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h2 class="font-display text-xl font-bold text-warm-900">MA VOIX — Sandra</h2>
+                    <span class="px-2 py-1 text-xs font-semibold bg-green-100 text-green-700 rounded-full">Actif</span>
+                  </div>
+                  <p class="text-warm-500">Ton décontracté et direct, énergie haute</p>
+                </div>
+              </div>
+              <button class="p-2 hover:bg-warm-100 rounded-lg transition-colors">
+                <svg class="w-5 h-5 text-warm-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+              </button>
+            </div>
+            
+            <!-- Grille caractéristiques -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div class="bg-white rounded-xl p-4 border border-warm-100">
+                <p class="text-xs text-warm-400 uppercase tracking-wider mb-1">Ton</p>
+                <p class="font-semibold text-warm-900">Décontracté</p>
+              </div>
+              <div class="bg-white rounded-xl p-4 border border-warm-100">
+                <p class="text-xs text-warm-400 uppercase tracking-wider mb-1">Énergie</p>
+                <div class="flex items-center gap-2">
+                  <div class="flex-1 h-2 bg-warm-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-brand-500 rounded-full" style="width: 80%"></div>
+                  </div>
+                  <span class="text-sm font-semibold text-warm-700">8/10</span>
+                </div>
+              </div>
+              <div class="bg-white rounded-xl p-4 border border-warm-100">
+                <p class="text-xs text-warm-400 uppercase tracking-wider mb-1">Tutoiement</p>
+                <p class="font-semibold text-warm-900">Toujours</p>
+              </div>
+              <div class="bg-white rounded-xl p-4 border border-warm-100">
+                <p class="text-xs text-warm-400 uppercase tracking-wider mb-1">Emojis</p>
+                <p class="font-semibold text-warm-900">🚀 ✨ 💪 🔥</p>
+              </div>
+            </div>
+            
+            <!-- Expressions clés -->
+            <div class="bg-white rounded-xl p-4 border border-warm-100 mb-6">
+              <p class="text-xs text-warm-400 uppercase tracking-wider mb-2">Expressions favorites</p>
+              <div class="flex flex-wrap gap-2">
+                <span class="px-3 py-1 bg-brand-100 text-brand-700 rounded-full text-sm font-medium">C'est parti !</span>
+                <span class="px-3 py-1 bg-brand-100 text-brand-700 rounded-full text-sm font-medium">On y va ?</span>
+                <span class="px-3 py-1 bg-brand-100 text-brand-700 rounded-full text-sm font-medium">Let's go</span>
+              </div>
+            </div>
+            
+            <!-- Contexte business -->
+            <div class="bg-white rounded-xl p-4 border border-warm-100">
+              <p class="text-xs text-warm-400 uppercase tracking-wider mb-2">Contexte business</p>
+              <div class="space-y-2 text-sm">
+                <p><span class="text-warm-500">Activité :</span> <span class="text-warm-700">J'aide les entrepreneures à créer des expériences digitales</span></p>
+                <p><span class="text-warm-500">Cible :</span> <span class="text-warm-700">Femmes entrepreneures perdues avec la technique</span></p>
+                <p><span class="text-warm-500">Cadeau :</span> <span class="text-warm-700">Guide "5 automations qui changent tout"</span></p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Exemple de message généré -->
+          <div class="card p-6">
+            <h3 class="font-display font-semibold text-warm-900 mb-4 flex items-center gap-2">
+              <svg class="w-5 h-5 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+              </svg>
+              Aperçu d'un message généré avec ce profil
+            </h3>
+            <div class="bg-warm-50 rounded-xl p-4 text-warm-700">
+              <p>Hey ! 👋</p>
+              <p class="mt-2">J'ai vu ton post sur l'organisation des entrepreneures — trop bien ce que tu partages ! 🔥</p>
+              <p class="mt-2">Je bosse avec des femmes entrepreneures comme toi sur l'automatisation. J'ai un guide "5 automations qui changent tout" qui pourrait t'intéresser.</p>
+              <p class="mt-2">Ça te dit que je te l'envoie ? ✨</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- ============================================ -->
+      <!-- PAGE: RECHERCHE -->
+      <!-- ============================================ -->
+      <div class="page-content" data-page="search">
+        <header class="bg-white border-b border-warm-200 px-8 py-6">
+          <h1 class="font-display text-2xl font-bold text-warm-900">Recherche de prospects</h1>
+          <p class="text-warm-500 mt-1">Trouvez des prospects qualifiés sur Instagram et TikTok</p>
+        </header>
+        
+        <div class="p-8">
+          <div class="card p-8 max-w-2xl mx-auto">
+            <!-- Plateforme -->
+            <div class="mb-6">
+              <label class="block text-sm font-medium text-warm-700 mb-3">Plateforme</label>
+              <div class="grid grid-cols-2 gap-3">
+                <button class="flex items-center justify-center gap-3 p-4 rounded-xl border-2 border-brand-500 bg-brand-50 text-brand-700 transition-all">
+                  <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069z"/></svg>
+                  <span class="font-semibold">Instagram</span>
+                </button>
+                <button class="flex items-center justify-center gap-3 p-4 rounded-xl border-2 border-warm-200 hover:border-warm-300 text-warm-600 transition-all">
+                  <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1-.1z"/></svg>
+                  <span class="font-semibold">TikTok</span>
+                </button>
+              </div>
+            </div>
+            
+            <!-- Type de recherche -->
+            <div class="mb-6">
+              <label class="block text-sm font-medium text-warm-700 mb-3">Type de recherche</label>
+              <div class="grid grid-cols-3 gap-3">
+                <button class="p-3 rounded-xl border-2 border-brand-500 bg-brand-50 text-brand-700 font-medium text-sm">
+                  🔍 Hashtag
+                </button>
+                <button class="p-3 rounded-xl border-2 border-warm-200 hover:border-warm-300 text-warm-600 font-medium text-sm">
+                  📍 Lieu
+                </button>
+                <button class="p-3 rounded-xl border-2 border-warm-200 hover:border-warm-300 text-warm-600 font-medium text-sm">
+                  👤 Profil
+                </button>
+              </div>
+            </div>
+            
+            <!-- Terme de recherche -->
+            <div class="mb-6">
+              <label class="block text-sm font-medium text-warm-700 mb-2">Hashtag ou mot-clé</label>
+              <div class="relative">
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-warm-400">#</span>
+                <input
+                  type="text"
+                  placeholder="entrepreneuriat, coaching, business..."
+                  class="w-full pl-8 pr-4 py-3 border-2 border-warm-200 rounded-xl focus:border-brand-500 focus:ring-0 outline-none transition-colors"
+                >
+              </div>
+            </div>
+            
+            <!-- Filtres -->
+            <div class="grid grid-cols-2 gap-4 mb-6">
+              <div>
+                <label class="block text-sm font-medium text-warm-700 mb-2">Abonnés min</label>
+                <input type="number" placeholder="1000" class="w-full px-4 py-2 border-2 border-warm-200 rounded-xl focus:border-brand-500">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-warm-700 mb-2">Abonnés max</label>
+                <input type="number" placeholder="100000" class="w-full px-4 py-2 border-2 border-warm-200 rounded-xl focus:border-brand-500">
+              </div>
+            </div>
+            
+            <!-- Bouton -->
+            <button class="w-full flex items-center justify-center gap-2 px-6 py-4 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl transition-colors shadow-lg shadow-brand-500/25">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+              Lancer la recherche
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- ============================================ -->
+      <!-- PAGE: PROSPECTS -->
+      <!-- ============================================ -->
+      <div class="page-content" data-page="prospects">
+        <header class="bg-white border-b border-warm-200 px-8 py-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h1 class="font-display text-2xl font-bold text-warm-900">Mes prospects</h1>
+              <p class="text-warm-500 mt-1">127 prospects • 52 messages envoyés</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <button class="flex items-center gap-2 px-4 py-2 bg-warm-100 hover:bg-warm-200 text-warm-700 font-medium rounded-xl transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                </svg>
+                Import manuel
+              </button>
+              <button class="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                Nouvelle recherche
+              </button>
+            </div>
+          </div>
+        </header>
+        
+        <div class="p-8">
+          <!-- Filtres -->
+          <div class="flex items-center gap-3 mb-6">
+            <button class="px-4 py-2 bg-brand-100 text-brand-700 font-medium rounded-lg">Tous (127)</button>
+            <button class="px-4 py-2 text-warm-600 hover:bg-warm-100 font-medium rounded-lg">À contacter (43)</button>
+            <button class="px-4 py-2 text-warm-600 hover:bg-warm-100 font-medium rounded-lg">Envoyés (52)</button>
+            <button class="px-4 py-2 text-warm-600 hover:bg-warm-100 font-medium rounded-lg">Réponses (12)</button>
+            <button class="px-4 py-2 text-warm-600 hover:bg-warm-100 font-medium rounded-lg">Convertis (8)</button>
+          </div>
+          
+          <!-- Liste -->
+          <div class="card divide-y divide-warm-100">
+            <div class="px-6 py-4 flex items-center gap-4 hover:bg-warm-50 transition-colors">
+              <input type="checkbox" class="w-4 h-4 rounded border-warm-300 text-brand-600 focus:ring-brand-500">
+              <img src="https://i.pravatar.cc/100?img=1" class="w-12 h-12 rounded-full object-cover" alt="">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <p class="font-semibold text-warm-900">@marie_coaching</p>
+                  <span class="px-2 py-0.5 text-xs font-medium bg-pink-100 text-pink-700 rounded-full">Instagram</span>
+                </div>
+                <p class="text-sm text-warm-500 truncate">Coach en développement personnel • 12.4K abonnés</p>
+              </div>
+              <div class="text-right">
+                <p class="text-sm font-medium text-warm-700">Score: 87%</p>
+                <p class="text-xs text-warm-400">Ajouté il y a 2j</p>
+              </div>
+              <span class="px-3 py-1 text-xs font-semibold bg-amber-100 text-amber-700 rounded-full">À contacter</span>
+              <button class="px-4 py-2 bg-brand-100 hover:bg-brand-200 text-brand-700 font-medium rounded-lg text-sm transition-colors">
+                Générer message
+              </button>
+            </div>
+            
+            <div class="px-6 py-4 flex items-center gap-4 hover:bg-warm-50 transition-colors">
+              <input type="checkbox" class="w-4 h-4 rounded border-warm-300 text-brand-600 focus:ring-brand-500">
+              <img src="https://i.pravatar.cc/100?img=5" class="w-12 h-12 rounded-full object-cover" alt="">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <p class="font-semibold text-warm-900">@julie_business</p>
+                  <span class="px-2 py-0.5 text-xs font-medium bg-pink-100 text-pink-700 rounded-full">Instagram</span>
+                </div>
+                <p class="text-sm text-warm-500 truncate">Consultante marketing digital • 8.2K abonnés</p>
+              </div>
+              <div class="text-right">
+                <p class="text-sm font-medium text-warm-700">Score: 92%</p>
+                <p class="text-xs text-warm-400">Ajouté il y a 3j</p>
+              </div>
+              <span class="px-3 py-1 text-xs font-semibold bg-blue-100 text-blue-700 rounded-full">Message envoyé</span>
+              <button class="px-4 py-2 bg-warm-100 hover:bg-warm-200 text-warm-600 font-medium rounded-lg text-sm transition-colors">
+                Voir message
+              </button>
+            </div>
+            
+            <div class="px-6 py-4 flex items-center gap-4 hover:bg-warm-50 transition-colors">
+              <input type="checkbox" class="w-4 h-4 rounded border-warm-300 text-brand-600 focus:ring-brand-500">
+              <img src="https://i.pravatar.cc/100?img=9" class="w-12 h-12 rounded-full object-cover" alt="">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <p class="font-semibold text-warm-900">@emma.creatrice</p>
+                  <span class="px-2 py-0.5 text-xs font-medium bg-gray-900 text-white rounded-full">TikTok</span>
+                </div>
+                <p class="text-sm text-warm-500 truncate">Créatrice de contenu lifestyle • 45.6K abonnés</p>
+              </div>
+              <div class="text-right">
+                <p class="text-sm font-medium text-warm-700">Score: 78%</p>
+                <p class="text-xs text-warm-400">Ajouté il y a 5j</p>
+              </div>
+              <span class="px-3 py-1 text-xs font-semibold bg-green-100 text-green-700 rounded-full">A répondu ✓</span>
+              <button class="px-4 py-2 bg-green-100 hover:bg-green-200 text-green-700 font-medium rounded-lg text-sm transition-colors">
+                Suivre
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- ============================================ -->
+      <!-- PAGE: MESSAGES -->
+      <!-- ============================================ -->
+      <div class="page-content" data-page="messages">
+        <header class="bg-white border-b border-warm-200 px-8 py-6">
+          <h1 class="font-display text-2xl font-bold text-warm-900">Messages générés</h1>
+          <p class="text-warm-500 mt-1">84 messages générés • 12 réponses</p>
+        </header>
+        
+        <div class="p-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Message card 1 -->
+          <div class="card overflow-hidden">
+            <div class="px-4 py-3 bg-warm-50 border-b border-warm-100 flex items-center gap-3">
+              <img src="https://i.pravatar.cc/100?img=1" class="w-10 h-10 rounded-full" alt="">
+              <div>
+                <p class="font-semibold text-warm-900">@marie_coaching</p>
+                <p class="text-xs text-warm-500">Instagram • 12.4K abonnés</p>
+              </div>
+              <span class="ml-auto px-2 py-1 text-xs font-medium bg-amber-100 text-amber-700 rounded-full">À envoyer</span>
+            </div>
+            <div class="p-4">
+              <p class="text-warm-700 text-sm leading-relaxed">
+                Hey Marie ! 👋<br><br>
+                J'ai vu ta story sur l'organisation — trop bien les astuces que tu partages ! 🔥<br><br>
+                Je bosse avec des coachs comme toi sur l'automatisation. J'ai un guide "5 automations qui changent tout" qui pourrait t'intéresser.<br><br>
+                Ça te dit que je te l'envoie ? ✨
+              </p>
+            </div>
+            <div class="px-4 py-3 bg-warm-50 border-t border-warm-100 flex items-center gap-2">
+              <button class="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-lg transition-colors text-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                </svg>
+                Copier
+              </button>
+              <button class="px-4 py-2 text-warm-600 hover:bg-warm-100 font-medium rounded-lg transition-colors text-sm">
+                Régénérer
+              </button>
+              <button class="px-4 py-2 text-green-600 hover:bg-green-50 font-medium rounded-lg transition-colors text-sm">
+                ✓ Envoyé
+              </button>
+            </div>
+          </div>
+          
+          <!-- Message card 2 -->
+          <div class="card overflow-hidden border-green-200 bg-green-50/30">
+            <div class="px-4 py-3 bg-green-50 border-b border-green-100 flex items-center gap-3">
+              <img src="https://i.pravatar.cc/100?img=9" class="w-10 h-10 rounded-full" alt="">
+              <div>
+                <p class="font-semibold text-warm-900">@emma.creatrice</p>
+                <p class="text-xs text-warm-500">TikTok • 45.6K abonnés</p>
+              </div>
+              <span class="ml-auto px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full">A répondu ✓</span>
+            </div>
+            <div class="p-4">
+              <p class="text-warm-700 text-sm leading-relaxed">
+                Salut Emma ! 🚀<br><br>
+                Je viens de voir ta vidéo sur les routines matinales — j'adore ton énergie ! 💪<br><br>
+                Je travaille avec des créatrices comme toi sur tout ce qui est automatisation et gain de temps. T'as déjà pensé à automatiser certains trucs ?<br><br>
+                On s'en parle ? ✨
+              </p>
+            </div>
+            <div class="px-4 py-3 bg-green-50 border-t border-green-100">
+              <p class="text-sm text-green-700 font-medium">💬 Elle a répondu il y a 2h</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- ============================================ -->
+      <!-- PAGE: ANALYTICS -->
+      <!-- ============================================ -->
+      <div class="page-content" data-page="analytics">
+        <header class="bg-white border-b border-warm-200 px-8 py-6">
+          <h1 class="font-display text-2xl font-bold text-warm-900">Analytics</h1>
+          <p class="text-warm-500 mt-1">Performance de vos campagnes de prospection</p>
+        </header>
+        
+        <div class="p-8">
+          <div class="text-center py-12">
+            <div class="w-16 h-16 rounded-2xl bg-warm-100 flex items-center justify-center mx-auto mb-4">
+              <svg class="w-8 h-8 text-warm-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+              </svg>
+            </div>
+            <h3 class="font-display text-lg font-semibold text-warm-900 mb-2">Page Analytics</h3>
+            <p class="text-warm-500">Graphiques, funnel de conversion, top hooks, etc.</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- ============================================ -->
+      <!-- PAGE: BILLING -->
+      <!-- ============================================ -->
+      <div class="page-content" data-page="billing">
+        <header class="bg-white border-b border-warm-200 px-8 py-6">
+          <h1 class="font-display text-2xl font-bold text-warm-900">Abonnement</h1>
+          <p class="text-warm-500 mt-1">Gérez votre plan et votre facturation</p>
+        </header>
+        
+        <div class="p-8">
+          <div class="text-center py-12">
+            <div class="w-16 h-16 rounded-2xl bg-warm-100 flex items-center justify-center mx-auto mb-4">
+              <svg class="w-8 h-8 text-warm-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+              </svg>
+            </div>
+            <h3 class="font-display text-lg font-semibold text-warm-900 mb-2">Page Abonnement</h3>
+            <p class="text-warm-500">Plans, usage, facturation via Lemon Squeezy</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- ============================================ -->
+      <!-- PAGE: SETTINGS -->
+      <!-- ============================================ -->
+      <div class="page-content" data-page="settings">
+        <header class="bg-white border-b border-warm-200 px-8 py-6">
+          <h1 class="font-display text-2xl font-bold text-warm-900">Paramètres</h1>
+          <p class="text-warm-500 mt-1">Gérez votre compte et vos préférences</p>
+        </header>
+        
+        <div class="p-8">
+          <div class="text-center py-12">
+            <div class="w-16 h-16 rounded-2xl bg-warm-100 flex items-center justify-center mx-auto mb-4">
+              <svg class="w-8 h-8 text-warm-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              </svg>
+            </div>
+            <h3 class="font-display text-lg font-semibold text-warm-900 mb-2">Page Paramètres</h3>
+            <p class="text-warm-500">Profil, notifications, export données, etc.</p>
+          </div>
+        </div>
+      </div>
+      
+    </main>
+  </div>
+  
+  <script>
+    // Navigation entre pages
+    document.querySelectorAll('.sidebar-link').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const page = link.dataset.page;
+        
+        // Update sidebar
+        document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+        link.classList.add('active');
+        
+        // Update content
+        document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
+        document.querySelector(`.page-content[data-page="${page}"]`).classList.add('active');
+      });
+    });
+  </script>
+  
+</body>
+</html>
