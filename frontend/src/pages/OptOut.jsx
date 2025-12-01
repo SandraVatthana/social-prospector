@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Shield, Check, AlertCircle, Instagram, Music2 } from 'lucide-react';
+import { API_BASE_URL } from '../lib/api';
 
 export default function OptOut() {
   const [formData, setFormData] = useState({
@@ -20,7 +21,7 @@ export default function OptOut() {
     setError(null);
 
     try {
-      const response = await fetch('/api/opt-out', {
+      const response = await fetch(`${API_BASE_URL}/opt-out`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

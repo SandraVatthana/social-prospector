@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Copy, Check, Loader2, Sparkles, RefreshCw, Send, Instagram, Play, Heart, MessageSquare, Zap, Eye, Edit3, Target, ChevronLeft } from 'lucide-react';
 
 import Modal from '../ui/Modal';
+import { API_BASE_URL } from '../../lib/api';
 import { ConversationGoalSelector } from '../conversations';
 
 // Icône TikTok
@@ -68,7 +69,7 @@ export default function GenerateMessageModal({ isOpen, onClose, prospect, posts 
         setLoadingStep('Analyse des posts récents...');
 
         try {
-          const analyzeResponse = await fetch('/api/prospects/analyze-posts', {
+          const analyzeResponse = await fetch(`${API_BASE_URL}/prospects/analyze-posts`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -100,7 +101,7 @@ export default function GenerateMessageModal({ isOpen, onClose, prospect, posts 
       setLoadingStep('Génération du message avec IA...');
 
       try {
-        const generateResponse = await fetch('/api/messages/generate', {
+        const generateResponse = await fetch(`${API_BASE_URL}/messages/generate`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

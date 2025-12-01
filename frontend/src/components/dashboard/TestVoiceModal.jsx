@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Copy, Check, Loader2, Sparkles, User } from 'lucide-react';
 import Modal from '../ui/Modal';
+import { API_BASE_URL } from '../../lib/api';
 
 /**
  * Modal "Tester ma voix"
@@ -40,7 +41,7 @@ export default function TestVoiceModal({ isOpen, onClose, voiceProfile }) {
       }
 
       // Appel API pour générer le message de test
-      const response = await fetch('/api/voice/test', {
+      const response = await fetch(`${API_BASE_URL}/voice/test`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

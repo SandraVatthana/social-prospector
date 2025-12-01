@@ -1,3 +1,6 @@
+// Base URL pour les appels API
+export const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+
 /**
  * API Client pour Social Prospector
  */
@@ -5,7 +8,7 @@ class API {
   constructor() {
     // En production, utiliser l'URL du backend Railway
     // En dev, utiliser le proxy Vite (/api)
-    this.baseUrl = import.meta.env.VITE_API_URL || '/api';
+    this.baseUrl = API_BASE_URL;
     this.token = localStorage.getItem('token');
   }
 

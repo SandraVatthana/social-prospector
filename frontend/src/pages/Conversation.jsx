@@ -36,6 +36,7 @@ import {
   MapPin,
 } from 'lucide-react';
 import Header from '../components/layout/Header';
+import { API_BASE_URL } from '../lib/api';
 
 // Icône TikTok
 const TikTokIcon = ({ className }) => (
@@ -122,7 +123,7 @@ export default function Conversation() {
       setLoading(true);
       try {
         // Essayer l'API
-        const response = await fetch(`/api/conversations/${prospectId}/history`, {
+        const response = await fetch(`${API_BASE_URL}/conversations/${prospectId}/history`, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         });
         if (response.ok) {
@@ -159,7 +160,7 @@ export default function Conversation() {
     setSuggestions([]);
 
     try {
-      const response = await fetch(`/api/conversations/${prospectId}/response`, {
+      const response = await fetch(`${API_BASE_URL}/conversations/${prospectId}/response`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -26,6 +26,7 @@ import Header from '../components/layout/Header';
 import GenerateMessageModal from '../components/dashboard/GenerateMessageModal';
 import InfoTooltip from '../components/ui/InfoTooltip';
 import { useTourContext } from '../App';
+import { API_BASE_URL } from '../lib/api';
 
 // Clé pour persister les données de recherche
 const SEARCH_STORAGE_KEY = 'social_prospector_search_state';
@@ -169,7 +170,7 @@ export default function Search() {
         params.append('subtype', accountSubtype);
       }
 
-      const response = await fetch(`/api/search/source?${params.toString()}`, {
+      const response = await fetch(`${API_BASE_URL}/search/source?${params.toString()}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },

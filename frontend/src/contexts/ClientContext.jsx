@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
+import { API_BASE_URL } from '../lib/api';
 
 const ClientContext = createContext(null);
 
@@ -56,7 +57,7 @@ export function ClientProvider({ children }) {
         return;
       }
 
-      const response = await fetch('/api/clients', {
+      const response = await fetch(`${API_BASE_URL}/clients`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -92,7 +93,7 @@ export function ClientProvider({ children }) {
         return newClient;
       }
 
-      const response = await fetch('/api/clients', {
+      const response = await fetch(`${API_BASE_URL}/clients`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -127,7 +128,7 @@ export function ClientProvider({ children }) {
         return;
       }
 
-      const response = await fetch(`/api/clients/${clientId}`, {
+      const response = await fetch(`${API_BASE_URL}/clients/${clientId}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -159,7 +160,7 @@ export function ClientProvider({ children }) {
         return;
       }
 
-      const response = await fetch(`/api/clients/${clientId}`, {
+      const response = await fetch(`${API_BASE_URL}/clients/${clientId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

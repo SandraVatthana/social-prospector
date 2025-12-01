@@ -32,6 +32,7 @@ import Header from '../components/layout/Header';
 import GenerateMessageModal from '../components/dashboard/GenerateMessageModal';
 import InfoTooltip from '../components/ui/InfoTooltip';
 import { useTourContext } from '../App';
+import { API_BASE_URL } from '../lib/api';
 
 // Icone TikTok custom
 const TikTokIcon = ({ className }) => (
@@ -507,7 +508,7 @@ function ProspectDetailPanel({ prospect, onClose, onStatusChange, onGenerateMess
 
     try {
       // Appel API pour recuperer les posts
-      const response = await fetch(`/api/prospects/${prospect.username}/posts?platform=${prospect.platform}&limit=3`, {
+      const response = await fetch(`${API_BASE_URL}/prospects/${prospect.username}/posts?platform=${prospect.platform}&limit=3`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
