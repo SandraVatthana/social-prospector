@@ -461,6 +461,7 @@ function formatProfile(profile, platform) {
       engagement: calculateEngagement(profile),
       score: calculateScore(profile),
       isVerified: profile.verified || false,
+      isPrivate: profile.privateAccount || profile.isPrivate || false,
       recentPosts: formatRecentPosts(profile.latestPosts || [], 'tiktok'),
     };
   }
@@ -479,6 +480,7 @@ function formatProfile(profile, platform) {
     engagement: calculateEngagement(profile),
     score: calculateScore(profile),
     isVerified: profile.verified || false,
+    isPrivate: profile.isPrivate || profile.is_private || false,
     lastActive: '1j',
     recentPosts: formatRecentPosts(profile.latestPosts || [], 'instagram'),
   };
@@ -536,6 +538,7 @@ function getMockProfiles(query, platform, limit) {
     posts: Math.floor(Math.random() * 500) + 50,
     engagement: (Math.random() * 5 + 2).toFixed(1),
     score: Math.floor(Math.random() * 30) + 70,
+    isPrivate: Math.random() > 0.7, // ~30% de comptes privés
     recentPosts: getMockPosts(`${names[i % names.length]}`, platform, 3),
   }));
 }

@@ -172,6 +172,60 @@ router.post('/generate', requireAuth, async (req, res) => {
 });
 
 /**
+ * POST /api/messages/generate-vocal
+ * Génère un script vocal personnalisé adapté au profil "MA VOIX"
+ */
+router.post('/generate-vocal', requireAuth, async (req, res) => {
+  try {
+    const { prospect, posts, voice_profile } = req.body;
+
+    if (!prospect) {
+      return res.status(400).json(formatError('Données du prospect requises', 'VALIDATION_ERROR'));
+    }
+
+    // Récupérer le profil voix de l'utilisateur si non fourni
+    let voiceData = voice_profile;
+    if (!voiceData) {
+      const { data: savedVoice } = await supabaseAdmin
+        .from('voice_profiles')
+        .select('*')
+        .eq('user_id', req.user.id)
+        .eq('is_active', true)
+        .single();
+      voiceData = savedVoice?.profil_json || savedVoice;
+    }
+
+    // Construire le prompt vocal
+    const systemPrompt = buildVocalSystemPrompt(voiceData);
+    const userPrompt = buildVocalUserPrompt(prospect, posts, voiceData);
+
+    // Appeler Claude
+    const message = await anthropic.messages.create({
+      model: 'claude-3-haiku-20240307',
+      max_tokens: 800,
+      system: systemPrompt,
+      messages: [
+        { role: 'user', content: userPrompt }
+      ],
+    });
+
+    const generatedMessage = message.content[0].text;
+
+    res.json(formatResponse({
+      message: generatedMessage,
+      type: 'vocal',
+      word_count: generatedMessage.split(/\s+/).length,
+      estimated_duration: Math.round(generatedMessage.split(/\s+/).length / 3) + ' secondes',
+      model: 'claude-3-haiku',
+    }));
+
+  } catch (error) {
+    console.error('Error generating vocal message:', error);
+    res.status(500).json(formatError('Erreur lors de la génération vocale', 'GENERATION_ERROR'));
+  }
+});
+
+/**
  * POST /api/messages/generate-legacy
  * Génère un message (ancienne méthode, pour compatibilité)
  */
@@ -434,6 +488,97 @@ function detectTone(bio) {
   if (bioLower.includes('fun') || bioLower.includes('😂')) return 'décontracté';
   if (bioLower.includes('ceo') || bioLower.includes('founder')) return 'professionnel';
   return 'authentique';
+}
+
+/**
+ * Construit le prompt système pour la génération vocale
+ */
+function buildVocalSystemPrompt(voiceProfile) {
+  // Déterminer le style de voix
+  let styleInstructions = '';
+  const tone = voiceProfile?.tone?.toLowerCase() || 'decontracte';
+
+  if (tone === 'decontracte' || tone === 'friendly') {
+    styleInstructions = `
+STYLE "Décontracté/Friendly" :
+- Transitions : "du coup", "en fait", "genre", "tu vois"
+- Ton : enthousiaste, comme un(e) ami(e)
+- Expressions : "j'ai trop kiffé", "c'est canon", "ça m'a parlé"
+- Tutoiement naturel`;
+  } else if (tone === 'professionnel' || tone === 'pro' || tone === 'expert') {
+    styleInstructions = `
+STYLE "Pro/Expert" :
+- Transitions : "d'ailleurs", "justement", "ce qui m'a interpellé"
+- Ton : posé, confiant, crédible
+- Expressions : "j'ai trouvé ça pertinent", "ça résonne avec", "je serais curieux de"
+- Peut vouvoyer ou tutoyer selon la cible`;
+  } else if (tone === 'chaleureux' || tone === 'empathique') {
+    styleInstructions = `
+STYLE "Chaleureux/Empathique" :
+- Transitions : "j'ai ressenti que", "ça m'a touché de voir"
+- Ton : bienveillant, à l'écoute
+- Expressions : "j'imagine que", "ça doit pas être simple", "bravo pour"
+- Tutoiement doux`;
+  } else if (tone === 'direct' || tone === 'efficace') {
+    styleInstructions = `
+STYLE "Direct/Efficace" :
+- Transitions : "concrètement", "l'idée c'est"
+- Ton : clair, sans détour, respectueux du temps
+- Expressions : "je vais droit au but", "voilà ce que je propose"
+- Peu de fioritures mais reste humain`;
+  }
+
+  return `Tu es un expert en création de scripts vocaux pour messages vocaux Instagram/TikTok.
+Tu dois générer un script qui sera DICTÉ, pas lu. Il doit sonner naturel à l'oral.
+
+${styleInstructions}
+
+RÈGLES UNIVERSELLES :
+- Écris comme si tu PARLAIS, pas comme si tu écrivais
+- 120-180 mots maximum (~30 secondes à l'oral)
+- 5-8 phrases
+- Mentionne 2-3 détails spécifiques du profil prospect
+- Termine par une question ouverte
+- ÉVITE : "je me permets", "n'hésitez pas", "cordialement", "j'espère que tu vas bien"
+- Le ton doit rester NATUREL à l'oral (pas récité)
+- Ajoute des pauses naturelles avec "...", des hésitations légères
+
+Structure à suivre :
+📍 Accroche (adaptée au style)
+🔗 Connexion (détails profil + ressenti adapté au ton)
+💎 Valeur (proposition claire)
+👉 CTA (question ouverte adaptée au style)`;
+}
+
+/**
+ * Construit le prompt utilisateur pour la génération vocale
+ */
+function buildVocalUserPrompt(prospect, posts, voiceProfile) {
+  let prompt = `Génère un script vocal de prospection Instagram pour ce prospect :
+
+PROFIL DU PROSPECT :
+- Username : @${prospect.username}
+- Plateforme : ${prospect.platform || 'Instagram'}
+- Bio : ${prospect.bio || 'Non disponible'}
+- Followers : ${prospect.followers || 'Inconnu'}`;
+
+  if (posts && posts.length > 0) {
+    prompt += `\n\nPOSTS RÉCENTS :`;
+    posts.slice(0, 3).forEach((post, idx) => {
+      prompt += `\n${idx + 1}. "${post.caption?.slice(0, 150) || 'Sans caption'}..." (${post.likes || 0} likes)`;
+    });
+  }
+
+  if (voiceProfile?.business_context) {
+    prompt += `\n\nCONTEXTE DE L'UTILISATEUR (MOI) :
+- Mon activité : ${voiceProfile.business_context.activity || 'Non spécifié'}
+- Ma cible : ${voiceProfile.business_context.target || 'Non spécifié'}
+- Mon offre/cadeau : ${voiceProfile.business_context.gift || 'Non spécifié'}`;
+  }
+
+  prompt += `\n\nGénère UNIQUEMENT le script vocal, prêt à être dicté. Pas d'explications, pas de guillemets.`;
+
+  return prompt;
 }
 
 async function incrementDailyDMCount(userId) {

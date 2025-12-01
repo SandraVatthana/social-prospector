@@ -21,6 +21,8 @@ import {
   AtSign,
   UserCheck,
   MessageSquarePlus,
+  Lock,
+  Globe,
 } from 'lucide-react';
 import Header from '../components/layout/Header';
 import GenerateMessageModal from '../components/dashboard/GenerateMessageModal';
@@ -750,6 +752,23 @@ function ProspectCard({ prospect, isSelected, onToggle, onGenerateMessage, forma
                 <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
               </svg>
             )}
+            {/* Indicateur privé/public */}
+            {prospect.isPrivate !== undefined && (
+              <span
+                className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded ${
+                  prospect.isPrivate
+                    ? 'bg-amber-100 text-amber-700'
+                    : 'bg-green-100 text-green-700'
+                }`}
+                title={prospect.isPrivate ? 'Compte privé' : 'Compte public'}
+              >
+                {prospect.isPrivate ? (
+                  <Lock className="w-3 h-3" />
+                ) : (
+                  <Globe className="w-3 h-3" />
+                )}
+              </span>
+            )}
             {prospect.fullName && (
               <span className="text-sm text-warm-400">• {prospect.fullName}</span>
             )}
@@ -892,8 +911,17 @@ function ProspectCard({ prospect, isSelected, onToggle, onGenerateMessage, forma
           </button>
           <button className="flex items-center gap-2 px-4 py-2 bg-warm-100 hover:bg-warm-200 text-warm-700 text-sm font-medium rounded-lg transition-colors">
             <UserPlus className="w-4 h-4" />
-            Ajouter aux prospects
+            Sauvegarder
           </button>
+          <a
+            href={`https://instagram.com/${prospect.username}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            <Instagram className="w-4 h-4" />
+            Voir le profil
+          </a>
           <button
             onClick={() => setShowActions(false)}
             className="ml-auto p-2 hover:bg-warm-100 rounded-lg transition-colors"
@@ -946,6 +974,7 @@ function generateMockProspects(query, sourceType, count = 20) {
       engagement: (Math.random() * 6 + 1).toFixed(1),
       score: Math.floor(Math.random() * 30) + 70,
       isVerified: Math.random() > 0.9,
+      isPrivate: Math.random() > 0.7, // ~30% de comptes privés
       location,
       recentPosts: [
         {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ChevronLeft, ChevronRight, Mic, Search, Users, MessageSquare, AlertTriangle, PartyPopper, Reply } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Mic, Search, Users, MessageSquare, AlertTriangle, PartyPopper, Reply, Sparkles, Lock, Instagram } from 'lucide-react';
 
 const STORAGE_KEY = 'social_prospector_tour_completed';
 
@@ -25,12 +25,38 @@ const TOUR_STEPS = [
     position: 'right',
   },
   {
+    id: 'private-public',
+    target: '[data-tour="search"]',
+    title: 'Comptes privés/publics',
+    content: 'Chaque prospect affiche un badge 🔒 (privé) ou 🌐 (public). Pour les comptes privés, pense à follow avant d\'envoyer un DM ! Le bouton "Voir le profil" t\'ouvre directement Instagram.',
+    icon: Lock,
+    position: 'right',
+    important: true,
+  },
+  {
     id: 'prospects',
     target: '[data-tour="prospects"]',
     title: 'Prospects',
     content: 'Tous tes prospects sauvegardés. Génère des messages personnalisés basés sur leurs posts récents.',
     icon: Users,
     position: 'right',
+  },
+  {
+    id: 'double-generation',
+    target: '[data-tour="prospects"]',
+    title: 'Double génération',
+    content: 'Quand tu génères un message, tu obtiens 2 versions : un message écrit (DM texte) ET un script vocal (~30 sec) adapté à ta voix. Utilise l\'onglet "Script vocal" pour les vocaux !',
+    icon: Sparkles,
+    position: 'right',
+  },
+  {
+    id: 'vocal-training',
+    target: '[data-tour="voice"]',
+    title: 'Entraînement vocal',
+    content: 'Clique sur "M\'entraîner à le dire" sous le script vocal. Enregistre-toi, et l\'IA te donne un feedback détaillé avec des scores sur 6 critères (naturel, énergie, clarté...). Parfait pour progresser !',
+    icon: Mic,
+    position: 'right',
+    important: true,
   },
   {
     id: 'status',

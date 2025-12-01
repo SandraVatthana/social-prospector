@@ -1,9 +1,31 @@
 import { useState, useEffect } from 'react';
-import { Copy, Check, Loader2, Sparkles, RefreshCw, Send, Instagram, Play, Heart, MessageSquare, Zap, Eye, Edit3, Target, ChevronLeft } from 'lucide-react';
+import { Copy, Check, Loader2, Sparkles, RefreshCw, Send, Instagram, Play, Heart, MessageSquare, Zap, Eye, Edit3, Target, ChevronLeft, Mic, MessageCircle, X } from 'lucide-react';
 
 import Modal from '../ui/Modal';
 import { API_BASE_URL } from '../../lib/api';
 import { ConversationGoalSelector } from '../conversations';
+import VocalTrainingModal from './VocalTrainingModal';
+
+// Clés localStorage
+const VOCAL_TIP_DISMISSED_KEY = 'social_prospector_vocal_tip_dismissed';
+const USER_SIGNUP_DATE_KEY = 'social_prospector_signup_date';
+
+// Vérifier si le badge "NOUVEAU" doit être affiché (30 jours après inscription)
+function shouldShowNewBadge() {
+  const signupDate = localStorage.getItem(USER_SIGNUP_DATE_KEY);
+  if (!signupDate) {
+    // Si pas de date d'inscription, on la crée maintenant
+    localStorage.setItem(USER_SIGNUP_DATE_KEY, new Date().toISOString());
+    return true;
+  }
+  const daysSinceSignup = (Date.now() - new Date(signupDate).getTime()) / (1000 * 60 * 60 * 24);
+  return daysSinceSignup <= 30;
+}
+
+// Vérifier si l'encart pédagogique a été fermé
+function isVocalTipDismissed() {
+  return localStorage.getItem(VOCAL_TIP_DISMISSED_KEY) === 'true';
+}
 
 // Icône TikTok
 const TikTokIcon = ({ className }) => (
@@ -26,6 +48,24 @@ export default function GenerateMessageModal({ isOpen, onClose, prospect, posts 
   const [copied, setCopied] = useState(false);
   const [messageSaved, setMessageSaved] = useState(false);
 
+  // Version vocale
+  const [vocalMessage, setVocalMessage] = useState('');
+  const [editedVocalMessage, setEditedVocalMessage] = useState('');
+  const [isEditingVocal, setIsEditingVocal] = useState(false);
+  const [loadingVocal, setLoadingVocal] = useState(false);
+  const [copiedVocal, setCopiedVocal] = useState(false);
+  const [vocalDuration, setVocalDuration] = useState('');
+
+  // Onglet actif (écrit ou vocal)
+  const [activeTab, setActiveTab] = useState('written'); // 'written' | 'vocal'
+
+  // Modal d'entraînement vocal
+  const [showTrainingModal, setShowTrainingModal] = useState(false);
+
+  // Encart pédagogique et badge
+  const [showVocalTip, setShowVocalTip] = useState(!isVocalTipDismissed());
+  const [showNewBadge] = useState(shouldShowNewBadge());
+
   // Nouvelles variables pour les séquences de conversation
   const [step, setStep] = useState('goal'); // 'goal' | 'generate'
   const [conversationGoal, setConversationGoal] = useState(null);
@@ -40,6 +80,13 @@ export default function GenerateMessageModal({ isOpen, onClose, prospect, posts 
       setAnalysis(null);
       setCopied(false);
       setMessageSaved(false);
+      // Reset vocal
+      setVocalMessage('');
+      setEditedVocalMessage('');
+      setIsEditingVocal(false);
+      setCopiedVocal(false);
+      setVocalDuration('');
+      setActiveTab('written');
       setStep('goal'); // Commencer par le choix de l'objectif
       setConversationGoal(prospect.conversation_goal || null); // Récupérer l'objectif existant si présent
     }
@@ -53,13 +100,25 @@ export default function GenerateMessageModal({ isOpen, onClose, prospect, posts 
     }
   }, [generatedMessage]);
 
+  // Mettre à jour le message vocal édité quand le message vocal généré change
+  useEffect(() => {
+    if (vocalMessage) {
+      setEditedVocalMessage(vocalMessage);
+      setIsEditingVocal(false);
+    }
+  }, [vocalMessage]);
+
   const handleGenerate = async () => {
     if (!prospect) return;
 
     setLoading(true);
+    setLoadingVocal(true);
     setGeneratedMessage('');
     setEditedMessage('');
     setIsEditing(false);
+    setVocalMessage('');
+    setEditedVocalMessage('');
+    setIsEditingVocal(false);
     setAnalysis(null);
 
     try {
@@ -97,48 +156,72 @@ export default function GenerateMessageModal({ isOpen, onClose, prospect, posts 
         }
       }
 
-      // Étape 2: Générer le message personnalisé avec Claude
-      setLoadingStep('Génération du message avec IA...');
+      // Étape 2: Générer les 2 versions en parallèle
+      setLoadingStep('Génération des messages avec IA...');
 
-      try {
-        const generateResponse = await fetch(`${API_BASE_URL}/messages/generate`, {
+      const prospectData = {
+        username: prospect.username,
+        platform: prospect.platform,
+        bio: prospect.bio,
+        followers: prospect.followers,
+      };
+
+      // Lancer les 2 générations en parallèle
+      const [writtenResult, vocalResult] = await Promise.allSettled([
+        // Version écrite
+        fetch(`${API_BASE_URL}/messages/generate`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${localStorage.getItem('token')}`,
           },
-          body: JSON.stringify({
-            prospect: {
-              username: prospect.username,
-              platform: prospect.platform,
-              bio: prospect.bio,
-              followers: prospect.followers,
-            },
-            posts,
-          }),
-        });
+          body: JSON.stringify({ prospect: prospectData, posts }),
+        }).then(r => r.ok ? r.json() : Promise.reject('API error')),
 
-        if (generateResponse.ok) {
-          const generateData = await generateResponse.json();
-          setGeneratedMessage(generateData.data?.message);
-          if (generateData.data?.analysis) {
-            setAnalysis(generateData.data.analysis);
-          }
-        } else {
-          throw new Error('API error');
+        // Version vocale
+        fetch(`${API_BASE_URL}/messages/generate-vocal`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+          body: JSON.stringify({ prospect: prospectData, posts }),
+        }).then(r => r.ok ? r.json() : Promise.reject('API error')),
+      ]);
+
+      // Traiter le résultat écrit
+      if (writtenResult.status === 'fulfilled') {
+        setGeneratedMessage(writtenResult.value.data?.message);
+        if (writtenResult.value.data?.analysis) {
+          setAnalysis(writtenResult.value.data.analysis);
         }
-      } catch (err) {
-        console.log('API Claude non disponible, utilisation du mode démo');
-        // Mode démo - générer un message exemple basé sur l'analyse
+      } else {
+        console.log('API écrit non disponible, utilisation du mode démo');
         const demoMessage = generateDemoMessage(prospect, posts, postAnalysis || analysis);
         setGeneratedMessage(demoMessage);
       }
+
+      // Traiter le résultat vocal
+      if (vocalResult.status === 'fulfilled') {
+        setVocalMessage(vocalResult.value.data?.message);
+        setVocalDuration(vocalResult.value.data?.estimated_duration || '~30 sec');
+      } else {
+        console.log('API vocal non disponible, utilisation du mode démo');
+        const demoVocal = generateDemoVocalMessage(prospect, posts, postAnalysis || analysis);
+        setVocalMessage(demoVocal);
+        setVocalDuration('~30 sec');
+      }
+
     } catch (err) {
       console.error('Erreur génération:', err);
       const demoMessage = generateDemoMessage(prospect, posts, analysis);
       setGeneratedMessage(demoMessage);
+      const demoVocal = generateDemoVocalMessage(prospect, posts, analysis);
+      setVocalMessage(demoVocal);
+      setVocalDuration('~30 sec');
     } finally {
       setLoading(false);
+      setLoadingVocal(false);
       setLoadingStep('');
     }
   };
@@ -148,6 +231,13 @@ export default function GenerateMessageModal({ isOpen, onClose, prospect, posts 
     await navigator.clipboard.writeText(messageToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleCopyVocal = async () => {
+    const messageToCopy = isEditingVocal ? editedVocalMessage : vocalMessage;
+    await navigator.clipboard.writeText(messageToCopy);
+    setCopiedVocal(true);
+    setTimeout(() => setCopiedVocal(false), 2000);
   };
 
   const handleSave = () => {
@@ -190,6 +280,12 @@ export default function GenerateMessageModal({ isOpen, onClose, prospect, posts 
     setAnalysis(null);
     setCopied(false);
     setMessageSaved(false);
+    // Reset vocal
+    setVocalMessage('');
+    setEditedVocalMessage('');
+    setIsEditingVocal(false);
+    setCopiedVocal(false);
+    setActiveTab('written');
     onClose();
   };
 
@@ -343,10 +439,74 @@ export default function GenerateMessageModal({ isOpen, onClose, prospect, posts 
         )}
 
         {/* Résultat */}
-        {generatedMessage && !loading && (
+        {(generatedMessage || vocalMessage) && !loading && (
           <>
-            {/* Analyse des posts (si disponible) */}
-            {analysis && posts.length > 0 && (
+            {/* Encart pédagogique vocal (première utilisation) */}
+            {showVocalTip && (
+              <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">💡</span>
+                  <p className="text-sm text-purple-800">
+                    <strong>Les vocaux ont 3x plus de réponses !</strong> Teste l'onglet Script vocal →
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowVocalTip(false);
+                    localStorage.setItem(VOCAL_TIP_DISMISSED_KEY, 'true');
+                  }}
+                  className="p-1 hover:bg-purple-100 rounded-lg transition-colors"
+                >
+                  <X className="w-4 h-4 text-purple-400" />
+                </button>
+              </div>
+            )}
+
+            {/* Onglets Écrit / Vocal - Design amélioré */}
+            <div className="flex gap-2 p-1 bg-warm-100 rounded-xl">
+              <button
+                onClick={() => setActiveTab('written')}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 font-medium text-sm rounded-lg transition-all ${
+                  activeTab === 'written'
+                    ? 'bg-white text-brand-600 shadow-sm'
+                    : 'text-warm-500 hover:text-warm-700 hover:bg-warm-50'
+                }`}
+              >
+                <MessageCircle className="w-4 h-4" />
+                Message écrit
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab('vocal');
+                  // Fermer l'encart si on clique sur vocal
+                  if (showVocalTip) {
+                    setShowVocalTip(false);
+                    localStorage.setItem(VOCAL_TIP_DISMISSED_KEY, 'true');
+                  }
+                }}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 font-medium text-sm rounded-lg transition-all ${
+                  activeTab === 'vocal'
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-sm'
+                    : 'text-warm-500 hover:text-warm-700 hover:bg-warm-50'
+                }`}
+              >
+                <Mic className="w-4 h-4" />
+                Script vocal
+                {showNewBadge && activeTab !== 'vocal' && (
+                  <span className="text-[10px] bg-gradient-to-r from-orange-400 to-red-500 text-white px-1.5 py-0.5 rounded-full font-bold animate-pulse">
+                    NEW
+                  </span>
+                )}
+                {vocalDuration && activeTab === 'vocal' && (
+                  <span className="text-xs bg-white/20 text-white px-1.5 py-0.5 rounded">
+                    {vocalDuration}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* Analyse des posts (si disponible) - uniquement pour l'onglet écrit */}
+            {activeTab === 'written' && analysis && posts.length > 0 && (
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-sm font-medium text-warm-700">
                   <Zap className="w-4 h-4 text-amber-500" />
@@ -403,11 +563,12 @@ export default function GenerateMessageModal({ isOpen, onClose, prospect, posts 
               </div>
             )}
 
-            {/* Message généré / éditable */}
+            {/* === ONGLET MESSAGE ÉCRIT === */}
+            {activeTab === 'written' && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-warm-700">
-                  {isEditing ? 'Modifier le message :' : 'Message généré :'}
+                  {isEditing ? 'Modifier le message :' : 'Message écrit :'}
                 </p>
                 <div className="flex items-center gap-2">
                   {!isEditing && (
@@ -480,6 +641,115 @@ export default function GenerateMessageModal({ isOpen, onClose, prospect, posts 
                 </p>
               )}
             </div>
+            )}
+
+            {/* === ONGLET SCRIPT VOCAL === */}
+            {activeTab === 'vocal' && vocalMessage && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-warm-700">
+                    {isEditingVocal ? 'Modifier le script :' : 'Script vocal :'}
+                  </p>
+                  <span className="text-xs bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <Mic className="w-3 h-3" />
+                    À dicter
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {!isEditingVocal && (
+                    <button
+                      onClick={() => setIsEditingVocal(true)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-colors"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                      Modifier
+                    </button>
+                  )}
+                  {isEditingVocal && (
+                    <button
+                      onClick={() => {
+                        setEditedVocalMessage(vocalMessage);
+                        setIsEditingVocal(false);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-warm-500 hover:text-warm-700 hover:bg-warm-100 rounded-lg transition-colors"
+                    >
+                      Annuler
+                    </button>
+                  )}
+                  <button
+                    onClick={handleGenerate}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-warm-500 hover:text-warm-700 hover:bg-warm-100 rounded-lg transition-colors"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Régénérer
+                  </button>
+                  <button
+                    onClick={handleCopyVocal}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-colors"
+                  >
+                    {copiedVocal ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        Copié !
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        Copier
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Zone de script vocal */}
+              {isEditingVocal ? (
+                <div className="relative">
+                  <textarea
+                    value={editedVocalMessage}
+                    onChange={(e) => setEditedVocalMessage(e.target.value)}
+                    className="w-full min-h-[200px] p-4 bg-white rounded-xl border-2 border-purple-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 text-warm-700 leading-relaxed resize-none transition-colors outline-none"
+                    placeholder="Modifiez votre script ici..."
+                  />
+                  <div className="absolute bottom-3 right-3 text-xs text-warm-400">
+                    {editedVocalMessage.split(/\s+/).length} mots
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 bg-purple-50 rounded-xl border border-purple-100">
+                  <p className="text-warm-700 whitespace-pre-line leading-relaxed text-lg">{editedVocalMessage || vocalMessage}</p>
+                </div>
+              )}
+
+              {/* Info vocale */}
+              <div className="flex items-center gap-4 text-xs text-warm-500">
+                <span className="flex items-center gap-1">
+                  <Mic className="w-3 h-3" />
+                  {(editedVocalMessage || vocalMessage).split(/\s+/).length} mots
+                </span>
+                <span>~{Math.round((editedVocalMessage || vocalMessage).split(/\s+/).length / 3)} secondes</span>
+                <span className="text-purple-600">Adapté à ta voix</span>
+              </div>
+
+              {/* Bouton M'entraîner */}
+              <button
+                onClick={() => setShowTrainingModal(true)}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold rounded-xl transition-all shadow-lg shadow-purple-500/25"
+              >
+                <Mic className="w-5 h-5" />
+                M'entraîner à le dire
+              </button>
+
+              {/* Indicateur de modification */}
+              {editedVocalMessage !== vocalMessage && !isEditingVocal && (
+                <p className="text-xs text-amber-600 flex items-center gap-1">
+                  <Edit3 className="w-3 h-3" />
+                  Script modifié par vous
+                </p>
+              )}
+            </div>
+            )}
 
             {/* Actions */}
             <div className="flex gap-3">
@@ -513,6 +783,14 @@ export default function GenerateMessageModal({ isOpen, onClose, prospect, posts 
           </>
         )}
       </div>
+
+      {/* Modal d'entraînement vocal */}
+      <VocalTrainingModal
+        isOpen={showTrainingModal}
+        onClose={() => setShowTrainingModal(false)}
+        script={editedVocalMessage || vocalMessage}
+        prospect={prospect}
+      />
     </Modal>
   );
 }
@@ -694,4 +972,27 @@ function generateDemoMessage(prospect, posts, analysis) {
   }
 
   return genericMessages[timeIndex % genericMessages.length];
+}
+
+/**
+ * Génère un script vocal de démo (plus long, style parlé)
+ */
+function generateDemoVocalMessage(prospect, posts, analysis) {
+  const { username } = prospect;
+  const timeIndex = Date.now() % 5;
+
+  // Scripts vocaux adaptés au style "décontracté/friendly"
+  const vocalScripts = [
+    `Salut ${username} ! Du coup... j'étais sur ton profil et franchement, j'ai trop kiffé ce que tu fais. Genre, ton approche c'est vraiment authentique, tu vois ? Et en fait, je bosse sur un truc qui pourrait vraiment matcher avec ton activité. C'est un outil qui aide les créateurs comme toi à trouver des clients sans y passer des heures. Rien de commercial hein, juste... je me suis dit que ça pourrait t'intéresser. Du coup... t'aurais 5 minutes pour qu'on en parle ?`,
+
+    `Hey ${username} ! En fait, je te suis depuis un moment et... j'avoue, ton contenu c'est vraiment canon. Ce qui m'a parlé surtout c'est ta façon d'être authentique avec ta communauté. Du coup voilà, je développe quelque chose qui pourrait t'aider à développer ton audience de manière organique. Sans spam, sans tricher, tu vois le délire ? J'serais vraiment curieuse d'avoir ton avis. On se fait un petit call de 10 minutes ?`,
+
+    `Coucou ${username} ! Alors... j'ai découvert ton profil y'a pas longtemps et franchement... j'ai adoré. Genre, ta vibe c'est exactement ce que je recherche. En fait, je travaille sur un projet pour aider les créateurs à trouver les bonnes opportunités. Et je me suis dit que toi... ça pourrait vraiment t'intéresser. Pas de prise de tête, juste un échange pour voir si ça peut matcher. T'en penses quoi ?`,
+
+    `Yo ${username} ! Du coup... je vais être direct avec toi. J'ai vu ton profil, j'ai trop kiffé ton énergie. Et en fait... je bosse sur un truc qui pourrait vraiment booster ton activité. C'est un outil pour trouver des clients qualifiés sans y passer ta vie. Je me suis dit... peut-être que ça t'intéresse ? Concrètement, l'idée c'est de te faire gagner du temps. On peut en parler 5 minutes si t'es chaud ?`,
+
+    `Hello ${username} ! Bon... j'ai ressenti que ton contenu c'était vraiment du lourd. Ce qui m'a touché c'est ton authenticité, tu vois ? Du coup... j'imagine que tu dois galérer parfois pour trouver des clients. Parce que créer du contenu c'est bien, mais convertir c'est autre chose hein. Justement, je développe quelque chose pour ça. Ça te dirait qu'on en discute tranquille ?`,
+  ];
+
+  return vocalScripts[timeIndex];
 }
