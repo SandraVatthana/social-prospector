@@ -4,12 +4,14 @@
 
 const APIFY_API_TOKEN = process.env.APIFY_API_TOKEN;
 
-// Actors Apify pour chaque plateforme
+// Actors Apify pour chaque plateforme (mis à jour 2024)
+// Note: utiliser ~ au lieu de / dans les URLs API
 const APIFY_ACTORS = {
-  instagram: 'apify/instagram-scraper',
-  instagramProfile: 'apify/instagram-scraper',
-  tiktok: 'clockworks/tiktok-scraper',
-  tiktokProfile: 'clockworks/tiktok-scraper',
+  instagram: 'apify~instagram-post-scraper',
+  instagramProfile: 'apify~instagram-profile-scraper',
+  instagramSearch: 'apify~instagram-search-scraper',
+  tiktok: 'clockworks~free-tiktok-scraper',
+  tiktokProfile: 'clockworks~free-tiktok-scraper',
 };
 
 /**
@@ -284,10 +286,12 @@ export async function searchSimilarProfiles(query, platform = 'instagram', limit
   }
 
   try {
-    // Utiliser les bons actors configurés
+    // Utiliser les bons actors selon la plateforme
     const actorId = platform === 'tiktok'
       ? APIFY_ACTORS.tiktokProfile
-      : APIFY_ACTORS.instagramProfile;
+      : APIFY_ACTORS.instagramSearch;
+
+    console.log(`[Apify] Recherche "${query}" sur ${platform} avec actor: ${actorId}`);
 
     // Configuration selon la plateforme
     const inputConfig = platform === 'tiktok'
@@ -297,11 +301,13 @@ export async function searchSimilarProfiles(query, platform = 'instagram', limit
           shouldDownloadVideos: false,
         }
       : {
+          // Instagram Search Scraper config
           search: query,
           resultsLimit: limit,
-          resultsType: 'user',
           searchType: 'user',
         };
+
+    console.log('[Apify] Config:', JSON.stringify(inputConfig));
 
     const runResponse = await fetch(
       `https://api.apify.com/v2/acts/${actorId}/runs?token=${APIFY_API_TOKEN}`,
@@ -313,11 +319,14 @@ export async function searchSimilarProfiles(query, platform = 'instagram', limit
     );
 
     if (!runResponse.ok) {
-      throw new Error(`Apify run failed: ${runResponse.status}`);
+      const errorText = await runResponse.text();
+      console.error('[Apify] Error response:', errorText);
+      throw new Error(`Apify run failed: ${runResponse.status} - ${errorText}`);
     }
 
     const runData = await runResponse.json();
     const runId = runData.data.id;
+    console.log(`[Apify] Run started: ${runId}`);
 
     // Polling pour le résultat
     let status = 'RUNNING';
@@ -332,18 +341,32 @@ export async function searchSimilarProfiles(query, platform = 'instagram', limit
       const statusData = await statusResponse.json();
       status = statusData.data.status;
       attempts++;
+      if (attempts % 5 === 0) {
+        console.log(`[Apify] Status: ${status} (attempt ${attempts})`);
+      }
     }
 
     if (status !== 'SUCCEEDED') {
       throw new Error(`Apify run failed with status: ${status}`);
     }
 
+    console.log('[Apify] Run completed, fetching results...');
+
     const resultsResponse = await fetch(
       `https://api.apify.com/v2/actor-runs/${runId}/dataset/items?token=${APIFY_API_TOKEN}`
     );
     const results = await resultsResponse.json();
 
-    return formatProfiles(results.slice(0, limit), platform);
+    console.log(`[Apify] Got ${results.length} results`);
+
+    const formatted = formatProfiles(results.slice(0, limit), platform);
+
+    // Log les données de followers pour debug
+    if (formatted.length > 0) {
+      console.log('[Apify] Profiles followers:', formatted.map(p => `@${p.username}: ${p.followers}`).join(', '));
+    }
+
+    return formatted;
   } catch (error) {
     console.error('Erreur recherche profils:', error);
     return getMockProfiles(query, platform, limit);
@@ -418,39 +441,63 @@ export async function getProfileDetails(username, platform = 'instagram') {
 }
 
 function formatProfiles(profiles, platform) {
-  return profiles.map(p => formatProfile(p, platform));
+  // Filtrer les erreurs et profils invalides
+  const validProfiles = profiles.filter(p => p && !p.error && p.username);
+  return validProfiles.map(p => formatProfile(p, platform));
 }
 
 function formatProfile(profile, platform) {
   if (platform === 'tiktok') {
     return {
-      id: profile.id || profile.uniqueId,
+      id: profile.id || profile.uniqueId || `tiktok_${Date.now()}`,
       username: profile.uniqueId || profile.username,
       platform: 'tiktok',
-      fullName: profile.nickname || profile.name,
-      bio: profile.signature || profile.bio,
-      avatar: profile.avatarThumb || profile.avatar,
-      followers: profile.followerCount || profile.fans,
-      following: profile.followingCount || profile.following,
-      posts: profile.videoCount || profile.posts,
+      fullName: profile.nickname || profile.name || profile.username,
+      bio: profile.signature || profile.bio || '',
+      avatar: profile.avatarThumb || profile.avatar || 'https://i.pravatar.cc/150',
+      followers: profile.followerCount || profile.fans || 0,
+      following: profile.followingCount || profile.following || 0,
+      posts: profile.videoCount || profile.posts || 0,
       engagement: calculateEngagement(profile),
       score: calculateScore(profile),
+      isVerified: profile.verified || false,
+      recentPosts: formatRecentPosts(profile.latestPosts || [], 'tiktok'),
     };
   }
 
+  // Instagram - format depuis instagram-search-scraper
   return {
-    id: profile.id || profile.pk,
-    username: profile.username,
+    id: profile.id || profile.pk || `ig_${Date.now()}`,
+    username: profile.username || '',
     platform: 'instagram',
-    fullName: profile.fullName || profile.full_name,
-    bio: profile.biography || profile.bio,
-    avatar: profile.profilePicUrl || profile.profile_pic_url,
-    followers: profile.followersCount || profile.follower_count,
-    following: profile.followsCount || profile.following_count,
-    posts: profile.postsCount || profile.media_count,
+    fullName: profile.fullName || profile.full_name || profile.username || '',
+    bio: profile.biography || profile.bio || '',
+    avatar: profile.profilePicUrl || profile.profilePicUrlHD || profile.profile_pic_url || 'https://i.pravatar.cc/150',
+    followers: profile.followersCount || profile.follower_count || 0,
+    following: profile.followsCount || profile.followingCount || profile.following_count || 0,
+    posts: profile.postsCount || profile.media_count || 0,
     engagement: calculateEngagement(profile),
     score: calculateScore(profile),
+    isVerified: profile.verified || false,
+    lastActive: '1j',
+    recentPosts: formatRecentPosts(profile.latestPosts || [], 'instagram'),
   };
+}
+
+function formatRecentPosts(posts, platform) {
+  if (!posts || !Array.isArray(posts)) return [];
+
+  return posts.slice(0, 3).map((post, idx) => ({
+    id: post.id || post.shortCode || `post_${idx}`,
+    thumbnail: post.displayUrl || post.thumbnail || `https://picsum.photos/seed/${idx}/400/400`,
+    caption: post.caption || '',
+    publishedAt: post.timestamp ? new Date(post.timestamp).getTime() : Date.now() - (idx + 1) * 86400000,
+    likes: post.likesCount || post.likes || 0,
+    comments: post.commentsCount || post.comments || 0,
+    hashtags: post.hashtags || [],
+    type: post.type === 'Video' ? 'video' : 'image',
+    url: post.url || `https://${platform}.com/p/${post.shortCode || post.id}`,
+  }));
 }
 
 function calculateEngagement(profile) {

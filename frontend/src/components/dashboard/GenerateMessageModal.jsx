@@ -154,10 +154,23 @@ export default function GenerateMessageModal({ isOpen, onClose, prospect, posts 
     const finalMessage = editedMessage || generatedMessage;
     console.log('Message sauvegardé:', finalMessage);
     setMessageSaved(true);
+
+    // Copier le message dans le presse-papier pour faciliter le collage
+    navigator.clipboard.writeText(finalMessage).catch(err => {
+      console.log('Erreur copie:', err);
+    });
+
     setTimeout(() => {
       setMessageSaved(false);
+
+      // Ouvrir le profil Instagram dans un nouvel onglet
+      if (prospect?.username) {
+        const instagramUrl = `https://instagram.com/${prospect.username}/`;
+        window.open(instagramUrl, '_blank');
+      }
+
       onClose();
-    }, 1500);
+    }, 1000);
   };
 
   const handleStartEditing = () => {
@@ -225,7 +238,11 @@ export default function GenerateMessageModal({ isOpen, onClose, prospect, posts 
                 <img
                   src={prospect.avatar}
                   alt={prospect.username}
-                  className="w-10 h-10 rounded-lg object-cover"
+                  className="w-10 h-10 rounded-lg object-cover bg-warm-200"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(prospect.username)}&background=f15a24&color=fff&size=150`;
+                  }}
                 />
                 <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center ${
                   prospect.platform === 'instagram'
@@ -280,7 +297,11 @@ export default function GenerateMessageModal({ isOpen, onClose, prospect, posts 
             <img
               src={prospect.avatar}
               alt={prospect.username}
-              className="w-14 h-14 rounded-xl object-cover"
+              className="w-14 h-14 rounded-xl object-cover bg-warm-200"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(prospect.username)}&background=f15a24&color=fff&size=150`;
+              }}
             />
             <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center ${
               prospect.platform === 'instagram'
@@ -332,33 +353,34 @@ export default function GenerateMessageModal({ isOpen, onClose, prospect, posts 
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  {/* Post de référence */}
+                  {/* Post de référence - Format texte avec lien */}
                   {posts[0] && (
                     <div className="p-3 bg-warm-50 rounded-xl border border-warm-100">
-                      <p className="text-xs text-warm-500 mb-2">Post de référence</p>
-                      <div className="flex gap-2">
-                        <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-warm-200">
-                          <img
-                            src={posts[0].thumbnail}
-                            alt=""
-                            className="w-full h-full object-cover"
-                            onError={(e) => { e.target.style.display = 'none'; }}
-                          />
-                          {posts[0].type === 'video' && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                              <Play className="w-4 h-4 text-white fill-white" />
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs text-warm-600 line-clamp-2">{posts[0].caption?.substring(0, 60)}...</p>
-                          <div className="flex items-center gap-2 mt-1 text-xs text-warm-400">
+                      <p className="text-xs text-warm-500 mb-2">📌 Post de référence</p>
+                      <div className="space-y-2">
+                        <p className="text-xs text-warm-600 leading-relaxed">
+                          {posts[0].caption?.trim()
+                            ? (posts[0].caption.length > 80
+                                ? posts[0].caption.substring(0, 80) + '...'
+                                : posts[0].caption)
+                            : '📷 Post sans légende'}
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-xs text-warm-400">
                             <span>{getRelativeTime(posts[0].publishedAt)}</span>
                             <span className="flex items-center gap-0.5">
                               <Heart className="w-3 h-3" />
                               {posts[0].likes >= 1000 ? `${(posts[0].likes / 1000).toFixed(1)}K` : posts[0].likes}
                             </span>
                           </div>
+                          <a
+                            href={posts[0].url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-brand-600 hover:text-brand-700 font-medium hover:underline"
+                          >
+                            Voir le post →
+                          </a>
                         </div>
                       </div>
                     </div>
@@ -468,12 +490,12 @@ export default function GenerateMessageModal({ isOpen, onClose, prospect, posts 
                 {messageSaved ? (
                   <>
                     <Check className="w-5 h-5" />
-                    Sauvegardé !
+                    Copié ! Ouverture Instagram...
                   </>
                 ) : (
                   <>
                     <Send className="w-5 h-5" />
-                    Sauvegarder et envoyer
+                    Copier et ouvrir Instagram
                   </>
                 )}
               </button>

@@ -27,8 +27,8 @@ const PORT = process.env.PORT || 3001;
 app.use(helmet());
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? ['https://social-prospector.com']
-    : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5177', 'http://localhost:3000'],
+    ? [process.env.FRONTEND_URL].filter(Boolean)
+    : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5177', 'http://localhost:5178', 'http://localhost:3000'],
   credentials: true,
 }));
 
@@ -46,6 +46,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // Health check
 app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 

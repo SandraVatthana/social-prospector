@@ -3,7 +3,9 @@
  */
 class API {
   constructor() {
-    this.baseUrl = '/api';
+    // En production, utiliser l'URL du backend Railway
+    // En dev, utiliser le proxy Vite (/api)
+    this.baseUrl = import.meta.env.VITE_API_URL || '/api';
     this.token = localStorage.getItem('token');
   }
 

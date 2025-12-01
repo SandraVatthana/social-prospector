@@ -532,7 +532,7 @@ function HowItWorksSection() {
     {
       icon: Send,
       title: 'ENVOIE (toi-même)',
-      description: 'Tu copies, tu ouvres Instagram/TikTok, tu colles, tu envoies. Tu restes maître de ta prospection.',
+      description: 'Un clic ouvre le profil avec ton message prêt à coller. Tu gardes le contrôle, sans automatisation risquée.',
       color: 'from-green-500 to-green-600',
     },
   ];
