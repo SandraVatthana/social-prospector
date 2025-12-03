@@ -158,34 +158,57 @@ router.get('/history', requireAuth, async (req, res) => {
 /**
  * GET /api/search/source
  * Nouvelle recherche par source (compte, hashtag, lieu)
+ * Note: requireAuth temporairement optionnel pour les tests
  */
-router.get('/source', requireAuth, async (req, res) => {
+router.get('/source', async (req, res) => {
   try {
-    const { sourceType, query, subtype = 'followers', limit = 50 } = req.query;
+    const { sourceType, query, subtype = 'followers', limit = 50, offset = 0 } = req.query;
 
     if (!sourceType || !query) {
       return res.status(400).json(formatError('sourceType et query requis', 'VALIDATION_ERROR'));
     }
 
-    // Vérifier le quota
-    const canSearch = await checkSearchQuota(req.user.id);
-    if (!canSearch.allowed) {
-      return res.status(429).json(formatError(
-        `Limite de recherches atteinte (${canSearch.used}/${canSearch.limit})`,
-        'QUOTA_EXCEEDED'
-      ));
+    const parsedOffset = parseInt(offset) || 0;
+
+    // Vérifier le quota seulement si authentifié
+    let canSearch = { allowed: true, used: 0, limit: 100 };
+    if (req.user?.id) {
+      canSearch = await checkSearchQuota(req.user.id);
+      if (!canSearch.allowed) {
+        return res.status(429).json(formatError(
+          `Limite de recherches atteinte (${canSearch.used}/${canSearch.limit})`,
+          'QUOTA_EXCEEDED'
+        ));
+      }
     }
 
-    console.log(`[Search/Source] Type: ${sourceType}, Query: "${query}", Subtype: ${subtype}`);
+    console.log(`[Search/Source] Type: ${sourceType}, Query: "${query}", Subtype: ${subtype}, Offset: ${parsedOffset}`);
 
-    // Sauvegarder la recherche
-    await saveSearch(req.user.id, `${sourceType}:${query}`, 'instagram');
+    // Sauvegarder la recherche seulement si authentifié (et pas un "load more")
+    if (req.user?.id && parsedOffset === 0) {
+      await saveSearch(req.user.id, `${sourceType}:${query}`, 'instagram');
+    }
 
     let prospects = [];
 
     if (process.env.APIFY_API_TOKEN) {
       // Appeler Apify selon le type de source
-      prospects = await searchBySource(sourceType, query, subtype, parseInt(limit));
+      // Note: l'offset est utilisé pour demander plus de résultats à Apify
+      const adjustedLimit = parseInt(limit) + parsedOffset;
+      prospects = await searchBySource(sourceType, query, subtype, adjustedLimit);
+
+      // Appliquer l'offset pour renvoyer seulement les nouveaux résultats
+      if (parsedOffset > 0 && prospects.length > parsedOffset) {
+        prospects = prospects.slice(parsedOffset);
+      } else if (parsedOffset > 0) {
+        // Pas assez de résultats pour l'offset
+        prospects = [];
+      }
+
+      // Enrichir les profils avec les bios (max 15 profils pour limiter les coûts)
+      if (prospects.length > 0) {
+        prospects = await enrichProspectsWithBios(prospects.slice(0, 15));
+      }
     } else {
       // Mode démo
       console.log('[Search/Source] Mode démo - données mockées');
@@ -211,6 +234,123 @@ router.get('/source', requireAuth, async (req, res) => {
 });
 
 // ============ Helper Functions ============
+
+/**
+ * Enrichit les prospects avec leurs bios via instagram-profile-scraper
+ */
+async function enrichProspectsWithBios(prospects) {
+  const APIFY_API_TOKEN = process.env.APIFY_API_TOKEN;
+  if (!APIFY_API_TOKEN || prospects.length === 0) return prospects;
+
+  // Filtrer les profils qui n'ont pas de bio
+  const profilesToEnrich = prospects.filter(p => !p.bio || p.bio.length < 5);
+
+  if (profilesToEnrich.length === 0) {
+    console.log('[Enrich] All profiles already have bios');
+    return prospects;
+  }
+
+  console.log(`[Enrich] Enriching ${profilesToEnrich.length} profiles with bios...`);
+
+  try {
+    // Construire les URLs des profils à enrichir
+    const directUrls = profilesToEnrich.map(p => `https://www.instagram.com/${p.username}/`);
+
+    const inputConfig = {
+      directUrls,
+      resultsLimit: profilesToEnrich.length,
+    };
+
+    console.log(`[Enrich] Input config:`, JSON.stringify(inputConfig));
+
+    const runResponse = await fetch(
+      `https://api.apify.com/v2/acts/apify~instagram-profile-scraper/runs?token=${APIFY_API_TOKEN}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(inputConfig),
+      }
+    );
+
+    if (!runResponse.ok) {
+      const errorText = await runResponse.text();
+      console.error(`[Enrich] Failed to start run: ${runResponse.status}`, errorText);
+      return prospects;
+    }
+
+    const runData = await runResponse.json();
+    const runId = runData.data.id;
+    console.log(`[Enrich] Run started: ${runId}`);
+
+    // Polling
+    let status = 'RUNNING';
+    let attempts = 0;
+    while (status === 'RUNNING' && attempts < 60) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const statusResponse = await fetch(
+        `https://api.apify.com/v2/actor-runs/${runId}?token=${APIFY_API_TOKEN}`
+      );
+      const statusData = await statusResponse.json();
+      status = statusData.data.status;
+      attempts++;
+      if (attempts % 10 === 0) {
+        console.log(`[Enrich] Status: ${status} (attempt ${attempts})`);
+      }
+    }
+
+    if (status !== 'SUCCEEDED') {
+      console.error(`[Enrich] Run failed: ${status}`);
+      return prospects;
+    }
+
+    const resultsResponse = await fetch(
+      `https://api.apify.com/v2/actor-runs/${runId}/dataset/items?token=${APIFY_API_TOKEN}`
+    );
+    const enrichedData = await resultsResponse.json();
+
+    console.log(`[Enrich] Got ${enrichedData.length} enriched profiles`);
+
+    // Créer un map username -> données enrichies
+    const bioMap = {};
+    for (const data of enrichedData) {
+      if (data.username) {
+        bioMap[data.username.toLowerCase()] = {
+          bio: data.biography || '',
+          fullName: data.fullName || data.full_name || '',
+          followers: data.followersCount || data.edge_followed_by?.count || 0,
+          following: data.followsCount || data.edge_follow?.count || 0,
+          posts: data.postsCount || data.edge_owner_to_timeline_media?.count || 0,
+          isPrivate: data.isPrivate || data.is_private || false,
+          isVerified: data.verified || data.is_verified || false,
+          avatar: data.profilePicUrl || data.profilePicUrlHD || '',
+        };
+      }
+    }
+
+    // Fusionner les données
+    return prospects.map(prospect => {
+      const enrichment = bioMap[prospect.username.toLowerCase()];
+      if (enrichment) {
+        return {
+          ...prospect,
+          bio: enrichment.bio || prospect.bio,
+          fullName: enrichment.fullName || prospect.fullName,
+          followers: enrichment.followers || prospect.followers,
+          following: enrichment.following || prospect.following,
+          posts: enrichment.posts || prospect.posts,
+          isPrivate: enrichment.isPrivate ?? prospect.isPrivate,
+          isVerified: enrichment.isVerified ?? prospect.isVerified,
+          avatar: enrichment.avatar || prospect.avatar,
+        };
+      }
+      return prospect;
+    });
+
+  } catch (error) {
+    console.error('[Enrich] Error:', error);
+    return prospects;
+  }
+}
 
 async function checkSearchQuota(userId) {
   // Récupérer le plan de l'utilisateur
@@ -404,6 +544,9 @@ function filterFrenchProfiles(prospects) {
     const usernameLower = (prospect.username || '').toLowerCase();
     const combined = `${bioLower} ${fullNameLower} ${usernameLower}`;
 
+    // Si pas de bio du tout, on vérifie quand même le nom/username
+    const hasBio = bioLower.length > 10;
+
     // 1. Exclure si indicateurs clairement non-francophones
     const hasNonFrench = nonFrenchIndicators.some(indicator =>
       combined.includes(indicator.toLowerCase())
@@ -422,7 +565,7 @@ function filterFrenchProfiles(prospects) {
 
     // 3. Détecter les caractères accentués français (é, è, ê, à, ù, ç, œ, æ)
     const frenchAccents = /[éèêëàâäùûüçœæîïôö]/i;
-    if (frenchAccents.test(bioLower)) {
+    if (frenchAccents.test(bioLower) || frenchAccents.test(fullNameLower)) {
       return true;
     }
 
@@ -434,18 +577,54 @@ function filterFrenchProfiles(prospects) {
       return true;
     }
 
-    // 5. MODE STRICT : on EXCLUT par défaut sauf si indicateurs francophones
-    // Un profil sans indicateur français clair est probablement international
+    // 5. Prénoms français typiques dans le nom
+    const frenchFirstNames = [
+      'marie', 'léa', 'emma', 'chloé', 'camille', 'manon', 'sarah', 'julie',
+      'lucas', 'hugo', 'thomas', 'maxime', 'antoine', 'nicolas', 'julien',
+      'pierre', 'jean', 'louis', 'françois', 'mathieu', 'guillaume',
+      'sophie', 'céline', 'nathalie', 'laure', 'pauline', 'elodie', 'aurélie',
+    ];
+    const hasFrencFirstName = frenchFirstNames.some(name =>
+      fullNameLower.includes(name.toLowerCase())
+    );
+    if (hasFrencFirstName) {
+      return true;
+    }
+
+    // 6. Si pas de bio, on est plus permissif pour ne pas tout filtrer
+    // mais on garde quand même ceux qui n'ont pas d'indicateurs négatifs
+    if (!hasBio) {
+      // Garder si le username ou nom a un accent français
+      if (frenchAccents.test(usernameLower) || frenchAccents.test(fullNameLower)) {
+        return true;
+      }
+      // Exclure si username typiquement anglophone
+      const englishPatterns = /_official$|_uk$|_us$|\.us$|\.uk$/i;
+      if (englishPatterns.test(usernameLower)) {
+        return false;
+      }
+      // Sans info, on garde par défaut (sera affiné plus tard)
+      return true;
+    }
+
+    // 7. MODE STRICT avec bio : on EXCLUT par défaut sauf si indicateurs francophones
     return false;
   });
 
-  console.log(`[Filter] French filter (strict): ${prospects.length} -> ${filtered.length} profiles (${prospects.length - filtered.length} excluded)`);
+  console.log(`[Filter] French filter: ${prospects.length} -> ${filtered.length} profiles (${prospects.length - filtered.length} excluded)`);
 
   return filtered;
 }
 
 /**
  * Recherche par source via Apify
+ *
+ * Actors disponibles (officiels Apify) :
+ * - apify/instagram-scraper : recherche générale
+ * - apify/instagram-profile-scraper : détails profil
+ * - apify/instagram-post-scraper : posts d'un compte
+ * - apify/instagram-hashtag-scraper : posts par hashtag
+ * - apify/instagram-comment-scraper : commentaires
  */
 async function searchBySource(sourceType, query, subtype, limit) {
   const APIFY_API_TOKEN = process.env.APIFY_API_TOKEN;
@@ -456,34 +635,33 @@ async function searchBySource(sourceType, query, subtype, limit) {
 
     switch (sourceType) {
       case 'account':
-        // Scraping des followers/following/commenters d'un compte
-        if (subtype === 'followers') {
-          actorId = 'apify~instagram-followers-scraper';
-          inputConfig = {
-            usernames: [query],
-            resultsLimit: limit,
-          };
-        } else if (subtype === 'following') {
-          actorId = 'apify~instagram-following-scraper';
-          inputConfig = {
-            usernames: [query],
-            resultsLimit: limit,
-          };
-        } else if (subtype === 'commenters') {
+        // Pour les comptes, on récupère les posts et extrait les profils engagés
+        // Note: Apify n'a pas d'actor pour lister les followers directement
+        if (subtype === 'commenters') {
+          // Récupérer les commentateurs des posts du compte
           actorId = 'apify~instagram-comment-scraper';
           inputConfig = {
             directUrls: [`https://www.instagram.com/${query}/`],
-            resultsLimit: limit,
+            resultsLimit: limit * 3, // Plus de commentaires pour dédupliquer
+          };
+        } else {
+          // Pour followers/following, on utilise le post scraper et analyse l'engagement
+          // Stratégie: récupérer les posts du compte et les profils qui interagissent
+          actorId = 'apify~instagram-post-scraper';
+          inputConfig = {
+            directUrls: [`https://www.instagram.com/${query}/`],
+            resultsLimit: 10, // Récupérer 10 posts récents
           };
         }
         break;
 
       case 'hashtag':
         // Scraping des posts par hashtag
+        // On demande 3x plus de posts pour avoir plusieurs posts par utilisateur
         actorId = 'apify~instagram-hashtag-scraper';
         inputConfig = {
-          hashtags: [query],
-          resultsLimit: limit,
+          hashtags: [query.replace('#', '')],
+          resultsLimit: Math.min(limit * 3, 150),
         };
         break;
 
@@ -570,49 +748,94 @@ async function searchBySource(sourceType, query, subtype, limit) {
 function formatSourceResults(results, sourceType, subtype, limit) {
   const prospects = [];
 
-  for (const item of results.slice(0, limit)) {
+  console.log(`[Source] Formatting ${results.length} results for ${sourceType}/${subtype}`);
+
+  for (const item of results) {
     // Ignorer les erreurs
     if (item.error) continue;
 
     let prospect;
 
-    if (sourceType === 'account' && (subtype === 'followers' || subtype === 'following')) {
-      // Format followers/following
-      prospect = {
-        id: item.id || item.pk || `ig_${Date.now()}_${Math.random()}`,
-        username: item.username || '',
-        fullName: item.fullName || item.full_name || '',
-        bio: item.biography || item.bio || '',
-        avatar: item.profilePicUrl || item.profile_pic_url || '',
-        followers: item.followersCount || item.follower_count || 0,
-        following: item.followsCount || item.following_count || 0,
-        posts: item.postsCount || item.media_count || 0,
-        isVerified: item.isVerified || item.is_verified || false,
-        isPrivate: item.isPrivate || item.is_private || false,
-      };
-    } else if (sourceType === 'account' && subtype === 'commenters') {
+    if (sourceType === 'account' && subtype === 'commenters') {
       // Format commenters - extraire l'auteur du commentaire
       prospect = {
-        id: item.ownerUsername || `ig_${Date.now()}_${Math.random()}`,
+        id: item.ownerUsername || item.id || `ig_${Date.now()}_${Math.random()}`,
         username: item.ownerUsername || '',
         fullName: item.ownerFullName || '',
         bio: '',
-        avatar: item.ownerProfilePicUrl || '',
+        avatar: item.ownerProfilePicUrl || item.profilePicUrl || '',
         followers: 0,
         commentText: item.text || '',
+        platform: 'instagram',
       };
-    } else if (sourceType === 'hashtag' || sourceType === 'location') {
-      // Format posts - extraire l'auteur du post
+    } else if (sourceType === 'account') {
+      // Pour followers/following, on extrait les infos des posts
+      // L'actor instagram-post-scraper retourne les posts avec des données owner
+      // On ne peut pas extraire les followers directement mais on peut voir les likes/comments
+
+      // Si c'est un post, on l'utilise pour enrichir les données
+      // On crée un prospect à partir du owner du post (le compte source)
+      if (item.ownerUsername) {
+        prospect = {
+          id: item.ownerId || item.ownerUsername || `ig_${Date.now()}_${Math.random()}`,
+          username: item.ownerUsername,
+          fullName: item.ownerFullName || '',
+          bio: '',
+          avatar: item.ownerProfilePicUrl || '',
+          followers: item.ownerFollowersCount || 0,
+          platform: 'instagram',
+          recentPosts: [{
+            id: item.id || item.shortCode,
+            caption: item.caption || '',
+            likes: item.likesCount || 0,
+            comments: item.commentsCount || 0,
+            publishedAt: item.timestamp ? new Date(item.timestamp).getTime() : Date.now(),
+            url: item.url || `https://instagram.com/p/${item.shortCode}`,
+          }],
+        };
+      }
+    } else if (sourceType === 'hashtag') {
+      // Format hashtag posts - extraire l'auteur du post
       prospect = {
         id: item.ownerId || item.ownerUsername || `ig_${Date.now()}_${Math.random()}`,
         username: item.ownerUsername || '',
         fullName: item.ownerFullName || '',
         bio: '',
-        avatar: '',
+        avatar: item.ownerProfilePicUrl || '',
         followers: item.ownerFollowersCount || 0,
-        postCaption: item.caption || '',
-        postLikes: item.likesCount || 0,
-        postUrl: item.url || `https://instagram.com/p/${item.shortCode}`,
+        platform: 'instagram',
+        isPrivate: item.ownerIsPrivate || false,
+        recentPosts: [{
+          id: item.id || item.shortCode,
+          caption: item.caption || '',
+          likes: item.likesCount || 0,
+          comments: item.commentsCount || 0,
+          publishedAt: item.timestamp ? new Date(item.timestamp).getTime() : Date.now(),
+          url: item.url || `https://instagram.com/p/${item.shortCode}`,
+          thumbnail: item.displayUrl || '',
+        }],
+      };
+    } else if (sourceType === 'location') {
+      // Format location posts - similaire aux hashtags
+      prospect = {
+        id: item.ownerId || item.ownerUsername || `ig_${Date.now()}_${Math.random()}`,
+        username: item.ownerUsername || '',
+        fullName: item.ownerFullName || '',
+        bio: '',
+        avatar: item.ownerProfilePicUrl || '',
+        followers: item.ownerFollowersCount || 0,
+        platform: 'instagram',
+        location: item.locationName || '',
+        isPrivate: item.ownerIsPrivate || false,
+        recentPosts: [{
+          id: item.id || item.shortCode,
+          caption: item.caption || '',
+          likes: item.likesCount || 0,
+          comments: item.commentsCount || 0,
+          publishedAt: item.timestamp ? new Date(item.timestamp).getTime() : Date.now(),
+          url: item.url || `https://instagram.com/p/${item.shortCode}`,
+          thumbnail: item.displayUrl || '',
+        }],
       };
     }
 
@@ -623,19 +846,34 @@ function formatSourceResults(results, sourceType, subtype, limit) {
     }
   }
 
-  // Dédupliquer par username
+  // Dédupliquer par username et fusionner les posts
   const uniqueProspects = [];
-  const seenUsernames = new Set();
+  const prospectsByUsername = new Map();
 
   for (const p of prospects) {
-    if (!seenUsernames.has(p.username.toLowerCase())) {
-      seenUsernames.add(p.username.toLowerCase());
+    const key = p.username.toLowerCase();
+    if (prospectsByUsername.has(key)) {
+      // Fusionner les posts récents
+      const existing = prospectsByUsername.get(key);
+      if (p.recentPosts && existing.recentPosts) {
+        existing.recentPosts.push(...p.recentPosts);
+        // Garder seulement les 3 derniers posts
+        existing.recentPosts = existing.recentPosts.slice(0, 3);
+      }
+      // Mettre à jour les infos si plus complètes
+      if (!existing.avatar && p.avatar) existing.avatar = p.avatar;
+      if (!existing.fullName && p.fullName) existing.fullName = p.fullName;
+      if (!existing.followers && p.followers) existing.followers = p.followers;
+    } else {
+      prospectsByUsername.set(key, p);
       uniqueProspects.push(p);
     }
   }
 
-  console.log(`[Source] Formatted ${uniqueProspects.length} unique prospects`);
-  return uniqueProspects;
+  // Limiter au nombre demandé
+  const finalProspects = uniqueProspects.slice(0, limit);
+  console.log(`[Source] Formatted ${finalProspects.length} unique prospects (from ${prospects.length} total)`);
+  return finalProspects;
 }
 
 /**

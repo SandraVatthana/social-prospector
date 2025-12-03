@@ -4,12 +4,15 @@
 
 const APIFY_API_TOKEN = process.env.APIFY_API_TOKEN;
 
-// Actors Apify pour chaque plateforme (mis à jour 2024)
+// Actors Apify pour chaque plateforme (mis à jour Dec 2025)
 // Note: utiliser ~ au lieu de / dans les URLs API
+// Actors officiels vérifiés sur https://apify.com/store
 const APIFY_ACTORS = {
-  instagram: 'apify~instagram-post-scraper',
-  instagramProfile: 'apify~instagram-profile-scraper',
-  instagramSearch: 'apify~instagram-search-scraper',
+  instagram: 'apify~instagram-scraper',           // Recherche générale
+  instagramProfile: 'apify~instagram-profile-scraper',  // Détails profil
+  instagramPosts: 'apify~instagram-post-scraper',       // Posts d'un compte
+  instagramHashtag: 'apify~instagram-hashtag-scraper',  // Posts par hashtag
+  instagramComments: 'apify~instagram-comment-scraper', // Commentaires
   tiktok: 'clockworks~free-tiktok-scraper',
   tiktokProfile: 'clockworks~free-tiktok-scraper',
 };
@@ -274,6 +277,118 @@ function getMockPosts(username, platform, limit) {
 }
 
 /**
+ * Enrichit les profils avec leurs bios en utilisant instagram-profile-scraper
+ * Fait un batch de requêtes pour économiser les crédits
+ */
+async function enrichProfilesWithBios(profiles) {
+  if (!APIFY_API_TOKEN || profiles.length === 0) return profiles;
+
+  // Filtrer les profils qui n'ont pas de bio
+  const profilesWithoutBio = profiles.filter(p => !p.bio || p.bio.length < 5);
+
+  if (profilesWithoutBio.length === 0) {
+    console.log('[Apify] All profiles already have bios');
+    return profiles;
+  }
+
+  console.log(`[Apify] Enriching ${profilesWithoutBio.length} profiles with bios...`);
+
+  try {
+    // Construire les URLs des profils à enrichir (max 20 pour limiter les coûts)
+    const profilesToEnrich = profilesWithoutBio.slice(0, 20);
+    const directUrls = profilesToEnrich.map(p => `https://www.instagram.com/${p.username}/`);
+
+    const runResponse = await fetch(
+      `https://api.apify.com/v2/acts/${APIFY_ACTORS.instagramProfile}/runs?token=${APIFY_API_TOKEN}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          directUrls,
+          resultsLimit: profilesToEnrich.length,
+        }),
+      }
+    );
+
+    if (!runResponse.ok) {
+      console.error('[Apify/Enrich] Failed to start run');
+      return profiles;
+    }
+
+    const runData = await runResponse.json();
+    const runId = runData.data.id;
+    console.log(`[Apify/Enrich] Run started: ${runId}`);
+
+    // Polling
+    let status = 'RUNNING';
+    let attempts = 0;
+    while (status === 'RUNNING' && attempts < 60) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const statusResponse = await fetch(
+        `https://api.apify.com/v2/actor-runs/${runId}?token=${APIFY_API_TOKEN}`
+      );
+      const statusData = await statusResponse.json();
+      status = statusData.data.status;
+      attempts++;
+      if (attempts % 10 === 0) {
+        console.log(`[Apify/Enrich] Status: ${status} (attempt ${attempts})`);
+      }
+    }
+
+    if (status !== 'SUCCEEDED') {
+      console.error(`[Apify/Enrich] Run failed with status: ${status}`);
+      return profiles;
+    }
+
+    // Récupérer les résultats
+    const resultsResponse = await fetch(
+      `https://api.apify.com/v2/actor-runs/${runId}/dataset/items?token=${APIFY_API_TOKEN}`
+    );
+    const enrichedData = await resultsResponse.json();
+
+    console.log(`[Apify/Enrich] Got ${enrichedData.length} enriched profiles`);
+
+    // Créer un map username -> bio pour fusionner
+    const bioMap = {};
+    for (const data of enrichedData) {
+      if (data.username && data.biography) {
+        bioMap[data.username.toLowerCase()] = {
+          bio: data.biography,
+          fullName: data.fullName || data.full_name,
+          followers: data.followersCount || data.edge_followed_by?.count,
+          following: data.followsCount || data.edge_follow?.count,
+          posts: data.postsCount || data.edge_owner_to_timeline_media?.count,
+          isPrivate: data.isPrivate || data.is_private,
+          isVerified: data.verified || data.is_verified,
+        };
+      }
+    }
+
+    // Fusionner les données
+    return profiles.map(profile => {
+      const enrichment = bioMap[profile.username.toLowerCase()];
+      if (enrichment) {
+        return {
+          ...profile,
+          bio: enrichment.bio || profile.bio,
+          fullName: enrichment.fullName || profile.fullName,
+          followers: enrichment.followers || profile.followers,
+          following: enrichment.following || profile.following,
+          posts: enrichment.posts || profile.posts,
+          isPrivate: enrichment.isPrivate ?? profile.isPrivate,
+          isVerified: enrichment.isVerified ?? profile.isVerified,
+        };
+      }
+      return profile;
+    });
+
+  } catch (error) {
+    console.error('[Apify/Enrich] Error:', error);
+    return profiles;
+  }
+}
+
+/**
  * Recherche des profils similaires sur Instagram
  * @param {string} query - Nom d'utilisateur ou hashtag
  * @param {string} platform - Plateforme (instagram/tiktok)
@@ -287,24 +402,29 @@ export async function searchSimilarProfiles(query, platform = 'instagram', limit
 
   try {
     // Utiliser les bons actors selon la plateforme
+    // Note: instagram-scraper supporte la recherche de profils via 'search' + 'searchType'
     const actorId = platform === 'tiktok'
       ? APIFY_ACTORS.tiktokProfile
-      : APIFY_ACTORS.instagramSearch;
+      : APIFY_ACTORS.instagram;
 
     console.log(`[Apify] Recherche "${query}" sur ${platform} avec actor: ${actorId}`);
 
     // Configuration selon la plateforme
+    // Doc: https://apify.com/apify/instagram-scraper
+    // Demander plus de résultats pour compenser le filtrage français
+    const searchLimit = Math.min(limit * 3, 100); // 3x pour filtrage, max 100
+
     const inputConfig = platform === 'tiktok'
       ? {
           profiles: [query],
-          resultsPerPage: limit,
+          resultsPerPage: searchLimit,
           shouldDownloadVideos: false,
         }
       : {
-          // Instagram Search Scraper config
+          // Instagram Scraper - recherche de profils
           search: query,
-          resultsLimit: limit,
-          searchType: 'user',
+          resultsLimit: searchLimit,
+          searchType: 'user',  // 'user', 'hashtag', ou 'place'
         };
 
     console.log('[Apify] Config:', JSON.stringify(inputConfig));
@@ -359,7 +479,16 @@ export async function searchSimilarProfiles(query, platform = 'instagram', limit
 
     console.log(`[Apify] Got ${results.length} results`);
 
-    const formatted = formatProfiles(results.slice(0, limit), platform);
+    let formatted = formatProfiles(results, platform);
+
+    // Enrichir les profils avec les bios si on est sur Instagram
+    // L'actor de recherche ne retourne pas toujours les bios
+    if (platform === 'instagram' && formatted.length > 0) {
+      formatted = await enrichProfilesWithBios(formatted);
+    }
+
+    // Limiter au nombre demandé après filtrage
+    formatted = formatted.slice(0, limit);
 
     // Log les données de followers pour debug
     if (formatted.length > 0) {
@@ -564,3 +693,4 @@ export default {
   searchSimilarProfiles,
   getProfileDetails,
 };
+// force reload

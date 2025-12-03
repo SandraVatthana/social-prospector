@@ -23,6 +23,7 @@ import {
   MessageSquarePlus,
   Lock,
   Globe,
+  Plus,
 } from 'lucide-react';
 import Header from '../components/layout/Header';
 import GenerateMessageModal from '../components/dashboard/GenerateMessageModal';
@@ -83,10 +84,12 @@ export default function Search() {
 
   // État recherche
   const [isSearching, setIsSearching] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasSearched, setHasSearched] = useState(savedState?.hasSearched || false);
   const [allProspects, setAllProspects] = useState(savedState?.allProspects || []);
   const [searchInfo, setSearchInfo] = useState(savedState?.searchInfo || null);
   const [selectedProspects, setSelectedProspects] = useState([]);
+  const [searchOffset, setSearchOffset] = useState(savedState?.searchOffset || 0);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(savedState?.currentPage || 1);
@@ -121,9 +124,10 @@ export default function Search() {
         showGenerateModal,
         selectedProspect,
         selectedPosts,
+        searchOffset,
       });
     }
-  }, [sourceType, accountSubtype, accountInput, hashtagInput, locationInput, hasSearched, allProspects, searchInfo, currentPage, filters, showGenerateModal, selectedProspect, selectedPosts]);
+  }, [sourceType, accountSubtype, accountInput, hashtagInput, locationInput, hasSearched, allProspects, searchInfo, currentPage, filters, showGenerateModal, selectedProspect, selectedPosts, searchOffset]);
 
   // Prospects filtrés et paginés
   const filteredProspects = allProspects.filter(p => {
@@ -160,6 +164,7 @@ export default function Search() {
     setHasSearched(true);
     setCurrentPage(1);
     setSelectedProspects([]);
+    setSearchOffset(0);
 
     try {
       const params = new URLSearchParams({
@@ -205,6 +210,69 @@ export default function Search() {
       });
     } finally {
       setIsSearching(false);
+    }
+  };
+
+  // Charger plus de résultats
+  const handleLoadMore = async () => {
+    if (!searchInfo) return;
+
+    setIsLoadingMore(true);
+    const newOffset = allProspects.length;
+
+    try {
+      const params = new URLSearchParams({
+        sourceType: searchInfo.type,
+        query: searchInfo.query,
+        limit: '50',
+        offset: newOffset.toString(),
+      });
+
+      if (searchInfo.type === SOURCE_TYPES.ACCOUNT) {
+        params.append('subtype', searchInfo.subtype);
+      }
+
+      const response = await fetch(`${API_BASE_URL}/search/source?${params.toString()}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const newProspects = data.data?.prospects || [];
+
+        if (newProspects.length > 0) {
+          // Filtrer les doublons par username
+          const existingUsernames = new Set(allProspects.map(p => p.username));
+          const uniqueNewProspects = newProspects.filter(p => !existingUsernames.has(p.username));
+
+          setAllProspects(prev => [...prev, ...uniqueNewProspects]);
+          setSearchOffset(newOffset);
+          setSearchInfo(prev => ({
+            ...prev,
+            count: prev.count + uniqueNewProspects.length,
+          }));
+        }
+      } else {
+        throw new Error('API non disponible');
+      }
+    } catch (err) {
+      console.error('Erreur chargement supplémentaire:', err);
+      // Mode démo - ajouter des données mockées
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const mockData = generateMockProspects(searchInfo.query, searchInfo.type, 10);
+      const existingUsernames = new Set(allProspects.map(p => p.username));
+      const uniqueMock = mockData.filter(p => !existingUsernames.has(p.username));
+      setAllProspects(prev => [...prev, ...uniqueMock]);
+      setSearchOffset(newOffset);
+      setSearchInfo(prev => ({
+        ...prev,
+        count: prev.count + uniqueMock.length,
+        demo: true,
+      }));
+    } finally {
+      setIsLoadingMore(false);
     }
   };
 
@@ -610,6 +678,27 @@ export default function Search() {
                     </button>
                   </div>
                 )}
+
+                {/* Bouton Charger plus */}
+                <div className="flex justify-center pt-4">
+                  <button
+                    onClick={handleLoadMore}
+                    disabled={isLoadingMore}
+                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-brand-500 to-accent-500 hover:from-brand-600 hover:to-accent-600 disabled:from-warm-300 disabled:to-warm-400 text-white font-semibold rounded-xl transition-all shadow-lg shadow-brand-500/25 hover:shadow-xl hover:shadow-brand-500/30"
+                  >
+                    {isLoadingMore ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Chargement...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-5 h-5" />
+                        Charger plus de résultats
+                      </>
+                    )}
+                  </button>
+                </div>
               </>
             )}
 
