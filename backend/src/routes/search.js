@@ -275,6 +275,12 @@ async function enrichProspectsWithBios(prospects) {
     if (!runResponse.ok) {
       const errorText = await runResponse.text();
       console.error(`[Enrich] Failed to start run: ${runResponse.status}`, errorText);
+
+      // Détecter les erreurs de crédits insuffisants
+      if (runResponse.status === 402 || errorText.includes('insufficient') || errorText.includes('credit')) {
+        console.error('[Enrich] ⚠️ CRÉDITS APIFY INSUFFISANTS - Rechargez votre compte sur https://console.apify.com/billing');
+      }
+
       return prospects;
     }
 
@@ -694,6 +700,12 @@ async function searchBySource(sourceType, query, subtype, limit) {
     if (!runResponse.ok) {
       const errorText = await runResponse.text();
       console.error(`[Apify/Source] Error: ${runResponse.status}`, errorText);
+
+      // Détecter les erreurs de crédits insuffisants
+      if (runResponse.status === 402 || errorText.includes('insufficient') || errorText.includes('credit')) {
+        console.error('[Apify/Source] ⚠️ CRÉDITS APIFY INSUFFISANTS - Rechargez votre compte sur https://console.apify.com/billing');
+      }
+
       throw new Error(`Apify error: ${runResponse.status}`);
     }
 
