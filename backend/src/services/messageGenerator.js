@@ -108,10 +108,18 @@ Exemple :
  * Génère le prompt système pour la génération de message
  */
 function buildSystemPrompt(voiceProfile, method) {
+  // Déterminer le tutoiement
+  const tutoiementStyle = voiceProfile?.tutoiement === 'Toujours' ? 'Tu tutoies TOUJOURS, jamais de vouvoiement.' :
+                          voiceProfile?.tutoiement === 'Jamais' ? 'Tu vouvoies TOUJOURS, jamais de tutoiement.' :
+                          'Tu tutoies par défaut (style Instagram/TikTok).';
+
   return `Tu es un expert en prospection personnalisée sur les réseaux sociaux (Instagram/TikTok).
 
 ## TON RÔLE
 Générer un message de prospection court, authentique et personnalisé qui donne envie de répondre.
+
+## FORME D'ADRESSE
+${tutoiementStyle}
 
 ## STYLE ET TON À ADOPTER
 ${voiceProfile ? `

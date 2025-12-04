@@ -97,7 +97,7 @@ router.post('/', requireAuth, requireAgencyPlan, async (req, res) => {
 
     if (clientError) throw clientError;
 
-    // Si un profil vocal est fourni, le créer
+    // Si un profil vocal est fourni, le créer (sans description - colonne n'existe pas)
     if (voice_profile) {
       const { data: profile, error: profileError } = await supabaseAdmin
         .from('voice_profiles')
@@ -105,7 +105,6 @@ router.post('/', requireAuth, requireAgencyPlan, async (req, res) => {
           user_id: req.user.id,
           client_id: client.id,
           nom: voice_profile.nom || `MA VOIX — ${name}`,
-          description: voice_profile.description,
           profil_json: voice_profile,
           is_active: true,
           source: 'onboarding',

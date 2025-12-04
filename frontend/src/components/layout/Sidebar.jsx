@@ -28,7 +28,7 @@ const insights = [
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Analytics Agence', href: '/analytics-agence', icon: Building2, badge: 'PRO', agencyOnly: true },
   { name: 'Mes Clients', href: '/clients', icon: Users, badge: 'PRO', agencyOnly: true },
-  { name: 'Abonnement', href: '/billing', icon: CreditCard },
+  { name: 'Abonnement', href: '/billing', icon: CreditCard, disabled: true, badge: 'Bientôt' },
 ];
 
 export default function Sidebar({ user, prospectsCount = 0, messagesCount = 0 }) {
@@ -108,25 +108,40 @@ export default function Sidebar({ user, prospectsCount = 0, messagesCount = 0 })
         {insights
           .filter(item => !item.agencyOnly || isAgencyMode)
           .map((item) => (
-          <NavLink
-            key={item.name}
-            to={item.href}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
-                isActive
-                  ? 'bg-gradient-to-r from-brand-50 to-accent-50 text-brand-700 border-l-3 border-brand-500'
-                  : 'text-warm-600 hover:bg-warm-50'
-              }`
-            }
-          >
-            <item.icon className="w-5 h-5" />
-            <span className="font-medium">{item.name}</span>
-            {item.badge && (
-              <span className="ml-auto px-2 py-0.5 text-xs font-semibold bg-gradient-to-r from-brand-500 to-accent-500 text-white rounded-full">
-                {item.badge}
-              </span>
-            )}
-          </NavLink>
+          item.disabled ? (
+            <div
+              key={item.name}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-warm-400 cursor-not-allowed opacity-60"
+            >
+              <item.icon className="w-5 h-5" />
+              <span className="font-medium">{item.name}</span>
+              {item.badge && (
+                <span className="ml-auto px-2 py-0.5 text-xs font-semibold bg-warm-200 text-warm-500 rounded-full">
+                  {item.badge}
+                </span>
+              )}
+            </div>
+          ) : (
+            <NavLink
+              key={item.name}
+              to={item.href}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
+                  isActive
+                    ? 'bg-gradient-to-r from-brand-50 to-accent-50 text-brand-700 border-l-3 border-brand-500'
+                    : 'text-warm-600 hover:bg-warm-50'
+                }`
+              }
+            >
+              <item.icon className="w-5 h-5" />
+              <span className="font-medium">{item.name}</span>
+              {item.badge && (
+                <span className="ml-auto px-2 py-0.5 text-xs font-semibold bg-gradient-to-r from-brand-500 to-accent-500 text-white rounded-full">
+                  {item.badge}
+                </span>
+              )}
+            </NavLink>
+          )
         ))}
       </nav>
 

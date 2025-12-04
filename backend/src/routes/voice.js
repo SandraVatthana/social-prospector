@@ -283,13 +283,12 @@ router.post('/profiles', requireAuth, async (req, res) => {
         .eq('user_id', req.user.id);
     }
 
-    // Créer le nouveau profil
+    // Créer le nouveau profil (sans description - colonne n'existe pas)
     const { data: newProfile, error } = await supabaseAdmin
       .from('voice_profiles')
       .insert({
         user_id: req.user.id,
         nom: profile.nom || 'MA VOIX',
-        description: profile.description,
         profil_json: profile,
         is_active: profile.isActive || true,
         source: profile.source || 'manual',

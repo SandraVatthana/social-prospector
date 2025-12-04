@@ -178,7 +178,7 @@ function TourTooltip({ step, position, targetRect, onNext, onPrev, onSkip, curre
 
   return (
     <div
-      className="fixed z-[10002] w-80 bg-white rounded-2xl shadow-2xl border border-warm-200 animate-fade-in"
+      className="fixed z-[10002] w-80 bg-white rounded-2xl shadow-2xl border border-warm-200 animate-fade-in pointer-events-auto"
       style={tooltipStyle}
     >
       {/* Flèche */}
@@ -268,7 +268,7 @@ function TourTooltip({ step, position, targetRect, onNext, onPrev, onSkip, curre
  */
 function TourCompletionModal({ onConfigureVoice, onExplore }) {
   return (
-    <div className="fixed inset-0 z-[10003] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[10003] flex items-center justify-center p-4 pointer-events-auto">
       <div className="bg-white rounded-3xl shadow-2xl border border-warm-200 max-w-md w-full p-8 text-center animate-scale-in">
         {/* Icône */}
         <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-brand-100 to-accent-100 flex items-center justify-center">
@@ -382,20 +382,25 @@ export default function GuidedTour({ isOpen, onClose, onNavigate }) {
   return createPortal(
     <>
       {/* Overlay sombre avec découpe pour l'élément actif */}
-      <div className="fixed inset-0 z-[10000]">
+      <div className="fixed inset-0 z-[10000] pointer-events-none">
         {/* Overlay principal */}
         <div className="absolute inset-0 bg-black/70" />
 
         {/* Zone découpée pour l'élément actif */}
         {targetRect && !showCompletion && (
           <div
-            className="absolute bg-transparent rounded-xl ring-4 ring-brand-400 ring-offset-4 ring-offset-transparent"
+            className="absolute bg-transparent rounded-xl ring-4 ring-brand-400 ring-offset-4 ring-offset-transparent pointer-events-auto cursor-pointer"
             style={{
               top: targetRect.top - 4,
               left: targetRect.left - 4,
               width: targetRect.width + 8,
               height: targetRect.height + 8,
               boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.7)',
+            }}
+            onClick={() => {
+              // Permettre le clic sur l'élément mis en surbrillance
+              const element = document.querySelector(step.target);
+              if (element) element.click();
             }}
           />
         )}
@@ -404,7 +409,7 @@ export default function GuidedTour({ isOpen, onClose, onNavigate }) {
       {/* Bouton fermer */}
       <button
         onClick={handleSkip}
-        className="fixed top-4 right-4 z-[10003] p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+        className="fixed top-4 right-4 z-[10003] p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors pointer-events-auto"
       >
         <X className="w-6 h-6" />
       </button>

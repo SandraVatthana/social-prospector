@@ -356,6 +356,11 @@ async function getConversationHistory(prospectId, userId) {
 function buildSuggestionSystemPrompt(voiceProfile, goal, analysis) {
   const goalInfo = CONVERSATION_GOALS[goal];
 
+  // Déterminer le tutoiement
+  const tutoiementStyle = voiceProfile?.tutoiement === 'Toujours' ? 'Tu tutoies TOUJOURS, jamais de vouvoiement.' :
+                          voiceProfile?.tutoiement === 'Jamais' ? 'Tu vouvoies TOUJOURS, jamais de tutoiement.' :
+                          'Tu tutoies par défaut (style Instagram/TikTok).';
+
   let prompt = `Tu es un expert en copywriting pour DMs Instagram/TikTok.
 Tu génères des suggestions de réponse pour continuer une conversation de prospection.
 
@@ -368,6 +373,8 @@ ANALYSE DE LA RÉPONSE DU PROSPECT:
 - Objections: ${analysis.objections.join(', ') || 'Aucune'}
 - Approche suggérée: ${analysis.suggestedApproach}
 
+FORME D'ADRESSE: ${tutoiementStyle}
+
 RÈGLES:
 - Messages courts (max 250 caractères)
 - Ton naturel et conversationnel
@@ -376,6 +383,39 @@ RÈGLES:
 - Si objection → rassurer avec douceur
 - Si positif → avancer vers l'objectif
 - Si question → répondre puis transition`;
+
+  // Règles spécifiques pour "Créer une relation" (network)
+  if (goal === 'network') {
+    prompt += `
+
+IMPORTANT - OBJECTIF "CRÉER UNE RELATION":
+- C'est une approche 100% RELATIONNELLE, PAS commerciale
+- INTERDIT: parler de tes services, ton offre, ce que tu fais
+- INTERDIT: "je propose", "j'aide les X à", "mon expertise"
+
+FINS DE MESSAGE INTERDITES (CTA commerciaux):
+- "Tu veux que je te montre ?"
+- "On en discute ?"
+- "Je t'envoie plus d'infos ?"
+- "Ça te dit qu'on en parle ?"
+- "Je peux t'aider avec ça"
+- Toute proposition de call/échange/démo
+
+FINS DE MESSAGE OBLIGATOIRES (questions ouvertes sur ELLE):
+- "Qu'en penses-tu ?"
+- "Ça te parle ?"
+- "Comment tu gères ça toi ?"
+- "T'en es où sur ce sujet ?"
+- "C'est quoi ton approche ?"
+- Questions sur SON expérience, SON avis, SES projets
+
+STRUCTURE DU MESSAGE:
+1. Accroche personnalisée (référence à un VRAI contenu récent)
+2. Point commun OU compliment sincère et spécifique
+3. Question ouverte sur SON expérience/avis (pas sur ton offre)
+
+Le message doit donner envie de répondre par curiosité, pas par intérêt commercial.`;
+  }
 
   if (voiceProfile) {
     prompt += `
@@ -444,6 +484,11 @@ Réponds UNIQUEMENT en JSON valide.`;
 function buildOpeningSystemPrompt(voiceProfile, goal, template) {
   const goalInfo = CONVERSATION_GOALS[goal];
 
+  // Déterminer le tutoiement
+  const tutoiementStyle = voiceProfile?.tutoiement === 'Toujours' ? 'Tu tutoies TOUJOURS, jamais de vouvoiement.' :
+                          voiceProfile?.tutoiement === 'Jamais' ? 'Tu vouvoies TOUJOURS, jamais de tutoiement.' :
+                          'Tu tutoies par défaut (style Instagram/TikTok).';
+
   let prompt = `Tu es un expert en copywriting pour DMs Instagram/TikTok.
 Tu génères le PREMIER message d'une séquence de prospection.
 
@@ -453,12 +498,47 @@ ${goalInfo.description}
 ÉTAPE ACTUELLE: 1 - Ouverture
 ${template?.ai_instructions || 'Créer une accroche personnalisée basée sur le contenu du prospect.'}
 
+FORME D'ADRESSE: ${tutoiementStyle}
+
 RÈGLES:
 - Message court (max 300 caractères)
 - Accroche personnalisée basée sur leur contenu récent
 - Question ouverte pour engager
 - Ton naturel et curieux
 - Pas de pitch, pas de vente à ce stade`;
+
+  // Règles spécifiques pour "Créer une relation" (network)
+  if (goal === 'network') {
+    prompt += `
+
+IMPORTANT - OBJECTIF "CRÉER UNE RELATION":
+- Ce n'est PAS de la prospection commerciale, c'est du NETWORKING
+- Tu veux juste créer une connexion authentique avec cette personne
+- INTERDIT: mentionner tes services, ton offre, ton expertise
+- INTERDIT: "j'aide les X à", "je propose", "je fais du"
+
+FINS DE MESSAGE INTERDITES (CTA commerciaux):
+- "Tu veux que je te montre ?"
+- "On en discute ?"
+- "Je t'envoie plus d'infos ?"
+- "Ça te dit qu'on en parle ?"
+- "Je peux t'aider avec ça"
+- Toute proposition de call/échange/démo
+
+FINS DE MESSAGE OBLIGATOIRES (questions ouvertes sur ELLE):
+- "Qu'en penses-tu ?"
+- "Ça te parle ?"
+- "Comment tu gères ça toi ?"
+- "T'en es où sur ce sujet ?"
+- "C'est quoi ton approche ?"
+
+STRUCTURE DU MESSAGE:
+1. Accroche personnalisée (référence à un VRAI contenu récent)
+2. Point commun OU compliment sincère et spécifique
+3. Question ouverte sur SON expérience/avis (pas sur ton offre)
+
+Le message doit ressembler à ce qu'un ami curieux écrirait.`;
+  }
 
   if (voiceProfile) {
     prompt += `

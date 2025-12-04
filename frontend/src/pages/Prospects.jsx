@@ -51,108 +51,10 @@ const STATUS_CONFIG = {
   not_interested: { label: 'Pas interesse', color: 'bg-warm-100 text-warm-500', icon: X },
 };
 
-// Donnees mock
-const mockProspects = [
-  {
-    id: 1,
-    username: 'marie_coaching',
-    platform: 'instagram',
-    fullName: 'Marie Dupont',
-    bio: 'Coach en developpement personnel | Aide les femmes a reprendre confiance',
-    followers: 12400,
-    engagement: 4.2,
-    avatar: 'https://i.pravatar.cc/150?img=1',
-    status: 'replied',
-    tags: ['coach', 'femmes'],
-    addedAt: '2024-01-15',
-    lastContactedAt: '2024-01-18',
-    messagesSent: 2,
-    notes: 'Tres receptive, a demande plus d\'infos sur le programme',
-  },
-  {
-    id: 2,
-    username: 'fit_with_julie',
-    platform: 'instagram',
-    fullName: 'Julie Martin',
-    bio: 'Personal trainer | Programmes fitness personnalises | Nutrition & bien-etre',
-    followers: 8750,
-    engagement: 5.8,
-    avatar: 'https://i.pravatar.cc/150?img=5',
-    status: 'contacted',
-    tags: ['fitness', 'nutrition'],
-    addedAt: '2024-01-16',
-    lastContactedAt: '2024-01-17',
-    messagesSent: 1,
-    notes: '',
-  },
-  {
-    id: 3,
-    username: 'entrepreneurlife_alex',
-    platform: 'instagram',
-    fullName: 'Alexandre Bernard',
-    bio: 'Entrepreneur | E-commerce & Dropshipping | Partage mon parcours',
-    followers: 23100,
-    engagement: 3.1,
-    avatar: 'https://i.pravatar.cc/150?img=12',
-    status: 'interested',
-    tags: ['entrepreneur', 'ecommerce'],
-    addedAt: '2024-01-10',
-    lastContactedAt: '2024-01-14',
-    messagesSent: 3,
-    notes: 'Interesse par une collaboration, rappeler la semaine prochaine',
-  },
-  {
-    id: 4,
-    username: 'naturo_sophie',
-    platform: 'instagram',
-    fullName: 'Sophie Lemaire',
-    bio: 'Naturopathe certifiee | Conseils sante naturelle | Consultations en ligne',
-    followers: 5200,
-    engagement: 6.4,
-    avatar: 'https://i.pravatar.cc/150?img=9',
-    status: 'new',
-    tags: ['sante', 'naturopathie'],
-    addedAt: '2024-01-20',
-    lastContactedAt: null,
-    messagesSent: 0,
-    notes: '',
-  },
-  {
-    id: 5,
-    username: 'photo_thomas',
-    platform: 'tiktok',
-    fullName: 'Thomas Petit',
-    bio: 'Photographe | Tutoriels photo & video | Presets disponibles',
-    followers: 45000,
-    engagement: 8.2,
-    avatar: 'https://i.pravatar.cc/150?img=15',
-    status: 'converted',
-    tags: ['photo', 'createur'],
-    addedAt: '2024-01-05',
-    lastContactedAt: '2024-01-12',
-    messagesSent: 4,
-    notes: 'Client signe! Programme Premium',
-  },
-  {
-    id: 6,
-    username: 'yoga_zen_marie',
-    platform: 'instagram',
-    fullName: 'Marie-Claire Roux',
-    bio: 'Prof de yoga | Retraites bien-etre | Meditation guidee',
-    followers: 15800,
-    engagement: 4.8,
-    avatar: 'https://i.pravatar.cc/150?img=23',
-    status: 'not_interested',
-    tags: ['yoga', 'bien-etre'],
-    addedAt: '2024-01-08',
-    lastContactedAt: '2024-01-09',
-    messagesSent: 1,
-    notes: 'Pas le bon moment pour elle',
-  },
-];
+// Pas de données mock - liste vide par défaut
 
 export default function Prospects() {
-  const [prospects, setProspects] = useState(mockProspects);
+  const [prospects, setProspects] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [platformFilter, setPlatformFilter] = useState('all');
@@ -374,8 +276,15 @@ export default function Prospects() {
               {/* Rows */}
               {filteredProspects.length === 0 ? (
                 <div className="p-12 text-center">
-                  <AlertCircle className="w-12 h-12 text-warm-300 mx-auto mb-4" />
-                  <p className="text-warm-500">Aucun prospect trouve</p>
+                  <Users className="w-12 h-12 text-warm-300 mx-auto mb-4" />
+                  <h3 className="font-semibold text-warm-700 mb-2">Aucun prospect sauvegardé</h3>
+                  <p className="text-warm-500 mb-4">Lancez une recherche et sauvegardez des prospects pour les voir ici</p>
+                  <button
+                    onClick={() => window.location.href = '/search'}
+                    className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-xl transition-colors"
+                  >
+                    Lancer une recherche
+                  </button>
                 </div>
               ) : (
                 filteredProspects.map(prospect => (

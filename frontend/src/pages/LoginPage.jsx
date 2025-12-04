@@ -3,12 +3,14 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function LoginPage({ onDemoLogin }) {
-  const { signIn, signInWithGoogle } = useAuth();
+  const { signIn, signUp, signInWithGoogle } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isRegister, setIsRegister] = useState(false);
 
@@ -23,9 +25,18 @@ export default function LoginPage({ onDemoLogin }) {
 
     setLoading(true);
     setError('');
+    setSuccess('');
 
     try {
-      await signIn(email, password);
+      if (isRegister) {
+        // Inscription
+        await signUp(email, password, fullName);
+        setSuccess('Compte créé ! Vérifiez votre email pour confirmer votre inscription.');
+        setIsRegister(false);
+      } else {
+        // Connexion
+        await signIn(email, password);
+      }
     } catch (err) {
       setError(err.message || 'Erreur de connexion');
     } finally {
@@ -73,6 +84,12 @@ export default function LoginPage({ onDemoLogin }) {
             </div>
           )}
 
+          {success && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-600 text-sm">
+              {success}
+            </div>
+          )}
+
           {/* Bouton Google OAuth */}
           <button
             onClick={handleGoogleLogin}
@@ -101,6 +118,22 @@ export default function LoginPage({ onDemoLogin }) {
 
           {/* Formulaire email/mot de passe */}
           <form onSubmit={handleEmailLogin} className="space-y-4">
+            {isRegister && (
+              <div>
+                <label htmlFor="fullName" className="block text-sm font-medium text-warm-700 mb-1">
+                  Nom complet
+                </label>
+                <input
+                  type="text"
+                  id="fullName"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-warm-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-all"
+                  placeholder="Votre nom"
+                  required={isRegister}
+                />
+              </div>
+            )}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-warm-700 mb-1">
                 Email

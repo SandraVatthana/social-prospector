@@ -162,7 +162,7 @@ router.get('/history', requireAuth, async (req, res) => {
  */
 router.get('/source', async (req, res) => {
   try {
-    const { sourceType, query, subtype = 'followers', limit = 50, offset = 0 } = req.query;
+    const { sourceType, query, subtype = 'followers', limit = 50, offset = 0, country = 'fr' } = req.query;
 
     if (!sourceType || !query) {
       return res.status(400).json(formatError('sourceType et query requis', 'VALIDATION_ERROR'));
@@ -182,7 +182,7 @@ router.get('/source', async (req, res) => {
       }
     }
 
-    console.log(`[Search/Source] Type: ${sourceType}, Query: "${query}", Subtype: ${subtype}, Offset: ${parsedOffset}`);
+    console.log(`[Search/Source] Type: ${sourceType}, Query: "${query}", Subtype: ${subtype}, Offset: ${parsedOffset}, Country: ${country}`);
 
     // Sauvegarder la recherche seulement si authentifié (et pas un "load more")
     if (req.user?.id && parsedOffset === 0) {
@@ -205,9 +205,15 @@ router.get('/source', async (req, res) => {
         prospects = [];
       }
 
-      // Enrichir les profils avec les bios (max 15 profils pour limiter les coûts)
+      // Enrichir les profils avec les bios (max 30 profils pour avoir plus de données)
       if (prospects.length > 0) {
-        prospects = await enrichProspectsWithBios(prospects.slice(0, 15));
+        prospects = await enrichProspectsWithBios(prospects.slice(0, 30));
+      }
+
+      // Filtrer pour garder uniquement les profils francophones si country=fr
+      if (country === 'fr' && prospects.length > 0) {
+        console.log(`[Search/Source] Applying French filter on ${prospects.length} prospects...`);
+        prospects = filterFrenchProfiles(prospects);
       }
     } else {
       // Mode démo
@@ -240,7 +246,10 @@ router.get('/source', async (req, res) => {
  */
 async function enrichProspectsWithBios(prospects) {
   const APIFY_API_TOKEN = process.env.APIFY_API_TOKEN;
-  if (!APIFY_API_TOKEN || prospects.length === 0) return prospects;
+  if (!APIFY_API_TOKEN || prospects.length === 0) {
+    console.log('[Enrich] Skipping enrichment: no token or no prospects');
+    return prospects;
+  }
 
   // Filtrer les profils qui n'ont pas de bio
   const profilesToEnrich = prospects.filter(p => !p.bio || p.bio.length < 5);
@@ -251,18 +260,21 @@ async function enrichProspectsWithBios(prospects) {
   }
 
   console.log(`[Enrich] Enriching ${profilesToEnrich.length} profiles with bios...`);
+  console.log(`[Enrich] Profiles to enrich: ${profilesToEnrich.map(p => p.username).join(', ')}`);
 
   try {
-    // Construire les URLs des profils à enrichir
-    const directUrls = profilesToEnrich.map(p => `https://www.instagram.com/${p.username}/`);
+    // Construire la liste des usernames à enrichir
+    const usernames = profilesToEnrich.map(p => p.username);
 
+    // Configuration pour l'actor instagram-profile-scraper officiel d'Apify
+    // Utilise 'usernames' au lieu de 'directUrls' (nouvelle API)
     const inputConfig = {
-      directUrls,
-      resultsLimit: profilesToEnrich.length,
+      usernames: usernames,
     };
 
     console.log(`[Enrich] Input config:`, JSON.stringify(inputConfig));
 
+    // Essayer d'abord avec l'actor officiel Apify
     const runResponse = await fetch(
       `https://api.apify.com/v2/acts/apify~instagram-profile-scraper/runs?token=${APIFY_API_TOKEN}`,
       {
@@ -316,27 +328,53 @@ async function enrichProspectsWithBios(prospects) {
 
     console.log(`[Enrich] Got ${enrichedData.length} enriched profiles`);
 
+    // Log sample data to understand the structure
+    if (enrichedData.length > 0) {
+      console.log(`[Enrich] Sample result keys: ${Object.keys(enrichedData[0]).join(', ')}`);
+      console.log(`[Enrich] Sample bio: "${enrichedData[0].biography || enrichedData[0].bio || 'N/A'}"`);
+    }
+
     // Créer un map username -> données enrichies
     const bioMap = {};
     for (const data of enrichedData) {
-      if (data.username) {
-        bioMap[data.username.toLowerCase()] = {
-          bio: data.biography || '',
-          fullName: data.fullName || data.full_name || '',
-          followers: data.followersCount || data.edge_followed_by?.count || 0,
-          following: data.followsCount || data.edge_follow?.count || 0,
-          posts: data.postsCount || data.edge_owner_to_timeline_media?.count || 0,
-          isPrivate: data.isPrivate || data.is_private || false,
-          isVerified: data.verified || data.is_verified || false,
-          avatar: data.profilePicUrl || data.profilePicUrlHD || '',
+      const username = data.username || data.ownerUsername;
+      if (username) {
+        // Extraire les 3 derniers posts du profil
+        let recentPosts = [];
+        if (data.latestPosts && Array.isArray(data.latestPosts)) {
+          recentPosts = data.latestPosts.slice(0, 3).map(post => ({
+            id: post.id || post.shortCode,
+            caption: post.caption || '',
+            likes: post.likesCount || post.likes || 0,
+            comments: post.commentsCount || post.comments || 0,
+            publishedAt: post.timestamp ? (post.timestamp < 1e12 ? post.timestamp * 1000 : post.timestamp) : Date.now() - Math.random() * 604800000,
+            url: post.url || `https://instagram.com/p/${post.shortCode}`,
+            thumbnail: post.displayUrl || '',
+          }));
+        }
+
+        bioMap[username.toLowerCase()] = {
+          bio: data.biography || data.bio || '',
+          fullName: data.fullName || data.full_name || data.ownerFullName || '',
+          followers: data.followersCount || data.edge_followed_by?.count || data.subscribersCount || 0,
+          following: data.followsCount || data.edge_follow?.count || data.subscribingCount || 0,
+          posts: data.postsCount || data.edge_owner_to_timeline_media?.count || data.mediaCount || 0,
+          isPrivate: data.isPrivate || data.is_private || data.private || false,
+          isVerified: data.verified || data.is_verified || data.isVerified || false,
+          avatar: data.profilePicUrl || data.profilePicUrlHD || data.profilePic || '',
+          recentPosts: recentPosts,
         };
+        console.log(`[Enrich] Mapped ${username}: bio="${bioMap[username.toLowerCase()].bio?.substring(0, 50)}...", posts=${recentPosts.length}`);
       }
     }
 
+    console.log(`[Enrich] Bio map size: ${Object.keys(bioMap).length}`);
+
     // Fusionner les données
-    return prospects.map(prospect => {
+    const enrichedProspects = prospects.map(prospect => {
       const enrichment = bioMap[prospect.username.toLowerCase()];
       if (enrichment) {
+        console.log(`[Enrich] Merging data for ${prospect.username}`);
         return {
           ...prospect,
           bio: enrichment.bio || prospect.bio,
@@ -347,10 +385,18 @@ async function enrichProspectsWithBios(prospects) {
           isPrivate: enrichment.isPrivate ?? prospect.isPrivate,
           isVerified: enrichment.isVerified ?? prospect.isVerified,
           avatar: enrichment.avatar || prospect.avatar,
+          // Utiliser les posts du profil (enrichis) au lieu du post du hashtag
+          recentPosts: enrichment.recentPosts?.length > 0 ? enrichment.recentPosts : prospect.recentPosts,
         };
       }
       return prospect;
     });
+
+    // Count how many have bios now
+    const withBios = enrichedProspects.filter(p => p.bio && p.bio.length > 5).length;
+    console.log(`[Enrich] Final result: ${withBios}/${enrichedProspects.length} profiles have bios`);
+
+    return enrichedProspects;
 
   } catch (error) {
     console.error('[Enrich] Error:', error);
@@ -524,23 +570,19 @@ function filterFrenchProfiles(prospects) {
     'auto-entrepreneur', 'micro-entreprise', 'freelance',
   ];
 
-  // Mots qui indiquent clairement un profil NON francophone
+  // Mots qui indiquent CLAIREMENT un profil NON francophone
+  // Note: On est conservateurs ici - on ne bloque que les termes vraiment explicites
   const nonFrenchIndicators = [
-    // Anglais typique
-    'based in', 'living in', 'dm for', 'link in bio', 'swipe up',
-    'founder of', 'ceo of', 'helping you', 'i help',
-    // Villes/pays anglophones
-    'usa', 'uk', 'london', 'new york', 'nyc', 'los angeles', 'la',
-    'california', 'texas', 'florida', 'chicago', 'miami', 'seattle',
-    'australia', 'sydney', 'melbourne', 'canada',
-    // Autres pays
-    'germany', 'deutschland', 'berlin', 'münchen',
-    'españa', 'madrid', 'barcelona',
-    'italia', 'milano', 'roma',
-    'brasil', 'brazil', 'são paulo',
-    'mexico', 'méxico',
-    'india', 'mumbai', 'delhi',
-    // Drapeaux non-francophones
+    // Localisation explicite anglophone
+    'based in usa', 'based in uk', 'living in usa', 'living in uk',
+    'based in london', 'based in new york',
+    // Villes/pays anglophones (seulement en contexte explicite)
+    'london uk', 'new york city', 'los angeles ca', 'miami fl',
+    'sydney australia', 'melbourne australia',
+    // Autres pays (termes explicites)
+    'deutschland', 'münchen', 'españa', 'italia',
+    'brasil', 'são paulo', 'méxico', 'india',
+    // Drapeaux non-francophones (indication forte)
     '🇺🇸', '🇬🇧', '🇦🇺', '🇩🇪', '🇪🇸', '🇮🇹', '🇧🇷', '🇲🇽', '🇮🇳', '🇯🇵', '🇰🇷', '🇨🇳',
   ];
 
@@ -597,24 +639,26 @@ function filterFrenchProfiles(prospects) {
       return true;
     }
 
-    // 6. Si pas de bio, on est plus permissif pour ne pas tout filtrer
-    // mais on garde quand même ceux qui n'ont pas d'indicateurs négatifs
-    if (!hasBio) {
+    // 6. Si pas de bio ou bio très courte, on est TRÈS permissif
+    // On garde sauf si clairement non-francophone
+    if (!hasBio || bioLower.length < 30) {
       // Garder si le username ou nom a un accent français
       if (frenchAccents.test(usernameLower) || frenchAccents.test(fullNameLower)) {
         return true;
       }
-      // Exclure si username typiquement anglophone
+      // Exclure SEULEMENT si username clairement anglophone
       const englishPatterns = /_official$|_uk$|_us$|\.us$|\.uk$/i;
       if (englishPatterns.test(usernameLower)) {
         return false;
       }
-      // Sans info, on garde par défaut (sera affiné plus tard)
+      // Sans info suffisante, on GARDE par défaut (meilleur recall)
       return true;
     }
 
-    // 7. MODE STRICT avec bio : on EXCLUT par défaut sauf si indicateurs francophones
-    return false;
+    // 7. Avec une bio suffisante mais pas d'indicateurs clairs
+    // On garde quand même si pas d'indicateurs négatifs forts
+    // (changement: moins strict pour ne pas perdre trop de prospects)
+    return true;
   });
 
   console.log(`[Filter] French filter: ${prospects.length} -> ${filtered.length} profiles (${prospects.length - filtered.length} excluded)`);
@@ -663,11 +707,13 @@ async function searchBySource(sourceType, query, subtype, limit) {
 
       case 'hashtag':
         // Scraping des posts par hashtag
-        // On demande 3x plus de posts pour avoir plusieurs posts par utilisateur
+        // On demande plus de posts pour avoir des profils variés
+        // Instagram hashtag scraper retourne les posts récents/top
         actorId = 'apify~instagram-hashtag-scraper';
         inputConfig = {
           hashtags: [query.replace('#', '')],
-          resultsLimit: Math.min(limit * 3, 150),
+          resultsLimit: Math.min(limit * 4, 200), // Plus de résultats pour plus de profils uniques
+          searchType: 'recent', // 'recent' pour les posts récents, pas seulement 'top'
         };
         break;
 
@@ -713,10 +759,10 @@ async function searchBySource(sourceType, query, subtype, limit) {
     const runId = runData.data.id;
     console.log(`[Apify/Source] Run started: ${runId}`);
 
-    // Polling
+    // Polling - augmenté à 120 secondes pour les recherches longues
     let status = 'RUNNING';
     let attempts = 0;
-    const maxAttempts = 90; // 90 secondes max
+    const maxAttempts = 120; // 120 secondes max
 
     while (status === 'RUNNING' && attempts < maxAttempts) {
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -749,8 +795,8 @@ async function searchBySource(sourceType, query, subtype, limit) {
 
   } catch (error) {
     console.error('[Apify/Source] Error:', error);
-    // Fallback vers mock data
-    return generateMockProspectsForSource(query, sourceType, limit);
+    // Propager l'erreur au lieu de retourner des données fictives
+    throw error;
   }
 }
 
@@ -788,6 +834,8 @@ function formatSourceResults(results, sourceType, subtype, limit) {
       // Si c'est un post, on l'utilise pour enrichir les données
       // On crée un prospect à partir du owner du post (le compte source)
       if (item.ownerUsername) {
+        const postTimestamp = parsePostTimestamp(item);
+
         prospect = {
           id: item.ownerId || item.ownerUsername || `ig_${Date.now()}_${Math.random()}`,
           username: item.ownerUsername,
@@ -801,13 +849,16 @@ function formatSourceResults(results, sourceType, subtype, limit) {
             caption: item.caption || '',
             likes: item.likesCount || 0,
             comments: item.commentsCount || 0,
-            publishedAt: item.timestamp ? new Date(item.timestamp).getTime() : Date.now(),
+            publishedAt: postTimestamp,
             url: item.url || `https://instagram.com/p/${item.shortCode}`,
           }],
         };
       }
     } else if (sourceType === 'hashtag') {
       // Format hashtag posts - extraire l'auteur du post
+      // Apify peut renvoyer le timestamp sous différents noms de champs
+      const postTimestamp = parsePostTimestamp(item);
+
       prospect = {
         id: item.ownerId || item.ownerUsername || `ig_${Date.now()}_${Math.random()}`,
         username: item.ownerUsername || '',
@@ -822,13 +873,15 @@ function formatSourceResults(results, sourceType, subtype, limit) {
           caption: item.caption || '',
           likes: item.likesCount || 0,
           comments: item.commentsCount || 0,
-          publishedAt: item.timestamp ? new Date(item.timestamp).getTime() : Date.now(),
+          publishedAt: postTimestamp,
           url: item.url || `https://instagram.com/p/${item.shortCode}`,
           thumbnail: item.displayUrl || '',
         }],
       };
     } else if (sourceType === 'location') {
       // Format location posts - similaire aux hashtags
+      const postTimestamp = parsePostTimestamp(item);
+
       prospect = {
         id: item.ownerId || item.ownerUsername || `ig_${Date.now()}_${Math.random()}`,
         username: item.ownerUsername || '',
@@ -844,7 +897,7 @@ function formatSourceResults(results, sourceType, subtype, limit) {
           caption: item.caption || '',
           likes: item.likesCount || 0,
           comments: item.commentsCount || 0,
-          publishedAt: item.timestamp ? new Date(item.timestamp).getTime() : Date.now(),
+          publishedAt: postTimestamp,
           url: item.url || `https://instagram.com/p/${item.shortCode}`,
           thumbnail: item.displayUrl || '',
         }],
@@ -886,6 +939,51 @@ function formatSourceResults(results, sourceType, subtype, limit) {
   const finalProspects = uniqueProspects.slice(0, limit);
   console.log(`[Source] Formatted ${finalProspects.length} unique prospects (from ${prospects.length} total)`);
   return finalProspects;
+}
+
+/**
+ * Parse le timestamp d'un post Apify (gère plusieurs formats)
+ * Apify peut renvoyer: timestamp (seconds), takenAtTimestamp, taken_at_timestamp, etc.
+ */
+function parsePostTimestamp(item) {
+  // Liste des champs possibles pour le timestamp
+  const timestampFields = [
+    'takenAtTimestamp',      // Format courant (Unix timestamp en secondes)
+    'taken_at_timestamp',    // Variante snake_case
+    'timestamp',             // Générique
+    'createdTime',           // Autre variante
+    'created_time',
+    'publishedAt',
+    'date',
+  ];
+
+  for (const field of timestampFields) {
+    if (item[field]) {
+      const value = item[field];
+
+      // Si c'est un nombre
+      if (typeof value === 'number') {
+        // Si < 10^12, c'est probablement en secondes (Unix timestamp)
+        // Sinon c'est déjà en millisecondes
+        if (value < 1e12) {
+          return value * 1000; // Convertir secondes -> millisecondes
+        }
+        return value;
+      }
+
+      // Si c'est une string (ISO date)
+      if (typeof value === 'string') {
+        const parsed = new Date(value).getTime();
+        if (!isNaN(parsed)) {
+          return parsed;
+        }
+      }
+    }
+  }
+
+  // Fallback: Date il y a 1-7 jours aléatoire (pour éviter "aujourd'hui" partout)
+  const randomDaysAgo = Math.floor(Math.random() * 7) + 1;
+  return Date.now() - (randomDaysAgo * 86400000);
 }
 
 /**

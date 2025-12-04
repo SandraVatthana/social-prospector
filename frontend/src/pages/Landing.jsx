@@ -1156,7 +1156,7 @@ export default function Landing() {
       <HowItWorksSection />
       <BestPracticesSection />
       <SocialProofSection />
-      <PricingSection />
+      {/* <PricingSection /> -- Masqué pour la bêta */}
       <FAQSection />
       <FinalCTASection />
       <Footer />

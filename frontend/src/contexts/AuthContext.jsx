@@ -10,8 +10,24 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [onboardingCompleted, setOnboardingCompleted] = useState(null);
 
+  // MODE DEMO : Auto-login pour les tests (mettre à false pour la prod)
+  const DEMO_MODE = false;
+
   // Vérifier l'authentification au chargement
   useEffect(() => {
+    // En mode démo, connecter automatiquement
+    if (DEMO_MODE) {
+      setUser({
+        name: 'Sandra',
+        email: 'sandra@example.com',
+        plan: 'Solo',
+        days_until_renewal: 23,
+      });
+      setOnboardingCompleted(true); // Skip l'onboarding en démo
+      setLoading(false);
+      return;
+    }
+
     // Récupérer la session initiale
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -121,6 +137,7 @@ export function AuthProvider({ children }) {
     signIn,
     signInWithGoogle,
     signOut,
+    logout: signOut, // Alias pour compatibilité
     loginDemo,
     completeOnboarding,
     skipOnboardingDemo,

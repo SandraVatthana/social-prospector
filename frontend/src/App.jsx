@@ -19,6 +19,8 @@ import GuidedTour, { useTour, STORAGE_KEY } from './components/tour/GuidedTour';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ClientProvider } from './contexts/ClientContext';
 import { ToastProvider } from './components/ui/Toast';
+import WelcomeModal from './components/ui/WelcomeModal';
+import FAQChatbot from './components/ui/FAQChatbot';
 
 // Pages légales et publiques
 import OptOut from './pages/OptOut';
@@ -32,13 +34,6 @@ import Landing from './pages/Landing';
 const TourContext = createContext(null);
 export const useTourContext = () => useContext(TourContext);
 
-// Données mock pour la démo
-const mockUser = {
-  name: 'Sandra',
-  email: 'sandra@example.com',
-  plan: 'Solo',
-  days_until_renewal: 23,
-};
 
 // Routes publiques qui ne nécessitent pas d'authentification
 const PUBLIC_ROUTES = ['/opt-out', '/privacy', '/terms', '/legal', '/landing', '/login'];
@@ -151,9 +146,9 @@ function AppContent() {
       <div className="flex min-h-screen bg-warm-50">
         {/* Sidebar */}
         <Sidebar
-          user={mockUser}
-          prospectsCount={127}
-          messagesCount={12}
+          user={user}
+          prospectsCount={0}
+          messagesCount={0}
         />
 
         {/* Main content */}
@@ -185,6 +180,12 @@ function AppContent() {
           onClose={handleTourClose}
           onNavigate={handleTourNavigate}
         />
+
+        {/* Pop-up de bienvenue (bêta) */}
+        <WelcomeModal />
+
+        {/* Chatbot FAQ flottant */}
+        <FAQChatbot />
       </div>
     </TourContext.Provider>
   );

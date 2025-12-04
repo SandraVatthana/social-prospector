@@ -67,16 +67,15 @@ router.post('/complete', requireAuth, async (req, res) => {
 
     if (userError) throw userError;
 
-    // Créer le profil MA VOIX si fourni
+    // Créer le profil MA VOIX si fourni (sans description - colonne n'existe pas)
     if (voice_profile) {
       const { error: voiceError } = await supabaseAdmin
         .from('voice_profiles')
         .insert({
           user_id: req.user.id,
           nom: voice_profile.nom || `MA VOIX — ${onboarding_data.prenom}`,
-          description: voice_profile.description,
           profil_json: voice_profile,
-          is_default: true,
+          is_active: true,
         });
 
       if (voiceError) {

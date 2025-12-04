@@ -66,6 +66,51 @@ app.use('/api/opt-out', optoutRoutes);
 app.use('/api/conversations', conversationsRoutes);
 app.use('/api/clients', clientsRoutes);
 
+// Image proxy pour contourner les restrictions CORS d'Instagram
+app.get('/api/image-proxy', async (req, res) => {
+  try {
+    const { url } = req.query;
+
+    if (!url) {
+      return res.status(400).json({ error: 'URL requise' });
+    }
+
+    // Valider que c'est une URL Instagram ou CDN autorisé
+    const allowedDomains = [
+      'instagram.com',
+      'cdninstagram.com',
+      'fbcdn.net',
+      'scontent',
+    ];
+
+    const isAllowed = allowedDomains.some(domain => url.includes(domain));
+    if (!isAllowed) {
+      return res.status(403).json({ error: 'Domaine non autorisé' });
+    }
+
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'image/*',
+      },
+    });
+
+    if (!response.ok) {
+      return res.status(response.status).json({ error: 'Erreur de récupération' });
+    }
+
+    const contentType = response.headers.get('content-type');
+    res.setHeader('Content-Type', contentType || 'image/jpeg');
+    res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache 24h
+
+    const buffer = await response.arrayBuffer();
+    res.send(Buffer.from(buffer));
+  } catch (error) {
+    console.error('[ImageProxy] Error:', error.message);
+    res.status(500).json({ error: 'Erreur proxy' });
+  }
+});
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ error: 'Route non trouvée' });

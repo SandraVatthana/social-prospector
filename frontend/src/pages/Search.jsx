@@ -30,6 +30,19 @@ import GenerateMessageModal from '../components/dashboard/GenerateMessageModal';
 import InfoTooltip from '../components/ui/InfoTooltip';
 import { useTourContext } from '../App';
 import { API_BASE_URL } from '../lib/api';
+import { useToast } from '../components/ui/Toast';
+
+// Helper pour obtenir l'URL de l'avatar via proxy si nécessaire
+function getProxiedImageUrl(url) {
+  if (!url) return null;
+  // Si c'est une URL Instagram CDN, utiliser notre proxy
+  const instagramDomains = ['instagram.com', 'cdninstagram.com', 'fbcdn.net', 'scontent'];
+  const needsProxy = instagramDomains.some(domain => url.includes(domain));
+  if (needsProxy) {
+    return `${API_BASE_URL}/image-proxy?url=${encodeURIComponent(url)}`;
+  }
+  return url;
+}
 
 // Clé pour persister les données de recherche
 const SEARCH_STORAGE_KEY = 'social_prospector_search_state';
@@ -193,20 +206,35 @@ export default function Search() {
           count: data.data?.prospects?.length || 0,
         });
       } else {
-        throw new Error('API non disponible');
+        // Essayer de parser l'erreur du backend
+        let errorMessage = 'API non disponible';
+        try {
+          const errorData = await response.json();
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (e) {
+          // Ignorer si on ne peut pas parser la réponse
+        }
+        throw new Error(errorMessage);
       }
     } catch (err) {
       console.error('Erreur recherche:', err);
-      // Mode démo avec données mockées
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      const mockData = generateMockProspects(query, sourceType, 20);
-      setAllProspects(mockData);
+      // Afficher l'erreur de manière user-friendly
+      let friendlyError = err.message || 'Erreur lors de la recherche';
+      if (friendlyError.includes('Apify') || friendlyError.includes('timeout')) {
+        friendlyError = 'La recherche a pris trop de temps. Veuillez réessayer.';
+      } else if (friendlyError.includes('SEARCH_ERROR')) {
+        friendlyError = 'Erreur lors de la recherche. Veuillez réessayer.';
+      }
+
+      setAllProspects([]);
       setSearchInfo({
         type: sourceType,
         query: query,
         subtype: accountSubtype,
-        count: mockData.length,
-        demo: true,
+        count: 0,
+        error: friendlyError,
       });
     } finally {
       setIsSearching(false);
@@ -259,18 +287,7 @@ export default function Search() {
       }
     } catch (err) {
       console.error('Erreur chargement supplémentaire:', err);
-      // Mode démo - ajouter des données mockées
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const mockData = generateMockProspects(searchInfo.query, searchInfo.type, 10);
-      const existingUsernames = new Set(allProspects.map(p => p.username));
-      const uniqueMock = mockData.filter(p => !existingUsernames.has(p.username));
-      setAllProspects(prev => [...prev, ...uniqueMock]);
-      setSearchOffset(newOffset);
-      setSearchInfo(prev => ({
-        ...prev,
-        count: prev.count + uniqueMock.length,
-        demo: true,
-      }));
+      // Ne pas ajouter de données fictives - juste logger l'erreur
     } finally {
       setIsLoadingMore(false);
     }
@@ -298,6 +315,72 @@ export default function Search() {
       setSelectedProspects([]);
     } else {
       setSelectedProspects(prospects.map(p => p.id));
+    }
+  };
+
+  // Toast pour notifications
+  const toast = useToast();
+  const [isSaving, setIsSaving] = useState(false);
+  const [savingProspectId, setSavingProspectId] = useState(null);
+
+  // Sauvegarder les prospects sélectionnés dans le CRM
+  const saveSelectedProspects = async () => {
+    if (selectedProspects.length === 0) return;
+
+    setIsSaving(true);
+    try {
+      // Récupérer les données complètes des prospects sélectionnés
+      const prospectsToSave = allProspects.filter(p => selectedProspects.includes(p.id));
+
+      const response = await fetch(`${API_BASE_URL}/prospects`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        credentials: 'include',
+        body: JSON.stringify({ prospects: prospectsToSave }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success('Prospects sauvegardés !', data.data?.message || `${prospectsToSave.length} prospect(s) ajouté(s)`);
+        setSelectedProspects([]); // Désélectionner après sauvegarde
+      } else {
+        throw new Error('Erreur lors de la sauvegarde');
+      }
+    } catch (error) {
+      console.error('Erreur sauvegarde prospects:', error);
+      toast.error('Erreur', 'Impossible de sauvegarder les prospects');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Sauvegarder un prospect individuel dans le CRM
+  const saveSingleProspect = async (prospect) => {
+    setSavingProspectId(prospect.id);
+    try {
+      const response = await fetch(`${API_BASE_URL}/prospects`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        credentials: 'include',
+        body: JSON.stringify({ prospects: [prospect] }),
+      });
+
+      if (response.ok) {
+        toast.success('Prospect ajouté !', `@${prospect.username} ajouté au CRM`);
+      } else {
+        throw new Error('Erreur lors de la sauvegarde');
+      }
+    } catch (error) {
+      console.error('Erreur sauvegarde prospect:', error);
+      toast.error('Erreur', 'Impossible de sauvegarder le prospect');
+    } finally {
+      setSavingProspectId(null);
     }
   };
 
@@ -560,8 +643,11 @@ export default function Search() {
                 )}
               </p>
               <p className="text-sm text-warm-500">
-                {searchInfo.count} profils trouvés
-                {searchInfo.demo && ' (mode démo)'}
+                {searchInfo.error ? (
+                  <span className="text-red-500">{searchInfo.error}</span>
+                ) : (
+                  `${searchInfo.count} profils trouvés`
+                )}
               </p>
             </div>
           </div>
@@ -586,16 +672,35 @@ export default function Search() {
                 )}
               </div>
 
-              {selectedProspects.length > 0 && (
+              {/* Boutons toujours visibles */}
+              {!isSearching && prospects.length > 0 && (
                 <div className="flex items-center gap-3">
-                  <span className="text-sm text-warm-500">
-                    {selectedProspects.length} sélectionné(s)
-                  </span>
-                  <button className="flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-xl transition-colors">
-                    <UserPlus className="w-4 h-4" />
-                    Ajouter aux prospects
+                  {selectedProspects.length > 0 && (
+                    <span className="text-sm text-warm-500">
+                      {selectedProspects.length} sélectionné(s)
+                    </span>
+                  )}
+                  <button
+                    onClick={saveSelectedProspects}
+                    disabled={isSaving || selectedProspects.length === 0}
+                    className={`flex items-center gap-2 px-4 py-2 font-medium rounded-xl transition-colors ${
+                      selectedProspects.length > 0
+                        ? 'bg-brand-600 hover:bg-brand-700 text-white'
+                        : 'bg-warm-200 text-warm-400 cursor-not-allowed'
+                    } disabled:opacity-50`}
+                    title={selectedProspects.length === 0 ? 'Sélectionne des prospects en cliquant sur la checkbox à gauche' : ''}
+                  >
+                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                    {isSaving ? 'Sauvegarde...' : 'Ajouter au CRM'}
                   </button>
-                  <button className="flex items-center gap-2 px-4 py-2 bg-accent-500 hover:bg-accent-600 text-white font-medium rounded-xl transition-colors">
+                  <button
+                    disabled={selectedProspects.length === 0}
+                    className={`flex items-center gap-2 px-4 py-2 font-medium rounded-xl transition-colors ${
+                      selectedProspects.length > 0
+                        ? 'bg-accent-500 hover:bg-accent-600 text-white'
+                        : 'bg-warm-200 text-warm-400 cursor-not-allowed'
+                    }`}
+                  >
                     <Sparkles className="w-4 h-4" />
                     Générer messages
                   </button>
@@ -608,7 +713,8 @@ export default function Search() {
               <div className="card p-12 text-center">
                 <Loader2 className="w-12 h-12 text-brand-500 animate-spin mx-auto mb-4" />
                 <p className="text-warm-600 font-medium">Analyse des profils...</p>
-                <p className="text-warm-400 text-sm mt-1">
+                <p className="text-brand-500 text-sm mt-1 font-medium">Merci de patienter</p>
+                <p className="text-warm-400 text-sm mt-2">
                   {sourceType === SOURCE_TYPES.ACCOUNT && 'Récupération des profils liés au compte...'}
                   {sourceType === SOURCE_TYPES.HASHTAG && 'Récupération des posts avec ce hashtag...'}
                   {sourceType === SOURCE_TYPES.LOCATION && 'Récupération des posts géolocalisés...'}
@@ -627,6 +733,8 @@ export default function Search() {
                       isSelected={selectedProspects.includes(prospect.id)}
                       onToggle={() => toggleSelect(prospect.id)}
                       onGenerateMessage={() => openGenerateModal(prospect)}
+                      onSave={() => saveSingleProspect(prospect)}
+                      isSaving={savingProspectId === prospect.id}
                       formatNumber={formatNumber}
                     />
                   ))}
@@ -776,9 +884,10 @@ export default function Search() {
 /**
  * Carte prospect individuelle
  */
-function ProspectCard({ prospect, isSelected, onToggle, onGenerateMessage, formatNumber }) {
+function ProspectCard({ prospect, isSelected, onToggle, onGenerateMessage, onSave, isSaving, formatNumber }) {
   const [showActions, setShowActions] = useState(false);
   const [showPosts, setShowPosts] = useState(false);
+  const toast = useToast();
 
   const getScoreColor = (score) => {
     if (score >= 90) return 'text-green-600 bg-green-50';
@@ -788,13 +897,32 @@ function ProspectCard({ prospect, isSelected, onToggle, onGenerateMessage, forma
 
   const getRelativeTime = (timestamp) => {
     if (!timestamp) return '';
+
+    // Convertir en nombre si c'est une string
+    let time = timestamp;
+    if (typeof timestamp === 'string') {
+      time = new Date(timestamp).getTime();
+    }
+
+    // Vérifier si c'est un timestamp en secondes (pas en ms)
+    if (time && time < 1e12) {
+      time = time * 1000;
+    }
+
+    // Vérifier si le timestamp est valide
+    if (!time || isNaN(time)) return '';
+
     const now = Date.now();
-    const diff = now - timestamp;
+    const diff = now - time;
     const days = Math.floor(diff / 86400000);
+
+    if (isNaN(days) || days < 0) return '';
     if (days === 0) return "aujourd'hui";
     if (days === 1) return 'hier';
     if (days < 7) return `il y a ${days}j`;
-    return `il y a ${Math.floor(days / 7)} sem`;
+    const weeks = Math.floor(days / 7);
+    if (weeks < 5) return `il y a ${weeks} sem`;
+    return `il y a ${Math.floor(days / 30)} mois`;
   };
 
   return (
@@ -804,14 +932,15 @@ function ProspectCard({ prospect, isSelected, onToggle, onGenerateMessage, forma
       }`}
     >
       <div className="flex items-start gap-4">
-        {/* Checkbox */}
+        {/* Checkbox - Plus visible */}
         <button
           onClick={onToggle}
-          className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+          className={`mt-1 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
             isSelected
-              ? 'bg-brand-500 border-brand-500'
-              : 'border-warm-300 hover:border-brand-400'
+              ? 'bg-brand-500 border-brand-500 scale-110'
+              : 'border-warm-300 hover:border-brand-500 hover:bg-brand-50'
           }`}
+          title={isSelected ? 'Désélectionner' : 'Sélectionner pour sauvegarder'}
         >
           {isSelected && <CheckCircle2 className="w-4 h-4 text-white" />}
         </button>
@@ -819,7 +948,7 @@ function ProspectCard({ prospect, isSelected, onToggle, onGenerateMessage, forma
         {/* Avatar */}
         <div className="relative">
           <img
-            src={prospect.avatar}
+            src={getProxiedImageUrl(prospect.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(prospect.username)}&background=f15a24&color=fff&size=150`}
             alt={prospect.username}
             className="w-14 h-14 rounded-xl object-cover bg-warm-200"
             onError={(e) => {
@@ -918,18 +1047,26 @@ function ProspectCard({ prospect, isSelected, onToggle, onGenerateMessage, forma
 
           <div className="flex items-center gap-1">
             <button
-              onClick={() => setShowActions(!showActions)}
-              className="p-2 hover:bg-warm-100 rounded-lg transition-colors"
-              title="Actions"
+              onClick={onGenerateMessage}
+              className="p-2 hover:bg-brand-50 rounded-lg transition-colors"
+              title="Générer un message"
             >
-              <MessageSquare className="w-5 h-5 text-warm-500" />
+              <MessageSquare className="w-5 h-5 text-brand-500" />
+            </button>
+            <button
+              onClick={onSave}
+              disabled={isSaving}
+              className="p-2 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50"
+              title="Ajouter au CRM"
+            >
+              <UserPlus className="w-5 h-5 text-green-600" />
             </button>
             <a
               href={`https://instagram.com/${prospect.username}`}
               target="_blank"
               rel="noopener noreferrer"
               className="p-2 hover:bg-warm-100 rounded-lg transition-colors"
-              title="Voir le profil"
+              title="Voir le profil Instagram"
             >
               <ExternalLink className="w-5 h-5 text-warm-500" />
             </a>
@@ -1023,68 +1160,3 @@ function ProspectCard({ prospect, isSelected, onToggle, onGenerateMessage, forma
   );
 }
 
-/**
- * Génère des prospects mock pour la démo
- */
-function generateMockProspects(query, sourceType, count = 20) {
-  const names = ['Emma', 'Léa', 'Marie', 'Julie', 'Sarah', 'Lucas', 'Thomas', 'Alex', 'Hugo', 'Nathan', 'Chloé', 'Camille', 'Laura', 'Manon', 'Océane'];
-  const lastNames = ['Martin', 'Bernard', 'Dubois', 'Petit', 'Durand', 'Leroy', 'Moreau', 'Simon', 'Laurent', 'Michel'];
-  const bios = [
-    '✨ Passionnée de bien-être | Bordeaux 🇫🇷',
-    'Entrepreneur | Fondateur @monentreprise | Lyon',
-    'Coach sportif certifié | Transformations 💪 Paris',
-    'Maman de 2 | Créatrice de contenu | Toulouse',
-    '📍 Marseille | Food lover | Bons plans locaux',
-    'Artisan local | Fait main 🌿 | Livraison France',
-    'Photographe lifestyle | Disponible pour collabs',
-    'Naturopathe certifiée | Consultations en ligne',
-    '🧘‍♀️ Prof de yoga | Cours collectifs & privés | Nantes',
-    'Digital nomad 🌍 | Freelance marketing',
-  ];
-
-  const locations = ['Paris', 'Lyon', 'Marseille', 'Bordeaux', 'Toulouse', 'Nantes', 'Lille', 'Strasbourg', 'Montpellier', 'Nice'];
-
-  const prospects = [];
-  for (let i = 0; i < count; i++) {
-    const firstName = names[i % names.length];
-    const lastName = lastNames[i % lastNames.length];
-    const location = locations[i % locations.length];
-    const followers = Math.floor(Math.random() * 45000) + 500;
-
-    prospects.push({
-      id: `mock_${i}_${Date.now()}`,
-      username: `${firstName.toLowerCase()}_${lastName.toLowerCase()}${Math.floor(Math.random() * 100)}`,
-      fullName: `${firstName} ${lastName}`,
-      bio: bios[i % bios.length],
-      avatar: `https://i.pravatar.cc/150?img=${(i % 70) + 1}`,
-      followers,
-      following: Math.floor(followers * (0.1 + Math.random() * 0.5)),
-      posts: Math.floor(Math.random() * 400) + 20,
-      engagement: (Math.random() * 6 + 1).toFixed(1),
-      score: Math.floor(Math.random() * 30) + 70,
-      isVerified: Math.random() > 0.9,
-      isPrivate: Math.random() > 0.7, // ~30% de comptes privés
-      location,
-      recentPosts: [
-        {
-          id: `post_${i}_1`,
-          caption: `Super journée à ${location} ! 🌞 #${location.toLowerCase()} #lifestyle`,
-          likes: Math.floor(Math.random() * 500) + 50,
-          comments: Math.floor(Math.random() * 50) + 5,
-          publishedAt: Date.now() - 86400000,
-          url: `https://instagram.com/p/mock_${i}_1`,
-        },
-        {
-          id: `post_${i}_2`,
-          caption: 'Nouvelle semaine, nouveaux objectifs 💪',
-          likes: Math.floor(Math.random() * 500) + 50,
-          comments: Math.floor(Math.random() * 50) + 5,
-          publishedAt: Date.now() - 172800000,
-          url: `https://instagram.com/p/mock_${i}_2`,
-        },
-      ],
-    });
-  }
-
-  return prospects;
-}

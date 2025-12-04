@@ -182,15 +182,16 @@ function buildEnhancedSystemPrompt(profile) {
   };
 
   const tone = profile ? (toneMap[profile.tone?.toLowerCase()] || profile.tone || 'décontracté') : 'décontracté';
-  const tutoiement = profile?.tutoiement === 'Toujours' ? 'tu tutoies toujours' :
-                     profile?.tutoiement === 'Jamais' ? 'tu vouvoies toujours' :
-                     'tu tutoies par défaut mais peux adapter';
+  const tutoiement = profile?.tutoiement === 'Toujours' ? 'Tu TUTOIES OBLIGATOIREMENT. Jamais de "vous", toujours "tu".' :
+                     profile?.tutoiement === 'Jamais' ? 'Tu VOUVOIES OBLIGATOIREMENT. Jamais de "tu", toujours "vous".' :
+                     'Tu tutoies par défaut (style Instagram/TikTok).';
 
   let prompt = `Tu es un expert en prospection personnalisée sur les réseaux sociaux.
 Tu génères des messages qui MONTRENT que tu as vraiment regardé le contenu du prospect.
 
 Style: ${tone}
-Forme: ${tutoiement}
+
+FORME D'ADRESSE (OBLIGATOIRE): ${tutoiement}
 
 RÈGLES ABSOLUES:
 1. Le message DOIT mentionner quelque chose de SPÉCIFIQUE du contenu du prospect
@@ -280,5 +281,144 @@ function getRelativeTime(timestamp) {
   if (days < 30) return `il y a ${Math.floor(days / 7)} sem`;
   return `il y a ${Math.floor(days / 30)} mois`;
 }
+
+/**
+ * POST /api/prospects
+ * Sauvegarde un ou plusieurs prospects dans le CRM
+ * Note: Auth optionnel pour la bêta (utilisera un userId par défaut)
+ */
+router.post('/', async (req, res) => {
+  try {
+    const { prospects } = req.body;
+
+    if (!prospects || !Array.isArray(prospects) || prospects.length === 0) {
+      return res.status(400).json(formatError('Aucun prospect à sauvegarder', 'NO_PROSPECTS'));
+    }
+
+    // Essayer de récupérer l'utilisateur authentifié
+    let userId = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      try {
+        const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+        if (user) {
+          userId = user.id;
+        }
+      } catch (authError) {
+        console.log('[Prospects] Auth failed, using demo mode');
+      }
+    }
+
+    // En mode démo/bêta sans auth, utiliser un userId par défaut
+    if (!userId) {
+      // Créer ou récupérer un utilisateur démo
+      const { data: demoUser } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('email', 'demo@socialprospector.app')
+        .single();
+
+      if (demoUser) {
+        userId = demoUser.id;
+      } else {
+        // Créer l'utilisateur démo s'il n'existe pas
+        const { data: newUser } = await supabaseAdmin
+          .from('users')
+          .insert({ email: 'demo@socialprospector.app', plan: 'solo' })
+          .select()
+          .single();
+        userId = newUser?.id;
+      }
+
+      if (!userId) {
+        console.log('[Prospects] No user available, using placeholder');
+        // Fallback: stocker en mémoire pour la session (demo uniquement)
+        return res.json(formatResponse({
+          saved: prospects.length,
+          message: `${prospects.length} prospect(s) ajouté(s) (mode démo sans persistance)`
+        }));
+      }
+    }
+
+    console.log(`[Prospects] Saving ${prospects.length} prospects for user ${userId}`);
+
+    // Préparer les données pour insertion (colonnes existantes seulement)
+    const prospectsToInsert = prospects.map(p => ({
+      user_id: userId,
+      username: p.username,
+      platform: p.platform || 'instagram',
+      full_name: p.fullName || p.full_name || null,
+      bio: p.bio || null,
+      profile_pic_url: p.avatar || p.avatarUrl || p.profilePicUrl || null,
+      followers_count: p.followers || p.followersCount || 0,
+      following_count: p.following || p.followingCount || 0,
+      posts_count: p.posts || p.postsCount || 0,
+      status: 'new',
+      source: p.source || 'search',
+      created_at: new Date().toISOString(),
+    }));
+
+    // Insérer en ignorant les doublons (upsert sur username + user_id)
+    const { data, error } = await supabaseAdmin
+      .from('prospects')
+      .upsert(prospectsToInsert, {
+        onConflict: 'user_id,username',
+        ignoreDuplicates: true
+      })
+      .select();
+
+    if (error) {
+      console.error('[Prospects] Error saving:', error);
+      return res.status(500).json(formatError('Erreur lors de la sauvegarde', 'SAVE_ERROR'));
+    }
+
+    console.log(`[Prospects] Saved ${data?.length || 0} prospects`);
+
+    res.json(formatResponse({
+      saved: data?.length || prospects.length,
+      message: `${data?.length || prospects.length} prospect(s) ajouté(s) au CRM`
+    }));
+
+  } catch (error) {
+    console.error('[Prospects] Error:', error);
+    res.status(500).json(formatError('Erreur serveur', 'SERVER_ERROR'));
+  }
+});
+
+/**
+ * GET /api/prospects
+ * Liste les prospects de l'utilisateur
+ */
+router.get('/', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { status, limit = 50, offset = 0 } = req.query;
+
+    let query = supabaseAdmin
+      .from('prospects')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .range(parseInt(offset), parseInt(offset) + parseInt(limit) - 1);
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('[Prospects] Error fetching:', error);
+      return res.status(500).json(formatError('Erreur lors de la récupération', 'FETCH_ERROR'));
+    }
+
+    res.json(formatResponse({ prospects: data || [] }));
+
+  } catch (error) {
+    console.error('[Prospects] Error:', error);
+    res.status(500).json(formatError('Erreur serveur', 'SERVER_ERROR'));
+  }
+});
 
 export default router;

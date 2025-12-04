@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users,
@@ -10,103 +10,42 @@ import {
   PenLine,
   BarChart3,
   Zap,
-  Sparkles,
-  X,
 } from 'lucide-react';
 import Header from '../components/layout/Header';
 import { GoalCard, VoiceWidget } from '../components/dashboard';
-import { ProspectCard } from '../components/prospects';
 import { useAuth } from '../contexts/AuthContext';
 
-// Données mock pour la démo
-const mockStats = {
-  prospects: { total: 127, trend: '+23%' },
-  messages: { total: 84, envoyes: 52, repondus: 12, taux_reponse: 23, trend: '+18%' },
+// Stats initiales (vides pour la bêta)
+const initialStats = {
+  prospects: { total: 0, trend: null },
+  messages: { total: 0, envoyes: 0, repondus: 0, taux_reponse: 0, trend: null },
 };
 
-const mockProspects = [
-  {
-    id: 1,
-    username: 'marie_coaching',
-    platform: 'instagram',
-    bio: 'Coach en développement personnel',
-    followers: 12400,
-    status: 'a_contacter',
-    score: 87,
-    added_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-  },
-  {
-    id: 2,
-    username: 'julie_business',
-    platform: 'instagram',
-    bio: 'Consultante marketing digital',
-    followers: 8200,
-    status: 'envoye',
-    score: 92,
-    added_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-  },
-  {
-    id: 3,
-    username: 'emma.creatrice',
-    platform: 'tiktok',
-    bio: 'Créatrice de contenu lifestyle',
-    followers: 45600,
-    status: 'repondu',
-    score: 78,
-    added_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-  },
-  {
-    id: 4,
-    username: 'sophie_mindset',
-    platform: 'instagram',
-    bio: 'Coach mindset & productivité',
-    followers: 5800,
-    status: 'nouveau',
-    score: 65,
-    added_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-  },
-];
-
-const mockVoiceProfile = {
-  name: 'MA VOIX — Sandra',
-  tone: 'Décontracté, Direct',
-  tutoiement: 'Toujours',
-  emojis: ['🚀', '✨', '💪', '🔥'],
-  isActive: true,
+// Profil MA VOIX par défaut (non configuré)
+const defaultVoiceProfile = {
+  name: 'MA VOIX',
+  tone: 'Non configuré',
+  tutoiement: '-',
+  emojis: [],
+  isActive: false,
 };
 
-const mockUsage = {
-  prospects: { used: 127, limit: 500 },
-  messages: { used: 84, limit: 500 },
-  searches: { used: 3, limit: 50 },
-};
-
-const mockUser = {
-  name: 'Sandra',
-  plan: 'Solo',
-  days_until_renewal: 23,
+// Usage initial (bêta = illimité pour l'instant)
+const initialUsage = {
+  prospects: { used: 0, limit: 500 },
+  messages: { used: 0, limit: 500 },
+  searches: { used: 0, limit: 50 },
 };
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [showWelcome, setShowWelcome] = useState(false);
   const [goals, setGoals] = useState({
-    monthly_goal_responses: 20,
-    monthly_goal_meetings: 5,
-    current_responses: 12,
-    current_meetings: 3,
+    monthly_goal_responses: 10,
+    monthly_goal_meetings: 3,
+    current_responses: 0,
+    current_meetings: 0,
   });
-
-  // Afficher le message de bienvenue pour les nouveaux utilisateurs
-  useEffect(() => {
-    const welcomeKey = 'social-prospector-welcome-shown';
-    const hasSeenWelcome = localStorage.getItem(welcomeKey);
-    if (!hasSeenWelcome) {
-      setShowWelcome(true);
-      localStorage.setItem(welcomeKey, 'true');
-    }
-  }, []);
 
   const handleSaveGoals = async (newGoals) => {
     setGoals((prev) => ({ ...prev, ...newGoals }));
@@ -130,52 +69,6 @@ export default function Dashboard() {
 
   return (
     <>
-      {/* Message de bienvenue pour les nouveaux utilisateurs */}
-      {showWelcome && (
-        <div className="mx-6 mt-6 lg:mx-8 lg:mt-8">
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-brand-500 via-brand-600 to-accent-500 p-6 text-white shadow-xl">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-            <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2"></div>
-
-            <button
-              onClick={() => setShowWelcome(false)}
-              className="absolute top-4 right-4 p-1 hover:bg-white/20 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="relative flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-                <Sparkles className="w-6 h-6" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold mb-2">
-                  Bienvenue sur Social Prospector, {firstName} !
-                </h2>
-                <p className="text-white/90 mb-4">
-                  Vous venez de faire le premier pas vers une prospection Instagram & TikTok
-                  vraiment efficace. Voici comment commencer :
-                </p>
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    onClick={() => { setShowWelcome(false); navigate('/voice'); }}
-                    className="px-4 py-2 bg-white text-brand-600 rounded-lg font-semibold hover:bg-white/90 transition-colors"
-                  >
-                    Configurer ma voix
-                  </button>
-                  <button
-                    onClick={() => { setShowWelcome(false); navigate('/search'); }}
-                    className="px-4 py-2 bg-white/20 text-white rounded-lg font-semibold hover:bg-white/30 transition-colors"
-                  >
-                    Lancer une recherche
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       <Header
         title={`Bonjour ${firstName} !`}
         subtitle="Voici un aperçu de votre activité"
@@ -196,29 +89,29 @@ export default function Dashboard() {
           <StatCard
             icon={Users}
             label="Prospects totaux"
-            value={mockStats.prospects.total}
-            trend={mockStats.prospects.trend}
+            value={initialStats.prospects.total}
+            trend={initialStats.prospects.trend}
             color="brand"
           />
           <StatCard
             icon={MessageSquare}
             label="Messages générés"
-            value={mockStats.messages.total}
-            trend={mockStats.messages.trend}
+            value={initialStats.messages.total}
+            trend={initialStats.messages.trend}
             color="accent"
           />
           <StatCard
             icon={Send}
             label="Messages envoyés"
-            value={mockStats.messages.envoyes}
-            trend="+0%"
+            value={initialStats.messages.envoyes}
+            trend={null}
             color="green"
           />
           <StatCard
             icon={TrendingUp}
             label="Taux de réponse"
-            value={`${mockStats.messages.taux_reponse}%`}
-            subValue={`${mockStats.messages.repondus} réponses`}
+            value={`${initialStats.messages.taux_reponse}%`}
+            subValue={`${initialStats.messages.repondus} réponses`}
             color="purple"
           />
         </div>
@@ -245,16 +138,21 @@ export default function Dashboard() {
                 Voir tout &rarr;
               </button>
             </div>
-            <div className="divide-y divide-warm-100">
-              {mockProspects.map((prospect) => (
-                <ProspectCard
-                  key={prospect.id}
-                  prospect={prospect}
-                  onClick={() => navigate(`/prospects/${prospect.id}`)}
-                  onGenerateMessage={() => navigate(`/messages/new?prospect=${prospect.id}`)}
-                  compact
-                />
-              ))}
+            {/* État vide - aucun prospect */}
+            <div className="p-8 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-warm-100 flex items-center justify-center mx-auto mb-4">
+                <Users className="w-8 h-8 text-warm-400" />
+              </div>
+              <h3 className="font-semibold text-warm-700 mb-2">Aucun prospect pour l'instant</h3>
+              <p className="text-sm text-warm-500 mb-4">
+                Lancez une recherche pour trouver vos premiers prospects
+              </p>
+              <button
+                onClick={() => navigate('/search')}
+                className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-xl transition-colors"
+              >
+                Lancer une recherche
+              </button>
             </div>
           </div>
 
@@ -262,7 +160,7 @@ export default function Dashboard() {
           <div className="space-y-6">
             {/* MA VOIX Widget */}
             <VoiceWidget
-              voiceProfile={mockVoiceProfile}
+              voiceProfile={defaultVoiceProfile}
               onEditProfile={() => navigate('/voice')}
             />
 
@@ -273,27 +171,27 @@ export default function Dashboard() {
               <div className="space-y-4">
                 <UsageBar
                   label="Prospects analysés"
-                  used={mockUsage.prospects.used}
-                  limit={mockUsage.prospects.limit}
+                  used={initialUsage.prospects.used}
+                  limit={initialUsage.prospects.limit}
                   color="brand"
                 />
                 <UsageBar
                   label="Messages générés"
-                  used={mockUsage.messages.used}
-                  limit={mockUsage.messages.limit}
+                  used={initialUsage.messages.used}
+                  limit={initialUsage.messages.limit}
                   color="accent"
                 />
                 <UsageBar
                   label="Recherches aujourd'hui"
-                  used={mockUsage.searches.used}
-                  limit={mockUsage.searches.limit}
+                  used={initialUsage.searches.used}
+                  limit={initialUsage.searches.limit}
                   color="green"
                 />
               </div>
 
               <div className="mt-4 pt-4 border-t border-warm-100">
                 <p className="text-xs text-warm-400">
-                  Plan {mockUser.plan} &bull; Renouvellement dans {mockUser.days_until_renewal} jours
+                  Bêta gratuite &bull; Usage illimité
                 </p>
               </div>
             </div>

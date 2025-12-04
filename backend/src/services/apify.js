@@ -294,24 +294,31 @@ async function enrichProfilesWithBios(profiles) {
   console.log(`[Apify] Enriching ${profilesWithoutBio.length} profiles with bios...`);
 
   try {
-    // Construire les URLs des profils à enrichir (max 20 pour limiter les coûts)
+    // Construire la liste des usernames à enrichir (max 20 pour limiter les coûts)
     const profilesToEnrich = profilesWithoutBio.slice(0, 20);
-    const directUrls = profilesToEnrich.map(p => `https://www.instagram.com/${p.username}/`);
+    const usernames = profilesToEnrich.map(p => p.username);
+
+    console.log(`[Enrich] Profiles to enrich: ${usernames.join(', ')}`);
+
+    // Utiliser le format attendu par instagram-profile-scraper
+    const inputConfig = {
+      usernames: usernames,
+    };
+
+    console.log(`[Enrich] Input config: ${JSON.stringify(inputConfig)}`);
 
     const runResponse = await fetch(
       `https://api.apify.com/v2/acts/${APIFY_ACTORS.instagramProfile}/runs?token=${APIFY_API_TOKEN}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          directUrls,
-          resultsLimit: profilesToEnrich.length,
-        }),
+        body: JSON.stringify(inputConfig),
       }
     );
 
     if (!runResponse.ok) {
-      console.error('[Apify/Enrich] Failed to start run');
+      const errorText = await runResponse.text();
+      console.error(`[Enrich] Failed to start run: ${runResponse.status} ${errorText}`);
       return profiles;
     }
 
