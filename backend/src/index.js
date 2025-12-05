@@ -19,6 +19,8 @@ import adminRoutes from './routes/admin.js';
 import optoutRoutes from './routes/optout.js';
 import conversationsRoutes from './routes/conversations.js';
 import clientsRoutes from './routes/clients.js';
+import sequenceRoutes from './routes/sequence.js';
+import userRoutes from './routes/user.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -65,6 +67,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/opt-out', optoutRoutes);
 app.use('/api/conversations', conversationsRoutes);
 app.use('/api/clients', clientsRoutes);
+app.use('/api/sequence', sequenceRoutes);
+app.use('/api/user', userRoutes);
 
 // Image proxy pour contourner les restrictions CORS d'Instagram
 app.get('/api/image-proxy', async (req, res) => {
@@ -100,6 +104,10 @@ app.get('/api/image-proxy', async (req, res) => {
     }
 
     const contentType = response.headers.get('content-type');
+
+    // Headers CORS explicites pour éviter ERR_BLOCKED_BY_RESPONSE
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     res.setHeader('Content-Type', contentType || 'image/jpeg');
     res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache 24h
 

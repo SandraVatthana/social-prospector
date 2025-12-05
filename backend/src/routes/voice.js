@@ -283,16 +283,24 @@ router.post('/profiles', requireAuth, async (req, res) => {
         .eq('user_id', req.user.id);
     }
 
-    // Créer le nouveau profil (sans description - colonne n'existe pas)
+    // Mapper le profil vers les colonnes existantes de voice_profiles
+    const voiceData = {
+      user_id: req.user.id,
+      name: profile.nom || profile.name || 'Mon style',
+      tone: profile.ton_dominant || profile.tone || null,
+      style: profile.style_redaction?.style || profile.style || null,
+      signature: profile.signature || null,
+      examples: profile.examples || null,
+      keywords: profile.expressions_cles || profile.keywords || null,
+      avoid_words: profile.mots_a_eviter || profile.avoid_words || null,
+      target_audience: profile.contexte_business?.cible || profile.target_audience || null,
+      offer_description: profile.contexte_business?.proposition_valeur || profile.offer_description || null,
+      is_active: profile.isActive !== false,
+    };
+
     const { data: newProfile, error } = await supabaseAdmin
       .from('voice_profiles')
-      .insert({
-        user_id: req.user.id,
-        nom: profile.nom || 'MA VOIX',
-        profil_json: profile,
-        is_active: profile.isActive || true,
-        source: profile.source || 'manual',
-      })
+      .insert(voiceData)
       .select()
       .single();
 

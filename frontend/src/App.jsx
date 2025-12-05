@@ -39,7 +39,7 @@ export const useTourContext = () => useContext(TourContext);
 const PUBLIC_ROUTES = ['/opt-out', '/privacy', '/terms', '/legal', '/landing', '/login'];
 
 function AppContent() {
-  const { needsOnboarding, completeOnboarding, skipOnboardingDemo, user, loginDemo, loading } = useAuth();
+  const { needsOnboarding, completeOnboarding, skipOnboardingDemo, user, loginDemo, loading, onboardingData } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { isOpen: isTourOpen, startTour, closeTour, isTourCompleted, resetTour } = useTour();
@@ -126,6 +126,7 @@ function AppContent() {
       <OnboardingProfond
         onComplete={handleOnboardingComplete}
         onSkip={handleOnboardingSkip}
+        initialData={onboardingData}
       />
     );
   }

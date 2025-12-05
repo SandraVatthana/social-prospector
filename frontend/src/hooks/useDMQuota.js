@@ -22,8 +22,8 @@ export function useDMQuota() {
   const DAILY_LIMIT = limits.messages_per_day;
 
   const [quota, setQuota] = useState({
-    hourly: { sent: 0, limit: HOURLY_LIMIT, resetAt: null },
-    daily: { sent: 0, limit: DAILY_LIMIT, resetAt: null },
+    hourly: { sent: 0, resetAt: null },
+    daily: { sent: 0, resetAt: null },
     cooldownUntil: null,
     lastSentAt: null,
   });
@@ -80,8 +80,8 @@ export function useDMQuota() {
 
   const initializeQuota = () => {
     const initial = {
-      hourly: { sent: 0, limit: HOURLY_LIMIT, resetAt: getNextHourReset() },
-      daily: { sent: 0, limit: DAILY_LIMIT, resetAt: getMidnightReset() },
+      hourly: { sent: 0, resetAt: getNextHourReset() },
+      daily: { sent: 0, resetAt: getMidnightReset() },
       cooldownUntil: null,
       lastSentAt: null,
     };
@@ -96,12 +96,12 @@ export function useDMQuota() {
       const newQuota = {
         ...prev,
         hourly: {
-          ...prev.hourly,
           sent: prev.hourly.sent + 1,
+          resetAt: prev.hourly.resetAt,
         },
         daily: {
-          ...prev.daily,
           sent: prev.daily.sent + 1,
+          resetAt: prev.daily.resetAt,
         },
         lastSentAt: now,
       };
@@ -118,7 +118,7 @@ export function useDMQuota() {
 
       return newQuota;
     });
-  }, []);
+  }, [HOURLY_LIMIT]);
 
   // Vérifier et déclencher les warnings
   const checkAndTriggerWarnings = (quotaData) => {

@@ -213,6 +213,12 @@ class API {
     });
   }
 
+  async resetOnboarding() {
+    return this.request('/onboarding/reset', {
+      method: 'POST',
+    });
+  }
+
   // Voice Profiles
   async createVoiceProfile(voiceProfile) {
     return this.request('/voice/profiles', {

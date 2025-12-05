@@ -97,17 +97,21 @@ router.post('/', requireAuth, requireAgencyPlan, async (req, res) => {
 
     if (clientError) throw clientError;
 
-    // Si un profil vocal est fourni, le créer (sans description - colonne n'existe pas)
+    // Si un profil vocal est fourni, le créer (colonnes existantes seulement)
     if (voice_profile) {
       const { data: profile, error: profileError } = await supabaseAdmin
         .from('voice_profiles')
         .insert({
           user_id: req.user.id,
-          client_id: client.id,
-          nom: voice_profile.nom || `MA VOIX — ${name}`,
-          profil_json: voice_profile,
+          name: voice_profile.nom || voice_profile.name || `MA VOIX — ${name}`,
+          tone: voice_profile.ton_dominant || voice_profile.tone || null,
+          style: voice_profile.style_redaction?.style || voice_profile.style || null,
+          signature: voice_profile.signature || null,
+          keywords: voice_profile.expressions_cles || voice_profile.keywords || null,
+          avoid_words: voice_profile.mots_a_eviter || voice_profile.avoid_words || null,
+          target_audience: voice_profile.contexte_business?.cible || voice_profile.target_audience || null,
+          offer_description: voice_profile.contexte_business?.proposition_valeur || voice_profile.offer_description || null,
           is_active: true,
-          source: 'onboarding',
         })
         .select()
         .single();
@@ -115,12 +119,6 @@ router.post('/', requireAuth, requireAgencyPlan, async (req, res) => {
       if (profileError) {
         console.error('Error creating voice profile:', profileError);
       } else {
-        // Mettre à jour le client avec le voice_profile_id
-        await supabaseAdmin
-          .from('agency_clients')
-          .update({ voice_profile_id: profile.id })
-          .eq('id', client.id);
-
         client.voice_profile_id = profile.id;
         client.voice_profile = profile;
       }

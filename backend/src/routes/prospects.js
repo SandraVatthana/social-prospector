@@ -285,99 +285,85 @@ function getRelativeTime(timestamp) {
 /**
  * POST /api/prospects
  * Sauvegarde un ou plusieurs prospects dans le CRM
- * Note: Auth optionnel pour la bêta (utilisera un userId par défaut)
  */
-router.post('/', async (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
   try {
     const { prospects } = req.body;
+    const userId = req.user.id;
+
+    console.log(`[Prospects] POST received - User: ${userId}, Body keys:`, Object.keys(req.body));
+    console.log(`[Prospects] Prospects received:`, prospects?.length || 0);
 
     if (!prospects || !Array.isArray(prospects) || prospects.length === 0) {
+      console.log(`[Prospects] No prospects to save - prospects:`, prospects);
       return res.status(400).json(formatError('Aucun prospect à sauvegarder', 'NO_PROSPECTS'));
     }
 
-    // Essayer de récupérer l'utilisateur authentifié
-    let userId = null;
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.split(' ')[1];
-      try {
-        const { data: { user } } = await supabaseAdmin.auth.getUser(token);
-        if (user) {
-          userId = user.id;
-        }
-      } catch (authError) {
-        console.log('[Prospects] Auth failed, using demo mode');
-      }
-    }
-
-    // En mode démo/bêta sans auth, utiliser un userId par défaut
-    if (!userId) {
-      // Créer ou récupérer un utilisateur démo
-      const { data: demoUser } = await supabaseAdmin
-        .from('users')
-        .select('id')
-        .eq('email', 'demo@socialprospector.app')
-        .single();
-
-      if (demoUser) {
-        userId = demoUser.id;
-      } else {
-        // Créer l'utilisateur démo s'il n'existe pas
-        const { data: newUser } = await supabaseAdmin
-          .from('users')
-          .insert({ email: 'demo@socialprospector.app', plan: 'solo' })
-          .select()
-          .single();
-        userId = newUser?.id;
-      }
-
-      if (!userId) {
-        console.log('[Prospects] No user available, using placeholder');
-        // Fallback: stocker en mémoire pour la session (demo uniquement)
-        return res.json(formatResponse({
-          saved: prospects.length,
-          message: `${prospects.length} prospect(s) ajouté(s) (mode démo sans persistance)`
-        }));
-      }
-    }
-
     console.log(`[Prospects] Saving ${prospects.length} prospects for user ${userId}`);
+    console.log(`[Prospects] First prospect sample:`, JSON.stringify(prospects[0], null, 2));
+
+    // Récupérer les usernames déjà existants pour cet utilisateur
+    const usernames = prospects.map(p => p.username);
+    const { data: existingProspects } = await supabaseAdmin
+      .from('prospects')
+      .select('username, platform')
+      .eq('user_id', userId)
+      .in('username', usernames);
+
+    const existingKeys = new Set(
+      (existingProspects || []).map(p => `${p.platform}:${p.username}`)
+    );
+
+    // Filtrer les prospects déjà existants
+    const newProspects = prospects.filter(p => {
+      const key = `${p.platform || 'instagram'}:${p.username}`;
+      return !existingKeys.has(key);
+    });
+
+    console.log(`[Prospects] ${newProspects.length} new prospects (${prospects.length - newProspects.length} already exist)`);
+
+    if (newProspects.length === 0) {
+      return res.json(formatResponse({
+        saved: 0,
+        message: 'Tous ces prospects sont déjà dans votre CRM'
+      }));
+    }
 
     // Préparer les données pour insertion (colonnes existantes seulement)
-    const prospectsToInsert = prospects.map(p => ({
+    const prospectsToInsert = newProspects.map(p => ({
       user_id: userId,
       username: p.username,
       platform: p.platform || 'instagram',
       full_name: p.fullName || p.full_name || null,
       bio: p.bio || null,
-      profile_pic_url: p.avatar || p.avatarUrl || p.profilePicUrl || null,
-      followers_count: p.followers || p.followersCount || 0,
-      following_count: p.following || p.followingCount || 0,
+      avatar_url: p.avatar || p.avatarUrl || p.profilePicUrl || null,
+      followers: p.followers || p.followersCount || 0,
+      following: p.following || p.followingCount || 0,
       posts_count: p.posts || p.postsCount || 0,
       status: 'new',
-      source: p.source || 'search',
       created_at: new Date().toISOString(),
     }));
 
-    // Insérer en ignorant les doublons (upsert sur username + user_id)
+    // Insérer les nouveaux prospects
+    console.log(`[Prospects] Inserting ${prospectsToInsert.length} prospects...`);
+    console.log(`[Prospects] Insert data sample:`, JSON.stringify(prospectsToInsert[0], null, 2));
+
     const { data, error } = await supabaseAdmin
       .from('prospects')
-      .upsert(prospectsToInsert, {
-        onConflict: 'user_id,username',
-        ignoreDuplicates: true
-      })
+      .insert(prospectsToInsert)
       .select();
 
     if (error) {
       console.error('[Prospects] Error saving:', error);
+      console.error('[Prospects] Error details:', JSON.stringify(error, null, 2));
       return res.status(500).json(formatError('Erreur lors de la sauvegarde', 'SAVE_ERROR'));
     }
 
-    console.log(`[Prospects] Saved ${data?.length || 0} prospects`);
+    console.log(`[Prospects] SUCCESS - Saved ${data?.length || 0} prospects`);
 
     res.json(formatResponse({
-      saved: data?.length || prospects.length,
-      message: `${data?.length || prospects.length} prospect(s) ajouté(s) au CRM`
+      saved: data?.length || newProspects.length,
+      message: `${data?.length || newProspects.length} prospect(s) ajouté(s) au CRM`
     }));
 
   } catch (error) {
@@ -414,6 +400,47 @@ router.get('/', requireAuth, async (req, res) => {
     }
 
     res.json(formatResponse({ prospects: data || [] }));
+
+  } catch (error) {
+    console.error('[Prospects] Error:', error);
+    res.status(500).json(formatError('Erreur serveur', 'SERVER_ERROR'));
+  }
+});
+
+/**
+ * DELETE /api/prospects/:id
+ * Supprime un prospect
+ */
+router.delete('/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    // Vérifier que le prospect appartient à l'utilisateur
+    const { data: existing } = await supabaseAdmin
+      .from('prospects')
+      .select('id')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single();
+
+    if (!existing) {
+      return res.status(404).json(formatError('Prospect non trouvé', 'NOT_FOUND'));
+    }
+
+    // Supprimer le prospect
+    const { error } = await supabaseAdmin
+      .from('prospects')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('[Prospects] Delete error:', error);
+      return res.status(500).json(formatError('Erreur lors de la suppression', 'DELETE_ERROR'));
+    }
+
+    res.json(formatResponse({ deleted: true }));
 
   } catch (error) {
     console.error('[Prospects] Error:', error);

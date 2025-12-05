@@ -710,41 +710,62 @@ function StepGeneration({ data, isGenerating, generatedProfile, onFinish }) {
 // COMPOSANT PRINCIPAL
 // ============================================
 
-export default function OnboardingProfond({ mode = 'self', clientName = '', onComplete, onSkip }) {
+export default function OnboardingProfond({ mode = 'self', clientName = '', onComplete, onSkip, initialData = null }) {
   const [step, setStep] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedProfile, setGeneratedProfile] = useState(null);
-  
-  // Données collectées
-  const [data, setData] = useState({
+
+  // Debug: afficher les données initiales reçues
+  console.log('[OnboardingProfond] initialData received:', initialData);
+  console.log('[OnboardingProfond] initialData keys:', initialData ? Object.keys(initialData) : 'null');
+
+  // Valeurs par défaut
+  const defaultData = {
     // Étape 1 — Identité
     prenom: '',
     activite: '',
     type_activite: null,
     anciennete: null,
-    
+
     // Étape 2 — Client idéal
     cible_description: '',
     cible_genre: null,
     cible_problemes: [],
-    
+
     // Étape 3 — Transformation
     resultat_promis: '',
     preuve_sociale: '',
     differentiation: '',
     super_pouvoirs: [],
-    
+
     // Étape 4 — Style
     tutoiement: 'parfois',
     ton: [],
     utilisation_emojis: 'parfois',
     emojis_favoris: [],
     expressions: '',
-    
+
     // Étape 5 — Objectifs
     objectif_prospection: null,
     premier_contact: null,
     lead_magnet: '',
+  };
+
+  // Données collectées (pré-remplies si initialData fourni)
+  const [data, setData] = useState(() => {
+    if (initialData) {
+      // Fusionner les données initiales avec les valeurs par défaut
+      return {
+        ...defaultData,
+        ...initialData,
+        // S'assurer que les arrays sont bien des arrays
+        cible_problemes: initialData.cible_problemes || [],
+        super_pouvoirs: initialData.super_pouvoirs || [],
+        ton: initialData.ton || [],
+        emojis_favoris: initialData.emojis_favoris || [],
+      };
+    }
+    return defaultData;
   });
 
   // Configuration des étapes

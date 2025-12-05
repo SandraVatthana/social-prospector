@@ -41,6 +41,73 @@ const TikTokIcon = ({ className }) => (
   </svg>
 );
 
+// Helper pour obtenir les initiales d'un nom/username
+const getInitials = (username, fullName) => {
+  // Essayer d'abord avec fullName
+  if (fullName && fullName !== username) {
+    const parts = fullName.split(' ').filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    if (parts.length === 1 && parts[0].length >= 2) {
+      return parts[0].substring(0, 2).toUpperCase();
+    }
+  }
+  // Fallback sur username
+  if (username) {
+    return username.substring(0, 2).toUpperCase();
+  }
+  return '??';
+};
+
+// Couleurs de fond pour les avatars (basé sur le username pour consistance)
+const getAvatarColor = (username) => {
+  const colors = [
+    'bg-brand-500',
+    'bg-accent-500',
+    'bg-purple-500',
+    'bg-pink-500',
+    'bg-blue-500',
+    'bg-green-500',
+    'bg-orange-500',
+    'bg-red-500',
+  ];
+  const hash = (username || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return colors[hash % colors.length];
+};
+
+// Composant Avatar avec fallback
+const ProspectAvatar = ({ avatar, username, fullName, size = 'md' }) => {
+  const [imgError, setImgError] = useState(false);
+
+  const sizeClasses = {
+    sm: 'w-8 h-8 text-xs',
+    md: 'w-10 h-10 text-sm',
+    lg: 'w-14 h-14 text-base',
+  };
+
+  const sizeClass = sizeClasses[size] || sizeClasses.md;
+  const roundedClass = size === 'lg' ? 'rounded-xl' : 'rounded-lg';
+
+  // Afficher les initiales si pas d'avatar ou erreur de chargement
+  if (!avatar || imgError) {
+    return (
+      <div className={`${sizeClass} ${roundedClass} ${getAvatarColor(username)} flex items-center justify-center text-white font-semibold`}>
+        {getInitials(username, fullName)}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={avatar}
+      alt={username}
+      className={`${sizeClass} ${roundedClass} object-cover`}
+      onError={() => setImgError(true)}
+    />
+  );
+};
+
 // Statuts possibles
 const STATUS_CONFIG = {
   new: { label: 'Nouveau', color: 'bg-blue-100 text-blue-700', icon: Clock },
@@ -55,6 +122,7 @@ const STATUS_CONFIG = {
 
 export default function Prospects() {
   const [prospects, setProspects] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [platformFilter, setPlatformFilter] = useState('all');
@@ -64,6 +132,50 @@ export default function Prospects() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [prospectForMessage, setProspectForMessage] = useState(null);
+  const [openMenuId, setOpenMenuId] = useState(null); // Menu trois points ouvert
+
+  // Charger les prospects depuis l'API au montage
+  useEffect(() => {
+    fetchProspects();
+  }, []);
+
+  const fetchProspects = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/prospects`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Mapper les données pour correspondre au format attendu
+        const mappedProspects = (data.data?.prospects || []).map(p => ({
+          id: p.id,
+          username: p.username,
+          fullName: p.full_name || p.username,
+          avatar: p.avatar_url,
+          bio: p.bio || '',
+          platform: p.platform || 'instagram',
+          followers: p.followers || 0,
+          status: p.status || 'new',
+          addedAt: p.created_at,
+          lastContactedAt: p.last_contacted_at,
+          // Champs additionnels avec valeurs par défaut
+          engagement: p.engagement || 0,
+          messagesSent: p.messages_sent || 0,
+          notes: p.notes || '',
+          tags: p.tags || [],
+        }));
+        setProspects(mappedProspects);
+      }
+    } catch (error) {
+      console.error('Erreur chargement prospects:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Filtrer les prospects
   const filteredProspects = prospects
@@ -117,6 +229,39 @@ export default function Prospects() {
     setProspects(prev =>
       prev.map(p => p.id === id ? { ...p, status: newStatus } : p)
     );
+  };
+
+  // Supprimer un prospect
+  const deleteProspect = async (id) => {
+    if (!confirm('Supprimer ce prospect ?')) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/prospects/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+
+      if (response.ok) {
+        setProspects(prev => prev.filter(p => p.id !== id));
+        if (selectedProspect?.id === id) {
+          setSelectedProspect(null);
+        }
+      }
+    } catch (error) {
+      console.error('Erreur suppression:', error);
+    }
+    setOpenMenuId(null);
+  };
+
+  // Ouvrir le profil externe
+  const openProfile = (prospect) => {
+    const url = prospect.platform === 'tiktok'
+      ? `https://tiktok.com/@${prospect.username}`
+      : `https://instagram.com/${prospect.username}`;
+    window.open(url, '_blank');
+    setOpenMenuId(null);
   };
 
   // State pour les posts du prospect selectionne
@@ -274,7 +419,12 @@ export default function Prospects() {
               </div>
 
               {/* Rows */}
-              {filteredProspects.length === 0 ? (
+              {isLoading ? (
+                <div className="p-12 text-center">
+                  <Loader2 className="w-12 h-12 text-brand-500 animate-spin mx-auto mb-4" />
+                  <p className="text-warm-600">Chargement des prospects...</p>
+                </div>
+              ) : filteredProspects.length === 0 ? (
                 <div className="p-12 text-center">
                   <Users className="w-12 h-12 text-warm-300 mx-auto mb-4" />
                   <h3 className="font-semibold text-warm-700 mb-2">Aucun prospect sauvegardé</h3>
@@ -314,10 +464,11 @@ export default function Prospects() {
                     {/* Prospect info */}
                     <div className="col-span-4 flex items-center gap-3">
                       <div className="relative">
-                        <img
-                          src={prospect.avatar}
-                          alt={prospect.username}
-                          className="w-10 h-10 rounded-lg object-cover"
+                        <ProspectAvatar
+                          avatar={prospect.avatar}
+                          username={prospect.username}
+                          fullName={prospect.fullName}
+                          size="md"
                         />
                         <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center ${
                           prospect.platform === 'instagram'
@@ -345,9 +496,9 @@ export default function Prospects() {
 
                     {/* Stats */}
                     <div className="col-span-2 flex items-center gap-3 text-sm text-warm-500">
-                      <span>{formatNumber(prospect.followers)}</span>
+                      <span>{formatNumber(prospect.followers || 0)}</span>
                       <span className="text-warm-300">•</span>
-                      <span>{prospect.engagement}%</span>
+                      <span>{prospect.engagement || 0}%</span>
                     </div>
 
                     {/* Date */}
@@ -355,11 +506,55 @@ export default function Prospects() {
                       {formatDate(prospect.addedAt)}
                     </div>
 
-                    {/* Actions */}
-                    <div className="col-span-1 flex items-center justify-end" onClick={e => e.stopPropagation()}>
-                      <button className="p-1 hover:bg-warm-100 rounded">
+                    {/* Actions - Menu trois points */}
+                    <div className="col-span-1 flex items-center justify-end relative" onClick={e => e.stopPropagation()}>
+                      <button
+                        onClick={() => setOpenMenuId(openMenuId === prospect.id ? null : prospect.id)}
+                        className="p-1 hover:bg-warm-100 rounded"
+                      >
                         <MoreVertical className="w-4 h-4 text-warm-400" />
                       </button>
+
+                      {/* Dropdown menu */}
+                      {openMenuId === prospect.id && (
+                        <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-warm-200 rounded-xl shadow-lg z-20 overflow-hidden">
+                          <button
+                            onClick={() => {
+                              setSelectedProspect(prospect);
+                              setOpenMenuId(null);
+                            }}
+                            className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-sm text-warm-700 hover:bg-warm-50"
+                          >
+                            <Users className="w-4 h-4" />
+                            Voir les détails
+                          </button>
+                          <button
+                            onClick={() => {
+                              openGenerateModal(prospect, []);
+                              setOpenMenuId(null);
+                            }}
+                            className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-sm text-warm-700 hover:bg-warm-50"
+                          >
+                            <Sparkles className="w-4 h-4" />
+                            Générer un message
+                          </button>
+                          <button
+                            onClick={() => openProfile(prospect)}
+                            className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-sm text-warm-700 hover:bg-warm-50"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                            Voir le profil
+                          </button>
+                          <div className="border-t border-warm-100" />
+                          <button
+                            onClick={() => deleteProspect(prospect.id)}
+                            className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Supprimer
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))
@@ -400,7 +595,7 @@ export default function Prospects() {
  * Panel de detail prospect
  */
 function ProspectDetailPanel({ prospect, onClose, onStatusChange, onGenerateMessage, formatNumber, formatDate }) {
-  const [notes, setNotes] = useState(prospect.notes);
+  const [notes, setNotes] = useState(prospect.notes || '');
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [posts, setPosts] = useState([]);
   const [loadingPosts, setLoadingPosts] = useState(false);
@@ -461,10 +656,11 @@ function ProspectDetailPanel({ prospect, onClose, onStatusChange, onGenerateMess
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <img
-              src={prospect.avatar}
-              alt={prospect.username}
-              className="w-14 h-14 rounded-xl object-cover"
+            <ProspectAvatar
+              avatar={prospect.avatar}
+              username={prospect.username}
+              fullName={prospect.fullName}
+              size="lg"
             />
             <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center ${
               prospect.platform === 'instagram'
@@ -493,15 +689,15 @@ function ProspectDetailPanel({ prospect, onClose, onStatusChange, onGenerateMess
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         <div className="text-center p-3 bg-warm-50 rounded-xl">
-          <p className="font-bold text-warm-900">{formatNumber(prospect.followers)}</p>
+          <p className="font-bold text-warm-900">{formatNumber(prospect.followers || 0)}</p>
           <p className="text-xs text-warm-500">Abonnes</p>
         </div>
         <div className="text-center p-3 bg-warm-50 rounded-xl">
-          <p className="font-bold text-warm-900">{prospect.engagement}%</p>
+          <p className="font-bold text-warm-900">{prospect.engagement || 0}%</p>
           <p className="text-xs text-warm-500">Engagement</p>
         </div>
         <div className="text-center p-3 bg-warm-50 rounded-xl">
-          <p className="font-bold text-warm-900">{prospect.messagesSent}</p>
+          <p className="font-bold text-warm-900">{prospect.messagesSent || 0}</p>
           <p className="text-xs text-warm-500">Messages</p>
         </div>
       </div>
@@ -624,7 +820,7 @@ function ProspectDetailPanel({ prospect, onClose, onStatusChange, onGenerateMess
       <div>
         <label className="block text-sm font-medium text-warm-700 mb-2">Tags</label>
         <div className="flex flex-wrap gap-2">
-          {prospect.tags.map(tag => (
+          {(prospect.tags || []).map(tag => (
             <span key={tag} className="px-2 py-1 bg-warm-100 text-warm-600 text-sm rounded-lg">
               {tag}
             </span>

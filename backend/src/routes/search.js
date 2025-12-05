@@ -205,9 +205,9 @@ router.get('/source', async (req, res) => {
         prospects = [];
       }
 
-      // Enrichir les profils avec les bios (max 30 profils pour avoir plus de données)
+      // Enrichir les profils avec les bios (max 50 profils pour avoir plus de résultats)
       if (prospects.length > 0) {
-        prospects = await enrichProspectsWithBios(prospects.slice(0, 30));
+        prospects = await enrichProspectsWithBios(prospects.slice(0, 50));
       }
 
       // Filtrer pour garder uniquement les profils francophones si country=fr
@@ -236,6 +236,60 @@ router.get('/source', async (req, res) => {
   } catch (error) {
     console.error('Source search error:', error);
     res.status(500).json(formatError('Erreur lors de la recherche', 'SEARCH_ERROR'));
+  }
+});
+
+/**
+ * POST /api/search/source/more
+ * Charger plus de résultats en excluant les usernames déjà vus
+ */
+router.post('/source/more', async (req, res) => {
+  try {
+    const { sourceType, query, subtype = 'followers', platform = 'instagram', excludeUsernames = [], limit = 15 } = req.body;
+
+    if (!sourceType || !query) {
+      return res.status(400).json(formatError('sourceType et query requis', 'VALIDATION_ERROR'));
+    }
+
+    console.log(`[Search/More] Type: ${sourceType}, Query: "${query}", Exclude: ${excludeUsernames.length} usernames`);
+
+    let prospects = [];
+
+    if (process.env.APIFY_API_TOKEN) {
+      // Demander BEAUCOUP plus de résultats pour trouver des nouveaux profils
+      const requestedLimit = Math.max(200, excludeUsernames.length * 3);
+      prospects = await searchBySource(sourceType, query, subtype, requestedLimit);
+
+      // Exclure les usernames déjà vus
+      const excludeSet = new Set(excludeUsernames.map(u => u.toLowerCase()));
+      prospects = prospects.filter(p => !excludeSet.has(p.username.toLowerCase()));
+
+      console.log(`[Search/More] After excluding: ${prospects.length} new prospects found`);
+
+      // Enrichir avec les bios
+      if (prospects.length > 0) {
+        prospects = await enrichProspectsWithBios(prospects.slice(0, 30));
+      }
+
+      // Filtrer les profils francophones
+      if (prospects.length > 0) {
+        prospects = filterFrenchProfiles(prospects);
+      }
+
+      // Limiter le nombre de résultats retournés
+      prospects = prospects.slice(0, parseInt(limit));
+    }
+
+    res.json(formatResponse({
+      prospects,
+      sourceType,
+      query,
+      count: prospects.length,
+    }));
+
+  } catch (error) {
+    console.error('Load more error:', error);
+    res.status(500).json(formatError('Erreur lors du chargement', 'LOAD_MORE_ERROR'));
   }
 });
 
@@ -571,19 +625,35 @@ function filterFrenchProfiles(prospects) {
   ];
 
   // Mots qui indiquent CLAIREMENT un profil NON francophone
-  // Note: On est conservateurs ici - on ne bloque que les termes vraiment explicites
+  // Note: On est plus stricts pour les hashtags anglophones
   const nonFrenchIndicators = [
     // Localisation explicite anglophone
     'based in usa', 'based in uk', 'living in usa', 'living in uk',
-    'based in london', 'based in new york',
-    // Villes/pays anglophones (seulement en contexte explicite)
-    'london uk', 'new york city', 'los angeles ca', 'miami fl',
-    'sydney australia', 'melbourne australia',
+    'based in london', 'based in new york', 'based in la', 'based in miami',
+    // Villes/pays anglophones
+    'london', 'new york', 'los angeles', 'miami', 'chicago', 'houston', 'dallas',
+    'san francisco', 'seattle', 'boston', 'denver', 'atlanta', 'phoenix',
+    'sydney', 'melbourne', 'brisbane', 'perth', 'auckland',
+    'toronto', 'vancouver', 'calgary', // Canada anglophone
+    'manchester', 'birmingham', 'liverpool', 'glasgow', 'edinburgh',
+    // Expressions anglaises typiques
+    'dm for collab', 'dm me for', 'link in bio', 'tap the link', 'click link',
+    'follow for', 'follow me for', 'follow back', 'f4f', 'l4l',
+    'entrepreneur', 'ceo of', 'founder of', 'helping you', 'i help',
+    'business coach', 'life coach', 'mindset coach', 'wellness coach',
+    'work with me', 'let\'s connect', 'book a call', 'free guide',
+    'digital nomad', 'online business', 'passive income',
     // Autres pays (termes explicites)
-    'deutschland', 'münchen', 'españa', 'italia',
-    'brasil', 'são paulo', 'méxico', 'india',
+    'deutschland', 'münchen', 'berlin', 'hamburg',
+    'españa', 'madrid', 'barcelona',
+    'italia', 'milano', 'roma',
+    'brasil', 'são paulo', 'rio',
+    'méxico', 'india', 'mumbai', 'delhi',
+    'nederland', 'amsterdam', 'rotterdam',
+    'polska', 'portugal', 'lisboa',
     // Drapeaux non-francophones (indication forte)
     '🇺🇸', '🇬🇧', '🇦🇺', '🇩🇪', '🇪🇸', '🇮🇹', '🇧🇷', '🇲🇽', '🇮🇳', '🇯🇵', '🇰🇷', '🇨🇳',
+    '🇳🇱', '🇵🇱', '🇵🇹', '🇷🇺', '🇹🇷', '🇦🇪', '🇸🇦', '🇿🇦', '🇳🇬', '🇵🇭', '🇮🇩', '🇹🇭',
   ];
 
   const filtered = prospects.filter(prospect => {
@@ -639,25 +709,31 @@ function filterFrenchProfiles(prospects) {
       return true;
     }
 
-    // 6. Si pas de bio ou bio très courte, on est TRÈS permissif
-    // On garde sauf si clairement non-francophone
+    // 6. Si pas de bio ou bio très courte, on exclut par défaut
+    // Sauf si accent français dans username ou nom
     if (!hasBio || bioLower.length < 30) {
       // Garder si le username ou nom a un accent français
       if (frenchAccents.test(usernameLower) || frenchAccents.test(fullNameLower)) {
         return true;
       }
-      // Exclure SEULEMENT si username clairement anglophone
-      const englishPatterns = /_official$|_uk$|_us$|\.us$|\.uk$/i;
-      if (englishPatterns.test(usernameLower)) {
-        return false;
-      }
-      // Sans info suffisante, on GARDE par défaut (meilleur recall)
-      return true;
+      // Sans info suffisante, on EXCLUT par défaut pour plus de précision
+      return false;
     }
 
     // 7. Avec une bio suffisante mais pas d'indicateurs clairs
-    // On garde quand même si pas d'indicateurs négatifs forts
-    // (changement: moins strict pour ne pas perdre trop de prospects)
+    // Vérifier si la bio contient principalement du texte anglais
+    const englishWords = ['the', 'and', 'for', 'with', 'your', 'you', 'my', 'are', 'this', 'that', 'from', 'have', 'been'];
+    const englishWordCount = englishWords.filter(word => {
+      const regex = new RegExp(`\\b${word}\\b`, 'i');
+      return regex.test(bioLower);
+    }).length;
+
+    // Si plus de 3 mots anglais courants, c'est probablement un profil anglophone
+    if (englishWordCount >= 3) {
+      return false;
+    }
+
+    // Sinon on garde (bio non-anglaise sans indicateur clair)
     return true;
   });
 

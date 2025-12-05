@@ -8,19 +8,19 @@
 
 // Emails avec accès vraiment illimité (admin/dev)
 export const UNLIMITED_EMAILS = [
-  'sandra.devonssay@gmail.com',
+  'sandra.devonssay@gmail.com',  // Admin
   'contact@myinnerquest.fr',
 ];
 
 // Limites par plan
 export const PLAN_LIMITS = {
   free: {
-    prospects_per_hour: 3,
-    prospects_per_day: 10,
-    prospects_per_month: 50,
-    messages_per_hour: 3,
-    messages_per_day: 10,
-    messages_per_month: 50,
+    prospects_per_hour: 5,
+    prospects_per_day: 40,
+    prospects_per_month: 200,
+    messages_per_hour: 5,
+    messages_per_day: 40,
+    messages_per_month: 200,
     clients: 0,           // Pas de multi-clients
     voice_profiles: 1,
   },
@@ -60,8 +60,8 @@ export const PLAN_LIMITS = {
 export const PLAN_DISPLAY = {
   free: {
     name: 'Free',
-    prospects_label: '50/mois',
-    messages_label: '50/mois',
+    prospects_label: '200/mois',
+    messages_label: '200/mois',
     clients_label: '-',
     price: 0,
   },

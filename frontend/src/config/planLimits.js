@@ -4,8 +4,9 @@
  */
 
 // Emails avec accès illimité (admin/dev)
+// NOTE: Commenté temporairement pour tester les limites de plan
 export const UNLIMITED_EMAILS = [
-  'sandra.devonssay@gmail.com',
+  // 'sandra.devonssay@gmail.com',  // Décommenter pour accès admin
   'contact@myinnerquest.fr',
 ];
 

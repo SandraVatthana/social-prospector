@@ -13,7 +13,8 @@ import {
   Send,
   Info,
   Building2,
-  Users
+  Users,
+  RotateCcw
 } from 'lucide-react';
 import Header from '../components/layout/Header';
 import Modal from '../components/ui/Modal';
@@ -40,6 +41,7 @@ export default function Settings() {
     theme: 'light',
     language: 'fr',
   });
+  const [resettingOnboarding, setResettingOnboarding] = useState(false);
 
   // Charger les settings
   useEffect(() => {
@@ -64,6 +66,23 @@ export default function Settings() {
       toast.error('Erreur', 'Impossible de sauvegarder les paramètres');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Réinitialiser l'onboarding
+  const handleResetOnboarding = async () => {
+    setResettingOnboarding(true);
+    try {
+      await api.resetOnboarding();
+      toast.success('Onboarding réinitialisé', 'Rafraîchissez la page pour recommencer');
+      // Optionnel: recharger la page après 1s
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (error) {
+      toast.error('Erreur', 'Impossible de réinitialiser l\'onboarding');
+    } finally {
+      setResettingOnboarding(false);
     }
   };
 
@@ -164,6 +183,47 @@ export default function Settings() {
                 <Check className="w-4 h-4" />
               )}
               Enregistrer
+            </button>
+          </div>
+        </section>
+
+        {/* Onboarding */}
+        <section className="card">
+          <div className="p-6 border-b border-warm-100">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
+                <RotateCcw className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <h2 className="font-display font-semibold text-warm-900">Mon profil business</h2>
+                <p className="text-sm text-warm-500">Activité, cible et suggestions personnalisées</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-6 space-y-4">
+            <div className="flex items-start gap-3 p-4 bg-purple-50 border border-purple-200 rounded-xl">
+              <Info className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-purple-800">
+                <p className="font-medium">Modifier mon profil</p>
+                <p className="text-purple-700">
+                  Vos données actuelles seront pré-remplies.
+                  Vous pourrez modifier votre activité, client idéal, etc. et de nouvelles suggestions seront générées.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={handleResetOnboarding}
+              disabled={resettingOnboarding}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50"
+            >
+              {resettingOnboarding ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RotateCcw className="w-4 h-4" />
+              )}
+              Modifier mon profil
             </button>
           </div>
         </section>

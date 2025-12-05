@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { formatResponse, formatError } from '../utils/helpers.js';
 import { supabaseAdmin } from '../utils/supabase.js';
+import { generateSearchSuggestions } from '../services/searchSuggestions.js';
 
 const router = Router();
 
@@ -143,23 +144,54 @@ router.delete('/account', requireAuth, async (req, res) => {
 
 /**
  * POST /api/user/onboarding
- * Sauvegarde les données d'onboarding
+ * Sauvegarde les données d'onboarding et génère les suggestions de recherche
  */
 router.post('/onboarding', requireAuth, async (req, res) => {
   try {
     const { data: onboardingData, skipped } = req.body;
 
+    let enrichedData = onboardingData || null;
+    let suggestions = null;
+
+    // Si l'onboarding n'est pas skip, générer les suggestions de recherche
+    if (!skipped && onboardingData && onboardingData.activite) {
+      console.log('[User/Onboarding] Generating suggestions for user:', req.user.id);
+      try {
+        suggestions = await generateSearchSuggestions(onboardingData);
+        console.log('[User/Onboarding] Suggestions generated successfully');
+
+        // Enrichir les données avec les suggestions
+        enrichedData = {
+          ...onboardingData,
+          suggestions_instagram: suggestions?.instagram || null,
+          suggestions_tiktok: suggestions?.tiktok || null,
+          suggestions_linkedin: suggestions?.linkedin || null,
+          completed_at: new Date().toISOString(),
+        };
+      } catch (suggestionsError) {
+        console.error('[User/Onboarding] Error generating suggestions:', suggestionsError);
+        // Continuer sans suggestions - elles pourront être régénérées plus tard
+        enrichedData = {
+          ...onboardingData,
+          completed_at: new Date().toISOString(),
+        };
+      }
+    }
+
     const { error } = await supabaseAdmin
       .from('users')
       .update({
         onboarding_completed: !skipped,
-        onboarding_data: onboardingData || null,
+        onboarding_data: enrichedData,
       })
       .eq('id', req.user.id);
 
     if (error) throw error;
 
-    res.json(formatResponse({ saved: true }));
+    res.json(formatResponse({
+      saved: true,
+      suggestions: suggestions,
+    }));
   } catch (error) {
     console.error('Error saving onboarding:', error);
     res.status(500).json(formatError('Erreur lors de la sauvegarde', 'ONBOARDING_ERROR'));

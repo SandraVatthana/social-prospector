@@ -9,6 +9,7 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [onboardingCompleted, setOnboardingCompleted] = useState(null);
+  const [onboardingData, setOnboardingData] = useState(null);
 
   // MODE DEMO : Auto-login pour les tests (mettre à false pour la prod)
   const DEMO_MODE = false;
@@ -29,44 +30,74 @@ export function AuthProvider({ children }) {
     }
 
     // Récupérer la session initiale
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       if (session) {
         setUser(session.user);
         api.setToken(session.access_token);
-        checkOnboarding();
+        // Attendre que checkOnboarding soit terminé AVANT de mettre loading à false
+        await checkOnboarding(session.user?.id);
       }
       setLoading(false);
     });
 
     // Écouter les changements d'authentification
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('[AuthContext] Auth state changed:', _event, session?.user?.id);
       setSession(session);
       if (session) {
         setUser(session.user);
         api.setToken(session.access_token);
+        // Recharger les données d'onboarding en arrière-plan (pas de await pour éviter de bloquer)
+        checkOnboarding(session.user?.id);
       } else {
         setUser(null);
         api.setToken(null);
+        setOnboardingCompleted(null);
+        setOnboardingData(null);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const checkOnboarding = async () => {
+  const checkOnboarding = async (userId) => {
+    if (!userId) {
+      console.log('[AuthContext] No userId, skipping onboarding check');
+      setOnboardingCompleted(false);
+      return;
+    }
+
     try {
+      console.log('[AuthContext] Checking onboarding for user:', userId);
+
       const { data, error } = await supabase
         .from('users')
-        .select('onboarding_completed')
-        .eq('id', user?.id)
+        .select('onboarding_completed, onboarding_data')
+        .eq('id', userId)
         .single();
 
-      if (!error && data) {
-        setOnboardingCompleted(data.onboarding_completed);
+      console.log('[AuthContext] Onboarding check result:', {
+        completed: data?.onboarding_completed,
+        hasData: !!data?.onboarding_data,
+        dataKeys: data?.onboarding_data ? Object.keys(data.onboarding_data) : [],
+        error: error?.message
+      });
+
+      if (error) {
+        // Utilisateur n'existe pas encore dans la table users (premier login)
+        console.log('[AuthContext] User not in users table yet, setting onboarding to false');
+        setOnboardingCompleted(false);
+        setOnboardingData(null);
+      } else if (data) {
+        setOnboardingCompleted(data.onboarding_completed ?? false);
+        setOnboardingData(data.onboarding_data);
       }
     } catch (error) {
-      console.error('Error checking onboarding:', error);
+      console.error('[AuthContext] Error checking onboarding:', error);
+      // En cas d'erreur, on considère que l'onboarding n'est pas fait
+      setOnboardingCompleted(false);
+      setOnboardingData(null);
     }
   };
 
@@ -133,6 +164,7 @@ export function AuthProvider({ children }) {
     session,
     loading,
     onboardingCompleted,
+    onboardingData,
     signUp,
     signIn,
     signInWithGoogle,
