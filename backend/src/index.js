@@ -1,4 +1,4 @@
-// Load environment variables FIRST
+// Load environment variables FIRST - Social Prospector Backend
 import 'dotenv/config';
 
 import express from 'express';
