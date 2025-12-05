@@ -8,7 +8,7 @@
 
 // Emails avec accès vraiment illimité (admin/dev)
 export const UNLIMITED_EMAILS = [
-  'sandra.devonssay@gmail.com',  // Admin
+  // 'sandra.devonssay@gmail.com',  // Désactivé pour tester les limites beta
   'contact@myinnerquest.fr',
 ];
 
