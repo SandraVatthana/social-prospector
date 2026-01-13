@@ -7,6 +7,10 @@
 
 const INSTAGRAM_DOMAIN = '.instagram.com';
 const INSTAGRAM_URL = 'https://www.instagram.com';
+const LINKEDIN_DOMAIN = '.linkedin.com';
+
+// URL du backend Social Prospector (Netlify Functions)
+const BACKEND_URL = 'https://social-prospector.netlify.app';
 
 // Cookies Instagram importants pour la session
 const SESSION_COOKIES = [
@@ -180,7 +184,71 @@ async function reloadInstagramTab() {
   }
 }
 
-// Écouter les messages du popup
+
+/**
+ * Importer des profils LinkedIn vers le backend
+ */
+async function importLinkedInProfiles(profiles) {
+  if (!profiles || profiles.length === 0) {
+    throw new Error('Aucun profil a importer');
+  }
+
+  const { linkedinProfiles = [] } = await chrome.storage.local.get('linkedinProfiles');
+  const existingUrls = new Set(linkedinProfiles.map(p => p.profileUrl));
+  const newProfiles = profiles.filter(p => !existingUrls.has(p.profileUrl));
+
+  const updatedProfiles = [...linkedinProfiles, ...newProfiles.map(p => ({
+    ...p,
+    importedAt: new Date().toISOString(),
+    source: 'linkedin'
+  }))];
+
+  await chrome.storage.local.set({ linkedinProfiles: updatedProfiles });
+
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/prospects/linkedin/import`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        profiles: newProfiles,
+        importedAt: new Date().toISOString()
+      })
+    });
+
+    if (!response.ok) {
+      console.warn('Erreur backend, profils stockes localement uniquement');
+    }
+  } catch (e) {
+    console.warn('Backend non disponible, profils stockes localement:', e.message);
+  }
+
+  return {
+    success: true,
+    imported: newProfiles.length,
+    duplicates: profiles.length - newProfiles.length,
+    total: updatedProfiles.length
+  };
+}
+
+/**
+ * Recuperer les profils LinkedIn stockes
+ */
+async function getLinkedInProfiles() {
+  const { linkedinProfiles = [] } = await chrome.storage.local.get('linkedinProfiles');
+  return linkedinProfiles;
+}
+
+/**
+ * Supprimer un profil LinkedIn
+ */
+async function deleteLinkedInProfile(profileUrl) {
+  const { linkedinProfiles = [] } = await chrome.storage.local.get('linkedinProfiles');
+  const updatedProfiles = linkedinProfiles.filter(p => p.profileUrl !== profileUrl);
+  await chrome.storage.local.set({ linkedinProfiles: updatedProfiles });
+  return { success: true, remaining: updatedProfiles.length };
+}
+
+// Écouter les messages du popup et des content scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   const handleAsync = async () => {
     try {
@@ -203,8 +271,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         case 'detectAccount':
           return await detectCurrentAccount();
 
+        case 'importLinkedInProfiles':
+          return await importLinkedInProfiles(request.profiles);
+
+        case 'getLinkedInProfiles':
+          return await getLinkedInProfiles();
+
+        case 'deleteLinkedInProfile':
+          return await deleteLinkedInProfile(request.profileUrl);
+
         default:
-          throw new Error('Action inconnue');
+          throw new Error('Action inconnue: ' + request.action);
       }
     } catch (error) {
       return { error: error.message };
@@ -216,4 +293,4 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 // Log au démarrage
-console.log('Social Prospector Multi-Account extension loaded');
+console.log('Social Prospector Multi-Account extension loaded (Instagram + LinkedIn)');
