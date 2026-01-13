@@ -272,7 +272,7 @@ export default function Billing() {
             contactez-nous pour un devis sur mesure.
           </p>
           <a
-            href="mailto:contact@socialprospector.io"
+            href="mailto:contact@socialprospection.com"
             className="inline-flex items-center gap-2 px-6 py-3 bg-white text-brand-600 font-semibold rounded-xl hover:bg-warm-50 transition-colors"
           >
             <Zap className="w-4 h-4" />

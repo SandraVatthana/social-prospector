@@ -107,7 +107,7 @@ export default function PricingCard({
           {plan.id === 'agency_plus' && (
             <p className="text-xs text-warm-400 mt-3 text-center">
               *Fair use : jusqu'à 10 000/mois.{' '}
-              <a href="mailto:contact@socialprospector.io" className="text-brand-500 hover:underline">
+              <a href="mailto:contact@socialprospection.com" className="text-brand-500 hover:underline">
                 Besoin de plus ?
               </a>
             </p>
