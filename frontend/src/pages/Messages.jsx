@@ -49,7 +49,7 @@ const mockMessages = [
       avatar: 'https://i.pravatar.cc/150?img=1',
       platform: 'instagram',
     },
-    content: "Hey Marie ! J'ai vu que tu faisais du coaching pour les femmes entrepreneurs, c'est super interessant ! Je travaille aussi dans le developpement personnel et j'ai une methode qui pourrait completer ton offre. Ca te dirait d'en discuter ?",
+    content: "Salut Marie ! J'ai vu que tu faisais du coaching pour les femmes entrepreneurs, c'est super interessant ! Je travaille aussi dans le developpement personnel et j'ai une methode qui pourrait completer ton offre. Ca te dirait d'en discuter ?",
     status: 'replied',
     createdAt: '2024-01-18T14:30:00',
     sentAt: '2024-01-18T15:00:00',

@@ -542,7 +542,7 @@ function MaVoixSection() {
   const [showAfter, setShowAfter] = useState(false);
 
   const beforeMessage = `Bonjour, j'ai vu votre profil et je pense que nous pourrions collaborer. N'hésitez pas à me contacter.`;
-  const afterMessage = `Hey Marie ! Ton post sur l'organisation m'a trop parlé — j'ai le même problème avec mes to-do lists infinies 😅 Tu veux que je te montre un truc qui m'a aidé ?`;
+  const afterMessage = `Salut Marie ! Ton post sur l'organisation m'a trop parlé — j'ai le même problème avec mes to-do lists infinies 😅 Tu veux que je te montre un truc qui m'a aidé ?`;
 
   const steps = [
     { num: '1', text: 'Colle 2-10 textes que TU as écrits (posts, emails, messages...)' },

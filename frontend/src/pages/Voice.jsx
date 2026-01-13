@@ -62,7 +62,7 @@ const mockVoiceProfile = {
   },
 
   exemples_messages: [
-    'Hey Marie ! 🚀\n\nJ\'ai vu ton profil et j\'adore ce que tu partages sur le coaching !\n\nJe bosse avec des créatrices comme toi sur l\'automatisation — ça te parle ?',
+    'Salut Marie ! 🚀\n\nJ\'ai vu ton profil et j\'adore ce que tu partages sur le coaching !\n\nJe bosse avec des créatrices comme toi sur l\'automatisation — ça te parle ?',
     'Salut Julie ! ✨\n\nTon contenu sur le marketing digital est canon ! Je me suis dit qu\'on pourrait échanger, j\'ai des tips qui pourraient te plaire.\n\nOn se capte ?',
   ],
 
