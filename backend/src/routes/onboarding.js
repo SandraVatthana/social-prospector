@@ -170,21 +170,34 @@ router.post('/complete-enriched', requireAuth, async (req, res) => {
  */
 router.post('/reset', requireAuth, async (req, res) => {
   try {
+    console.log('[Onboarding Reset] User ID:', req.user.id);
+
     // Ne remet que onboarding_completed à false, garde les données pour pré-remplir
-    const { error } = await supabaseAdmin
+    const { data, error, count } = await supabaseAdmin
       .from('users')
       .update({
         onboarding_completed: false,
         // On ne supprime PAS onboarding_data pour permettre de pré-remplir le formulaire
       })
-      .eq('id', req.user.id);
+      .eq('id', req.user.id)
+      .select();
 
-    if (error) throw error;
+    if (error) {
+      console.error('[Onboarding Reset] Supabase error:', error);
+      throw error;
+    }
 
+    // Vérifier si l'update a affecté des lignes
+    if (!data || data.length === 0) {
+      console.error('[Onboarding Reset] No rows updated - user may not exist in users table');
+      return res.status(404).json(formatError('Utilisateur non trouvé dans la base', 'USER_NOT_FOUND'));
+    }
+
+    console.log('[Onboarding Reset] Success, updated:', data.length, 'rows');
     res.json(formatResponse({ reset: true }, 'Onboarding réinitialisé'));
   } catch (error) {
     console.error('Error resetting onboarding:', error);
-    res.status(500).json(formatError('Erreur lors de la réinitialisation', 'RESET_ERROR'));
+    res.status(500).json(formatError(`Erreur: ${error.message || 'Erreur inconnue'}`, 'RESET_ERROR'));
   }
 });
 

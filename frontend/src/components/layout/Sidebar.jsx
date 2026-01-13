@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Mic,
@@ -10,9 +10,13 @@ import {
   Building2,
   CreditCard,
   Settings,
+  ArrowLeft,
+  Menu,
+  X,
 } from 'lucide-react';
 import { QuotaWidget } from '../dashboard';
 import { useClient } from '../../contexts/ClientContext';
+import { useSidebar } from '../../contexts/SidebarContext';
 import ClientSwitcher from '../agency/ClientSwitcher';
 import AddClientModal from '../agency/AddClientModal';
 
@@ -33,7 +37,9 @@ const insights = [
 
 export default function Sidebar({ user, prospectsCount = 0, messagesCount = 0 }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAgencyMode } = useClient();
+  const { isOpen, isMobile, toggleSidebar, closeSidebar } = useSidebar();
   const [showAddClientModal, setShowAddClientModal] = useState(false);
 
   const navWithCounts = navigation.map(item => {
@@ -42,19 +48,62 @@ export default function Sidebar({ user, prospectsCount = 0, messagesCount = 0 })
     return item;
   });
 
+  // Fermer la sidebar après navigation sur mobile
+  const handleNavClick = () => {
+    if (isMobile) {
+      closeSidebar();
+    }
+  };
+
   return (
-    <aside className="w-64 bg-white border-r border-warm-200 flex flex-col fixed h-full z-40">
+    <>
+      {/* Bouton hamburger mobile */}
+      <button
+        onClick={toggleSidebar}
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-xl shadow-lg border border-warm-200"
+        aria-label="Toggle menu"
+      >
+        {isOpen ? (
+          <X className="w-6 h-6 text-warm-700" />
+        ) : (
+          <Menu className="w-6 h-6 text-warm-700" />
+        )}
+      </button>
+
+      {/* Overlay mobile */}
+      {isMobile && isOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+          onClick={closeSidebar}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={`w-64 bg-white border-r border-warm-200 flex flex-col fixed h-full z-40 transition-transform duration-300 ease-in-out ${
+          isMobile ? (isOpen ? 'translate-x-0' : '-translate-x-full') : 'translate-x-0'
+        }`}
+      >
+      {/* Bouton Retour SOS Storytelling */}
+      <a
+        href="https://sosstorytelling.fr/app.html"
+        className="flex items-center gap-2 px-4 py-2 m-3 mb-0 text-sm font-medium text-brand-600 bg-brand-50 hover:bg-brand-100 rounded-lg transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Retour à SOS Storytelling
+      </a>
+
       {/* Logo + Slogan */}
       <div className="p-6 border-b border-warm-100">
         <div className="flex items-center gap-3">
           <img
             src="/logo-square-100.png"
-            alt="Social Prospector"
+            alt="Prospection par DM"
             className="w-10 h-10 rounded-xl"
           />
           <div>
-            <h1 className="font-display font-bold text-warm-900">Social</h1>
-            <p className="text-xs text-brand-600 font-semibold -mt-1">Prospector</p>
+            <h1 className="font-display font-bold text-warm-900">Prospection</h1>
+            <p className="text-xs text-brand-600 font-semibold -mt-1">par DM</p>
           </div>
         </div>
         {/* Slogan */}
@@ -77,6 +126,7 @@ export default function Sidebar({ user, prospectsCount = 0, messagesCount = 0 })
             key={item.name}
             to={item.href}
             data-tour={item.tourId}
+            onClick={handleNavClick}
             className={({ isActive }) =>
               `flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
                 isActive
@@ -125,6 +175,7 @@ export default function Sidebar({ user, prospectsCount = 0, messagesCount = 0 })
             <NavLink
               key={item.name}
               to={item.href}
+              onClick={handleNavClick}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
                   isActive
@@ -153,7 +204,10 @@ export default function Sidebar({ user, prospectsCount = 0, messagesCount = 0 })
       {/* User */}
       <div className="p-4 border-t border-warm-100">
         <button
-          onClick={() => navigate('/settings')}
+          onClick={() => {
+            handleNavClick();
+            navigate('/settings');
+          }}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-warm-600 hover:bg-warm-50 transition-colors"
         >
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-400 to-accent-400 flex items-center justify-center text-white font-semibold text-sm">
@@ -177,5 +231,6 @@ export default function Sidebar({ user, prospectsCount = 0, messagesCount = 0 })
         onClose={() => setShowAddClientModal(false)}
       />
     </aside>
+    </>
   );
 }

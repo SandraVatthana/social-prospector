@@ -473,7 +473,7 @@ function StepStyle({ data, setData, toggleArrayValue }) {
 /**
  * Étape 5 — Objectifs de prospection
  */
-function StepObjectifs({ data, setData }) {
+function StepObjectifs({ data, setData, showValidation }) {
   const objectifs = [
     { id: 'clients', label: '🎯 Trouver des clients', icon: Target },
     { id: 'collabs', label: '🤝 Proposer des collabs', icon: Users },
@@ -488,6 +488,10 @@ function StepObjectifs({ data, setData }) {
     { id: 'audit', label: '🔍 Un audit gratuit', icon: Eye },
   ];
 
+  const missingObjectif = !data.objectif_prospection;
+  const missingPremierContact = !data.premier_contact;
+  const showWarning = showValidation && (missingObjectif || missingPremierContact);
+
   const leadMagnets = [
     { id: 'guide', label: '📘 Guide PDF' },
     { id: 'formation', label: '🎥 Mini-formation' },
@@ -498,10 +502,29 @@ function StepObjectifs({ data, setData }) {
 
   return (
     <div className="space-y-6">
+      {/* Warning message */}
+      {showWarning && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+          <div className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <span className="text-amber-600 text-sm">⚠️</span>
+          </div>
+          <div>
+            <p className="text-amber-800 font-medium text-sm">Sélections requises</p>
+            <p className="text-amber-700 text-sm mt-1">
+              {missingObjectif && missingPremierContact
+                ? 'Choisis une option dans chaque section ci-dessous pour continuer.'
+                : missingObjectif
+                ? 'Choisis pourquoi tu contactes des gens.'
+                : 'Choisis ce que tu proposes en premier message.'}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Objectif */}
-      <div>
-        <label className="block text-sm font-medium text-warm-700 mb-3">
-          Tu contactes des gens pour...
+      <div className={`rounded-xl p-4 -m-4 transition-all ${showWarning && missingObjectif ? 'bg-amber-50/50 ring-2 ring-amber-300' : ''}`}>
+        <label className={`block text-sm font-medium mb-3 ${showWarning && missingObjectif ? 'text-amber-700' : 'text-warm-700'}`}>
+          Tu contactes des gens pour... {showWarning && missingObjectif && <span className="text-amber-600">*</span>}
         </label>
         <div className="grid grid-cols-2 gap-3">
           {objectifs.map(obj => (
@@ -512,6 +535,8 @@ function StepObjectifs({ data, setData }) {
               className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${
                 data.objectif_prospection === obj.id
                   ? 'border-brand-500 bg-brand-50'
+                  : showWarning && missingObjectif
+                  ? 'border-amber-300 hover:border-amber-400 bg-white'
                   : 'border-warm-200 hover:border-warm-300'
               }`}
             >
@@ -525,9 +550,9 @@ function StepObjectifs({ data, setData }) {
       </div>
 
       {/* Premier contact */}
-      <div>
-        <label className="block text-sm font-medium text-warm-700 mb-3">
-          En premier message, tu proposes quoi ?
+      <div className={`rounded-xl p-4 -m-4 mt-2 transition-all ${showWarning && missingPremierContact ? 'bg-amber-50/50 ring-2 ring-amber-300' : ''}`}>
+        <label className={`block text-sm font-medium mb-3 ${showWarning && missingPremierContact ? 'text-amber-700' : 'text-warm-700'}`}>
+          En premier message, tu proposes quoi ? {showWarning && missingPremierContact && <span className="text-amber-600">*</span>}
         </label>
         <div className="grid grid-cols-2 gap-3">
           {premiersContacts.map(pc => (
@@ -538,6 +563,8 @@ function StepObjectifs({ data, setData }) {
               className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${
                 data.premier_contact === pc.id
                   ? 'border-brand-500 bg-brand-50'
+                  : showWarning && missingPremierContact
+                  ? 'border-amber-300 hover:border-amber-400 bg-white'
                   : 'border-warm-200 hover:border-warm-300'
               }`}
             >
@@ -714,6 +741,7 @@ export default function OnboardingProfond({ mode = 'self', clientName = '', onCo
   const [step, setStep] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedProfile, setGeneratedProfile] = useState(null);
+  const [showValidation, setShowValidation] = useState(false);
 
   // Debug: afficher les données initiales reçues
   console.log('[OnboardingProfond] initialData received:', initialData);
@@ -796,6 +824,18 @@ export default function OnboardingProfond({ mode = 'self', clientName = '', onCo
 
   // Navigation
   const handleNext = async () => {
+    // Vérifier si on peut continuer
+    if (!canContinue()) {
+      // Afficher la validation sur l'étape 4 (objectifs)
+      if (step === 4) {
+        setShowValidation(true);
+      }
+      return;
+    }
+
+    // Réinitialiser la validation
+    setShowValidation(false);
+
     if (isLastInputStep) {
       setStep(5);
       await generateProfile();
@@ -909,7 +949,7 @@ export default function OnboardingProfond({ mode = 'self', clientName = '', onCo
               {step === 1 && <StepCible data={data} setData={setData} toggleArrayValue={toggleArrayValue} />}
               {step === 2 && <StepTransformation data={data} setData={setData} toggleArrayValue={toggleArrayValue} />}
               {step === 3 && <StepStyle data={data} setData={setData} toggleArrayValue={toggleArrayValue} />}
-              {step === 4 && <StepObjectifs data={data} setData={setData} />}
+              {step === 4 && <StepObjectifs data={data} setData={setData} showValidation={showValidation} />}
               {step === 5 && (
                 <StepGeneration 
                   data={data} 
@@ -944,8 +984,11 @@ export default function OnboardingProfond({ mode = 'self', clientName = '', onCo
 
                 <button
                   onClick={handleNext}
-                  disabled={!canContinue()}
-                  className="flex items-center gap-2 px-6 py-3 bg-brand-600 hover:bg-brand-700 disabled:bg-warm-300 text-white font-semibold rounded-xl transition-all disabled:cursor-not-allowed shadow-lg shadow-brand-500/25"
+                  className={`flex items-center gap-2 px-6 py-3 font-semibold rounded-xl transition-all shadow-lg ${
+                    canContinue()
+                      ? 'bg-brand-600 hover:bg-brand-700 text-white shadow-brand-500/25'
+                      : 'bg-warm-300 hover:bg-warm-400 text-white shadow-warm-500/10'
+                  }`}
                 >
                   {isLastInputStep ? (
                     <>

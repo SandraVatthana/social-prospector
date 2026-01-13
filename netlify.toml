@@ -1,0 +1,46 @@
+[build]
+  # Build command:
+  # 1. Prepare functions (copy backend source)
+  # 2. Install functions dependencies
+  # 3. Build frontend
+  command = "node scripts/prepare-functions.js && cd netlify/functions && npm install && cd ../../frontend && npm install && npm run build"
+  # Publish directory for the frontend
+  publish = "frontend/dist"
+  # Functions directory
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+# Function configuration
+[functions]
+  # Use esbuild for ESM support
+  node_bundler = "esbuild"
+  # External modules that shouldn't be bundled
+  external_node_modules = ["@anthropic-ai/sdk", "@supabase/supabase-js", "openai"]
+  # Include backend source files in the function bundle
+  included_files = ["backend/**"]
+
+# Environment variables for functions
+[context.production.environment]
+  NODE_ENV = "production"
+
+# API redirects - must come BEFORE the SPA catch-all
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
+# SPA fallback - must come AFTER API redirects
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Headers for API
+[[headers]]
+  for = "/.netlify/functions/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, Authorization"

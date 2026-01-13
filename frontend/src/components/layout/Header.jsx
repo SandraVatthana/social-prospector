@@ -13,7 +13,9 @@ export default function Header({ title, subtitle, action, children, showBack, on
   const shouldShowBack = showBack !== undefined ? showBack : location.pathname !== '/';
 
   return (
-    <header className="bg-white border-b border-warm-200 px-8 py-6">
+    <header className="bg-white border-b border-warm-200 px-4 lg:px-8 py-4 lg:py-6">
+      {/* Spacer pour le bouton hamburger sur mobile */}
+      <div className="h-8 lg:hidden" />
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           {shouldShowBack && (
@@ -26,11 +28,11 @@ export default function Header({ title, subtitle, action, children, showBack, on
             </button>
           )}
           <div>
-            <h1 className="font-display text-2xl font-bold text-warm-900">{title}</h1>
-            {subtitle && <p className="text-warm-500 mt-1">{subtitle}</p>}
+            <h1 className="font-display text-xl lg:text-2xl font-bold text-warm-900">{title}</h1>
+            {subtitle && <p className="text-warm-500 mt-1 text-sm lg:text-base">{subtitle}</p>}
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 lg:gap-3">
           {/* Bouton d'aide pour relancer le tour guidé */}
           {onStartTour && (
             <button

@@ -18,6 +18,7 @@ import OnboardingProfond from './components/onboarding/OnboardingProfond';
 import GuidedTour, { useTour, STORAGE_KEY } from './components/tour/GuidedTour';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ClientProvider } from './contexts/ClientContext';
+import { SidebarProvider } from './contexts/SidebarContext';
 import { ToastProvider } from './components/ui/Toast';
 import WelcomeModal from './components/ui/WelcomeModal';
 import FAQChatbot from './components/ui/FAQChatbot';
@@ -152,8 +153,8 @@ function AppContent() {
           messagesCount={0}
         />
 
-        {/* Main content */}
-        <div className="flex-1 ml-64 flex flex-col min-h-screen">
+        {/* Main content - responsive margin for sidebar */}
+        <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
           <main className="flex-1">
             <Routes>
               <Route path="/" element={<Dashboard />} />
@@ -196,9 +197,11 @@ export default function App() {
   return (
     <AuthProvider>
       <ClientProvider>
-        <ToastProvider>
-          <AppContent />
-        </ToastProvider>
+        <SidebarProvider>
+          <ToastProvider>
+            <AppContent />
+          </ToastProvider>
+        </SidebarProvider>
       </ClientProvider>
     </AuthProvider>
   );

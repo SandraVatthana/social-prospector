@@ -314,6 +314,86 @@ router.post('/profiles', requireAuth, async (req, res) => {
 });
 
 /**
+ * GET /api/voice/training-texts
+ * Récupère les textes d'entraînement sauvegardés
+ */
+router.get('/training-texts', requireAuth, async (req, res) => {
+  try {
+    // Récupérer le profil actif de l'utilisateur
+    const { data: profile, error } = await supabaseAdmin
+      .from('voice_profiles')
+      .select('id, training_texts')
+      .eq('user_id', req.user.id)
+      .eq('is_active', true)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows
+
+    res.json(formatResponse({
+      texts: profile?.training_texts || [],
+      profile_id: profile?.id || null,
+    }));
+  } catch (error) {
+    console.error('Error fetching training texts:', error);
+    res.status(500).json(formatError('Erreur lors de la récupération', 'FETCH_ERROR'));
+  }
+});
+
+/**
+ * POST /api/voice/training-texts
+ * Sauvegarde les textes d'entraînement
+ */
+router.post('/training-texts', requireAuth, async (req, res) => {
+  try {
+    const { texts } = req.body;
+
+    if (!Array.isArray(texts)) {
+      return res.status(400).json(formatError('Format invalide', 'INVALID_FORMAT'));
+    }
+
+    // Chercher le profil actif ou en créer un
+    let { data: profile, error: fetchError } = await supabaseAdmin
+      .from('voice_profiles')
+      .select('id')
+      .eq('user_id', req.user.id)
+      .eq('is_active', true)
+      .single();
+
+    if (fetchError && fetchError.code === 'PGRST116') {
+      // Pas de profil actif, en créer un
+      const { data: newProfile, error: createError } = await supabaseAdmin
+        .from('voice_profiles')
+        .insert({
+          user_id: req.user.id,
+          name: 'MA VOIX',
+          is_active: true,
+          training_texts: texts,
+        })
+        .select()
+        .single();
+
+      if (createError) throw createError;
+      profile = newProfile;
+    } else if (fetchError) {
+      throw fetchError;
+    } else {
+      // Mettre à jour le profil existant
+      const { error: updateError } = await supabaseAdmin
+        .from('voice_profiles')
+        .update({ training_texts: texts })
+        .eq('id', profile.id);
+
+      if (updateError) throw updateError;
+    }
+
+    res.json(formatResponse({ saved: true, count: texts.length }));
+  } catch (error) {
+    console.error('Error saving training texts:', error);
+    res.status(500).json(formatError('Erreur lors de la sauvegarde', 'SAVE_ERROR'));
+  }
+});
+
+/**
  * DELETE /api/voice/profiles/:id
  * Supprime un profil vocal
  */

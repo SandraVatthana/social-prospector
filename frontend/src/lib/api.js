@@ -2,7 +2,7 @@
 export const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 /**
- * API Client pour Social Prospector
+ * API Client pour Prospection par DM
  */
 class API {
   constructor() {
@@ -233,6 +233,17 @@ class API {
 
   async analyzeVoice(texts) {
     return this.request('/voice/analyze', {
+      method: 'POST',
+      body: { texts },
+    });
+  }
+
+  async getTrainingTexts() {
+    return this.request('/voice/training-texts');
+  }
+
+  async saveTrainingTexts(texts) {
+    return this.request('/voice/training-texts', {
       method: 'POST',
       body: { texts },
     });

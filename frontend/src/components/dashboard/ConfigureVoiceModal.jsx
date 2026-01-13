@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Plus,
   Trash2,
@@ -13,6 +13,7 @@ import {
   Zap,
   Volume2,
   MessageSquare,
+  Save,
 } from 'lucide-react';
 import Modal from '../ui/Modal';
 import { api } from '../../lib/api';
@@ -32,13 +33,52 @@ export default function ConfigureVoiceModal({ isOpen, onClose, onComplete }) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [feedbackGiven, setFeedbackGiven] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Charger les textes sauvegardés à l'ouverture
+  useEffect(() => {
+    if (isOpen) {
+      loadSavedTexts();
+    }
+  }, [isOpen]);
+
+  const loadSavedTexts = async () => {
+    setIsLoading(true);
+    try {
+      const response = await api.getTrainingTexts();
+      if (response.data?.texts && response.data.texts.length > 0) {
+        setTexts(response.data.texts.map((t, i) => ({
+          id: Date.now() + i,
+          content: t.content || t,
+          chars: (t.content || t).length,
+        })));
+      }
+    } catch (err) {
+      console.error('Error loading training texts:', err);
+      // Silently fail, user can still add texts
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const saveTextsToServer = async (textsToSave) => {
+    setIsSaving(true);
+    try {
+      await api.saveTrainingTexts(textsToSave.map(t => ({ content: t.content, chars: t.chars })));
+    } catch (err) {
+      console.error('Error saving training texts:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const charCount = currentText.length;
   const isTextValid = charCount >= MIN_CHARS && charCount <= MAX_CHARS;
   const canAnalyze = texts.length >= MIN_TEXTS;
   const canAddMore = texts.length < MAX_TEXTS;
 
-  const handleAddText = () => {
+  const handleAddText = async () => {
     if (!isTextValid) {
       if (charCount < MIN_CHARS) {
         setError(`Minimum ${MIN_CHARS} caractères requis (${charCount}/${MIN_CHARS})`);
@@ -53,13 +93,21 @@ export default function ConfigureVoiceModal({ isOpen, onClose, onComplete }) {
       return;
     }
 
-    setTexts([...texts, { id: Date.now(), content: currentText, chars: charCount }]);
+    const newTexts = [...texts, { id: Date.now(), content: currentText, chars: charCount }];
+    setTexts(newTexts);
     setCurrentText('');
     setError('');
+
+    // Sauvegarder automatiquement
+    await saveTextsToServer(newTexts);
   };
 
-  const handleRemoveText = (id) => {
-    setTexts(texts.filter(t => t.id !== id));
+  const handleRemoveText = async (id) => {
+    const newTexts = texts.filter(t => t.id !== id);
+    setTexts(newTexts);
+
+    // Sauvegarder automatiquement
+    await saveTextsToServer(newTexts);
   };
 
   const handleAnalyze = async () => {
@@ -101,7 +149,7 @@ export default function ConfigureVoiceModal({ isOpen, onClose, onComplete }) {
   };
 
   const handleClose = () => {
-    setTexts([]);
+    // Ne PAS effacer texts car ils sont sauvegardés
     setCurrentText('');
     setError('');
     setAnalysisResult(null);
@@ -312,6 +360,22 @@ export default function ConfigureVoiceModal({ isOpen, onClose, onComplete }) {
       size="large"
     >
       <div className="space-y-6">
+        {/* Indicateur de chargement */}
+        {isLoading && (
+          <div className="flex items-center justify-center gap-2 py-4 text-warm-500">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span>Chargement des textes sauvegardés...</span>
+          </div>
+        )}
+
+        {/* Indicateur de sauvegarde */}
+        {isSaving && (
+          <div className="flex items-center gap-2 px-3 py-2 bg-brand-50 border border-brand-100 rounded-lg text-sm text-brand-600">
+            <Save className="w-4 h-4" />
+            Sauvegarde en cours...
+          </div>
+        )}
+
         {/* Zone de saisie */}
         <div>
           <div className="flex items-center justify-between mb-2">

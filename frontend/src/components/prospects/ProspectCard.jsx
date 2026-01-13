@@ -1,5 +1,37 @@
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Flame, Leaf, Ban } from 'lucide-react';
 import PlatformIcon from './PlatformIcon';
+
+// Configuration des indicateurs de discernement basés sur le score
+const discernementConfig = {
+  hot: {
+    icon: Flame,
+    label: 'Chaud',
+    emoji: '🔥',
+    classes: 'bg-green-100 text-green-700 border-green-200',
+    tooltip: 'Prospect chaud - tu peux parler de ton offre',
+  },
+  nurture: {
+    icon: Leaf,
+    label: 'À nourrir',
+    emoji: '🌱',
+    classes: 'bg-amber-100 text-amber-700 border-amber-200',
+    tooltip: 'À nourrir - pose des questions, crée le lien',
+  },
+  skip: {
+    icon: Ban,
+    label: 'À laisser',
+    emoji: '🚫',
+    classes: 'bg-warm-100 text-warm-500 border-warm-200',
+    tooltip: 'À laisser de côté - pas aligné',
+  },
+};
+
+// Détermine le niveau de discernement basé sur le score
+function getDiscernement(score) {
+  if (score >= 70) return 'hot';
+  if (score >= 40) return 'nurture';
+  return 'skip';
+}
 
 const statusConfig = {
   nouveau: {
@@ -45,6 +77,8 @@ export default function ProspectCard({
   compact = false,
 }) {
   const status = statusConfig[prospect.status] || statusConfig.nouveau;
+  const discernement = discernementConfig[getDiscernement(prospect.score || 0)];
+  const DiscernementIcon = discernement.icon;
 
   if (compact) {
     return (
@@ -69,6 +103,14 @@ export default function ProspectCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <p className="font-semibold text-warm-900 truncate">@{prospect.username}</p>
+            {/* Badge discernement */}
+            <span
+              className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full border ${discernement.classes}`}
+              title={discernement.tooltip}
+            >
+              <span>{discernement.emoji}</span>
+              <span className="hidden sm:inline">{discernement.label}</span>
+            </span>
           </div>
           <p className="text-sm text-warm-500 truncate">
             {prospect.bio || prospect.description || 'Pas de bio'}
@@ -115,7 +157,17 @@ export default function ProspectCard({
 
       {/* Infos principales */}
       <div className="flex-1 min-w-0">
-        <p className="font-semibold text-warm-900 truncate">@{prospect.username}</p>
+        <div className="flex items-center gap-2">
+          <p className="font-semibold text-warm-900 truncate">@{prospect.username}</p>
+          {/* Badge discernement */}
+          <span
+            className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full border ${discernement.classes}`}
+            title={discernement.tooltip}
+          >
+            <span>{discernement.emoji}</span>
+            <span>{discernement.label}</span>
+          </span>
+        </div>
         <p className="text-sm text-warm-500 truncate">
           {prospect.bio || prospect.description}
           {prospect.followers && ` • ${formatFollowers(prospect.followers)} abonnés`}
