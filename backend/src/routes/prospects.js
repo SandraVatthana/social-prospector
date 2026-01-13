@@ -407,6 +407,84 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
+
+/**
+ * POST /api/prospects/linkedin/import
+ * Import de profils LinkedIn depuis l'extension Chrome
+ */
+router.post('/linkedin/import', async (req, res) => {
+  try {
+    const { profiles, importedAt } = req.body;
+
+    console.log(`[LinkedIn Import] Received ${profiles?.length || 0} profiles at ${importedAt}`);
+
+    if (!profiles || !Array.isArray(profiles) || profiles.length === 0) {
+      return res.status(400).json(formatError('Aucun profil LinkedIn fourni', 'NO_PROFILES'));
+    }
+
+    // Extraire les URLs de profil pour deduplication
+    const profileUrls = profiles.map(p => p.profileUrl).filter(Boolean);
+
+    // Verifier les doublons existants
+    const { data: existingProfiles } = await supabaseAdmin
+      .from('prospects')
+      .select('username')
+      .eq('platform', 'linkedin')
+      .in('username', profileUrls);
+
+    const existingUrls = new Set((existingProfiles || []).map(p => p.username));
+
+    // Filtrer les nouveaux profils
+    const newProfiles = profiles.filter(p => p.profileUrl && !existingUrls.has(p.profileUrl));
+
+    console.log(`[LinkedIn Import] ${newProfiles.length} new profiles (${profiles.length - newProfiles.length} duplicates)`);
+
+    if (newProfiles.length === 0) {
+      return res.json(formatResponse({
+        imported: 0,
+        duplicates: profiles.length,
+        message: 'Tous les profils sont deja importes'
+      }));
+    }
+
+    // Preparer les donnees pour insertion
+    const prospectsToInsert = newProfiles.map(p => ({
+      username: p.profileUrl,
+      platform: 'linkedin',
+      full_name: p.name || null,
+      bio: p.headline || null,
+      avatar_url: p.avatar || null,
+      followers: 0,
+      following: 0,
+      posts_count: 0,
+      status: 'new',
+      created_at: new Date().toISOString()
+    }));
+
+    const { data, error } = await supabaseAdmin
+      .from('prospects')
+      .insert(prospectsToInsert)
+      .select();
+
+    if (error) {
+      console.error('[LinkedIn Import] Insert error:', error);
+      return res.status(500).json(formatError("Erreur lors de l'import", 'IMPORT_ERROR'));
+    }
+
+    console.log(`[LinkedIn Import] SUCCESS - Imported ${data?.length || 0} profiles`);
+
+    res.json(formatResponse({
+      imported: data?.length || newProfiles.length,
+      duplicates: profiles.length - newProfiles.length,
+      message: `${data?.length || newProfiles.length} profil(s) LinkedIn importe(s)`
+    }));
+
+  } catch (error) {
+    console.error('[LinkedIn Import] Error:', error);
+    res.status(500).json(formatError('Erreur serveur', 'SERVER_ERROR'));
+  }
+});
+
 /**
  * DELETE /api/prospects/:id
  * Supprime un prospect

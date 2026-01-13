@@ -43,3 +43,6 @@ coverage/
 .temp
 .tmp
 frontend/nul
+
+# Local Netlify folder
+.netlify

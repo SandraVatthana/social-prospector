@@ -8,7 +8,7 @@ export default function LegalFooter() {
           {/* Logo / Brand */}
           <div className="flex items-center gap-2">
             <span className="text-sm text-warm-500">
-              Social Prospector — <span className="font-medium">My Inner Quest</span>
+              Prospection par DM — <span className="font-medium">SOS Storytelling</span>
             </span>
           </div>
 

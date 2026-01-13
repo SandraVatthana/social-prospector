@@ -34,7 +34,7 @@ export function generateAnalyticsPDF({ stats, hooks, platforms, periode }) {
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(24);
   doc.setFont('helvetica', 'bold');
-  doc.text('Social Prospector', 20, 25);
+  doc.text('Prospection par DM', 20, 25);
 
   doc.setFontSize(12);
   doc.setFont('helvetica', 'normal');
@@ -233,7 +233,7 @@ export function generateAnalyticsPDF({ stats, hooks, platforms, periode }) {
     doc.setFontSize(9);
     doc.setTextColor(150, 150, 150);
     doc.text(
-      `Social Prospector • Rapport généré le ${today} • Page ${i}/${pageCount}`,
+      `Prospection par DM • Rapport généré le ${today} • Page ${i}/${pageCount}`,
       pageWidth / 2,
       doc.internal.pageSize.getHeight() - 10,
       { align: 'center' }
@@ -483,7 +483,7 @@ export function generateAgencyClientPDF({ client, agencyStats, hooks, bestTimes,
     doc.setFontSize(9);
     doc.setTextColor(150, 150, 150);
     doc.text(
-      `Social Prospector • Rapport ${client?.name || 'Client'} • ${today} • Page ${i}/${pageCount}`,
+      `Prospection par DM • Rapport ${client?.name || 'Client'} • ${today} • Page ${i}/${pageCount}`,
       pageWidth / 2,
       doc.internal.pageSize.getHeight() - 10,
       { align: 'center' }
@@ -639,7 +639,7 @@ export function generateAgencyGlobalPDF({ clients, agencyStats, hooks, bestTimes
     doc.setFontSize(9);
     doc.setTextColor(150, 150, 150);
     doc.text(
-      `Social Prospector • Rapport Agence • ${today} • Page ${i}/${pageCount}`,
+      `Prospection par DM • Rapport Agence • ${today} • Page ${i}/${pageCount}`,
       pageWidth / 2,
       doc.internal.pageSize.getHeight() - 10,
       { align: 'center' }

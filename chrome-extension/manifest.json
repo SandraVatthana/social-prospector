@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Social Prospector - Multi-Account",
-  "version": "1.0.0",
-  "description": "Gérez plusieurs comptes Instagram facilement. Switchez entre vos comptes en un clic.",
+  "name": "Social Prospector",
+  "version": "2.0.0",
+  "description": "Prospection intelligente sur Instagram et LinkedIn. Importez des profils, generez des messages personnalises.",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -12,10 +12,12 @@
     "cookies",
     "storage",
     "tabs",
-    "activeTab"
+    "activeTab",
+    "scripting"
   ],
   "host_permissions": [
-    "*://*.instagram.com/*"
+    "*://*.instagram.com/*",
+    "*://*.linkedin.com/*"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -24,9 +26,23 @@
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     },
-    "default_title": "Social Prospector Multi-Account"
+    "default_title": "Social Prospector"
   },
   "background": {
     "service_worker": "background.js"
-  }
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.linkedin.com/*"],
+      "js": ["content-linkedin.js"],
+      "css": ["content-linkedin.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/*"],
+      "matches": ["*://*.linkedin.com/*", "*://*.instagram.com/*"]
+    }
+  ]
 }

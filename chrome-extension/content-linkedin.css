@@ -1,0 +1,240 @@
+/* Social Prospector - LinkedIn Content Script Styles */
+
+#sp-linkedin-extractor {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 999999;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Main button */
+#sp-extract-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #f15a24 0%, #df5f54 100%);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(241, 90, 36, 0.4);
+  transition: all 0.3s ease;
+}
+
+#sp-extract-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(241, 90, 36, 0.5);
+}
+
+#sp-extract-btn svg {
+  flex-shrink: 0;
+}
+
+/* Panel */
+.sp-panel {
+  position: absolute;
+  bottom: 60px;
+  right: 0;
+  width: 360px;
+  max-height: 500px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.sp-panel.sp-hidden {
+  opacity: 0;
+  transform: translateY(20px);
+  pointer-events: none;
+}
+
+.sp-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #f15a24 0%, #df5f54 100%);
+  color: white;
+}
+
+.sp-panel-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.sp-btn-icon {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.sp-btn-icon:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.sp-panel-content {
+  padding: 16px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* Status */
+#sp-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.sp-status-icon {
+  font-size: 20px;
+}
+
+.sp-status-text {
+  font-size: 14px;
+  color: #333;
+}
+
+/* Profiles list */
+#sp-profiles-list {
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.sp-profile-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 8px;
+  transition: background 0.2s;
+  cursor: pointer;
+}
+
+.sp-profile-item:hover {
+  background: #f5f5f5;
+}
+
+.sp-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #f15a24;
+}
+
+.sp-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #e0e0e0;
+}
+
+.sp-profile-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.sp-profile-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sp-profile-headline {
+  font-size: 12px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sp-empty {
+  text-align: center;
+  color: #888;
+  padding: 20px;
+  font-size: 14px;
+}
+
+/* Actions */
+#sp-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #eee;
+}
+
+#sp-actions.sp-hidden {
+  display: none;
+}
+
+.sp-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sp-btn-secondary {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.sp-btn-secondary:hover {
+  background: #e5e5e5;
+}
+
+.sp-btn-primary {
+  background: linear-gradient(135deg, #f15a24 0%, #df5f54 100%);
+  color: white;
+}
+
+.sp-btn-primary:hover {
+  box-shadow: 0 4px 12px rgba(241, 90, 36, 0.4);
+}
+
+/* Scrollbar */
+#sp-profiles-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+#sp-profiles-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+#sp-profiles-list::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+#sp-profiles-list::-webkit-scrollbar-thumb:hover {
+  background: #bbb;
+}

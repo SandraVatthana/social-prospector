@@ -72,7 +72,7 @@ export default function LoginPage({ onDemoLogin }) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
-          <h1 className="font-display text-3xl font-bold text-warm-800 mb-2">Social Prospector</h1>
+          <h1 className="font-display text-3xl font-bold text-warm-800 mb-2">Prospection par DM</h1>
           <p className="text-warm-500">Trouvez vos clients idéaux sur Instagram & TikTok</p>
         </div>
 

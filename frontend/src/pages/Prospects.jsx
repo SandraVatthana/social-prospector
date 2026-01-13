@@ -384,12 +384,12 @@ export default function Prospects() {
         </div>
 
         {/* Liste prospects */}
-        <div className="flex gap-6">
+        <div className="flex flex-col lg:flex-row gap-6">
           {/* Table */}
-          <div className={`flex-1 ${selectedProspect ? 'max-w-2xl' : ''}`}>
+          <div className={`flex-1 ${selectedProspect ? 'lg:max-w-2xl' : ''}`}>
             <div className="card overflow-hidden">
-              {/* Header table */}
-              <div className="grid grid-cols-12 gap-4 p-4 bg-warm-50 border-b border-warm-100 text-sm font-medium text-warm-600">
+              {/* Header table - Hidden on mobile */}
+              <div className="hidden md:grid grid-cols-12 gap-4 p-4 bg-warm-50 border-b border-warm-100 text-sm font-medium text-warm-600">
                 <div className="col-span-1">
                   <button
                     onClick={selectAll}
@@ -418,6 +418,26 @@ export default function Prospects() {
                 <div className="col-span-1"></div>
               </div>
 
+              {/* Mobile header with select all */}
+              <div className="md:hidden flex items-center justify-between p-4 bg-warm-50 border-b border-warm-100">
+                <button
+                  onClick={selectAll}
+                  className="flex items-center gap-2 text-sm text-warm-600"
+                >
+                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                    selectedIds.length === filteredProspects.length && filteredProspects.length > 0
+                      ? 'bg-brand-500 border-brand-500'
+                      : 'border-warm-300'
+                  }`}>
+                    {selectedIds.length === filteredProspects.length && filteredProspects.length > 0 && (
+                      <Check className="w-3 h-3 text-white" />
+                    )}
+                  </div>
+                  Tout sélectionner
+                </button>
+                <span className="text-sm text-warm-500">{filteredProspects.length} prospects</span>
+              </div>
+
               {/* Rows */}
               {isLoading ? (
                 <div className="p-12 text-center">
@@ -441,85 +461,78 @@ export default function Prospects() {
                   <div
                     key={prospect.id}
                     onClick={() => setSelectedProspect(prospect)}
-                    className={`grid grid-cols-12 gap-4 p-4 border-b border-warm-100 hover:bg-warm-50 cursor-pointer transition-colors ${
+                    className={`p-4 border-b border-warm-100 hover:bg-warm-50 cursor-pointer transition-colors ${
                       selectedProspect?.id === prospect.id ? 'bg-brand-50' : ''
                     }`}
                   >
-                    {/* Checkbox */}
-                    <div className="col-span-1" onClick={e => e.stopPropagation()}>
-                      <button
-                        onClick={() => toggleSelect(prospect.id)}
-                        className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                          selectedIds.includes(prospect.id)
-                            ? 'bg-brand-500 border-brand-500'
-                            : 'border-warm-300 hover:border-brand-400'
-                        }`}
-                      >
-                        {selectedIds.includes(prospect.id) && (
-                          <Check className="w-3 h-3 text-white" />
-                        )}
-                      </button>
-                    </div>
+                    {/* Mobile Layout */}
+                    <div className="md:hidden">
+                      <div className="flex items-start gap-3">
+                        {/* Checkbox */}
+                        <div onClick={e => e.stopPropagation()}>
+                          <button
+                            onClick={() => toggleSelect(prospect.id)}
+                            className={`w-5 h-5 rounded border-2 flex items-center justify-center mt-1 ${
+                              selectedIds.includes(prospect.id)
+                                ? 'bg-brand-500 border-brand-500'
+                                : 'border-warm-300 hover:border-brand-400'
+                            }`}
+                          >
+                            {selectedIds.includes(prospect.id) && (
+                              <Check className="w-3 h-3 text-white" />
+                            )}
+                          </button>
+                        </div>
 
-                    {/* Prospect info */}
-                    <div className="col-span-4 flex items-center gap-3">
-                      <div className="relative">
-                        <ProspectAvatar
-                          avatar={prospect.avatar}
-                          username={prospect.username}
-                          fullName={prospect.fullName}
-                          size="md"
-                        />
-                        <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center ${
-                          prospect.platform === 'instagram'
-                            ? 'bg-gradient-to-br from-purple-500 to-pink-500'
-                            : 'bg-black'
-                        }`}>
-                          {prospect.platform === 'instagram'
-                            ? <Instagram className="w-2.5 h-2.5 text-white" />
-                            : <TikTokIcon className="w-2.5 h-2.5 text-white" />
-                          }
+                        {/* Avatar */}
+                        <div className="relative flex-shrink-0">
+                          <ProspectAvatar
+                            avatar={prospect.avatar}
+                            username={prospect.username}
+                            fullName={prospect.fullName}
+                            size="md"
+                          />
+                          <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center ${
+                            prospect.platform === 'instagram'
+                              ? 'bg-gradient-to-br from-purple-500 to-pink-500'
+                              : 'bg-black'
+                          }`}>
+                            {prospect.platform === 'instagram'
+                              ? <Instagram className="w-2.5 h-2.5 text-white" />
+                              : <TikTokIcon className="w-2.5 h-2.5 text-white" />
+                            }
+                          </div>
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <p className="font-medium text-warm-900 truncate">@{prospect.username}</p>
+                            <div onClick={e => e.stopPropagation()}>
+                              <button
+                                onClick={() => setOpenMenuId(openMenuId === prospect.id ? null : prospect.id)}
+                                className="p-1 hover:bg-warm-100 rounded"
+                              >
+                                <MoreVertical className="w-4 h-4 text-warm-400" />
+                              </button>
+                            </div>
+                          </div>
+                          <p className="text-xs text-warm-500 truncate">{prospect.fullName}</p>
+                          <div className="flex items-center flex-wrap gap-2 mt-2">
+                            <span className={`px-2 py-0.5 rounded-lg text-xs font-medium ${STATUS_CONFIG[prospect.status].color}`}>
+                              {STATUS_CONFIG[prospect.status].label}
+                            </span>
+                            <span className="text-xs text-warm-400">{formatNumber(prospect.followers || 0)} abonnés</span>
+                          </div>
                         </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="font-medium text-warm-900 truncate">@{prospect.username}</p>
-                        <p className="text-xs text-warm-500 truncate">{prospect.fullName}</p>
-                      </div>
-                    </div>
 
-                    {/* Statut */}
-                    <div className="col-span-2 flex items-center">
-                      <span className={`px-2 py-1 rounded-lg text-xs font-medium ${STATUS_CONFIG[prospect.status].color}`}>
-                        {STATUS_CONFIG[prospect.status].label}
-                      </span>
-                    </div>
-
-                    {/* Stats */}
-                    <div className="col-span-2 flex items-center gap-3 text-sm text-warm-500">
-                      <span>{formatNumber(prospect.followers || 0)}</span>
-                      <span className="text-warm-300">•</span>
-                      <span>{prospect.engagement || 0}%</span>
-                    </div>
-
-                    {/* Date */}
-                    <div className="col-span-2 flex items-center text-sm text-warm-500">
-                      {formatDate(prospect.addedAt)}
-                    </div>
-
-                    {/* Actions - Menu trois points */}
-                    <div className="col-span-1 flex items-center justify-end relative" onClick={e => e.stopPropagation()}>
-                      <button
-                        onClick={() => setOpenMenuId(openMenuId === prospect.id ? null : prospect.id)}
-                        className="p-1 hover:bg-warm-100 rounded"
-                      >
-                        <MoreVertical className="w-4 h-4 text-warm-400" />
-                      </button>
-
-                      {/* Dropdown menu */}
+                      {/* Mobile Dropdown */}
                       {openMenuId === prospect.id && (
-                        <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-warm-200 rounded-xl shadow-lg z-20 overflow-hidden">
+                        <div className="absolute right-4 mt-1 w-48 bg-white border border-warm-200 rounded-xl shadow-lg z-20 overflow-hidden">
                           <button
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setSelectedProspect(prospect);
                               setOpenMenuId(null);
                             }}
@@ -529,7 +542,8 @@ export default function Prospects() {
                             Voir les détails
                           </button>
                           <button
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               openGenerateModal(prospect, []);
                               setOpenMenuId(null);
                             }}
@@ -539,7 +553,10 @@ export default function Prospects() {
                             Générer un message
                           </button>
                           <button
-                            onClick={() => openProfile(prospect)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openProfile(prospect);
+                            }}
                             className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-sm text-warm-700 hover:bg-warm-50"
                           >
                             <ExternalLink className="w-4 h-4" />
@@ -547,7 +564,10 @@ export default function Prospects() {
                           </button>
                           <div className="border-t border-warm-100" />
                           <button
-                            onClick={() => deleteProspect(prospect.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteProspect(prospect.id);
+                            }}
                             className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -555,6 +575,121 @@ export default function Prospects() {
                           </button>
                         </div>
                       )}
+                    </div>
+
+                    {/* Desktop Layout */}
+                    <div className="hidden md:grid grid-cols-12 gap-4">
+                      {/* Checkbox */}
+                      <div className="col-span-1" onClick={e => e.stopPropagation()}>
+                        <button
+                          onClick={() => toggleSelect(prospect.id)}
+                          className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                            selectedIds.includes(prospect.id)
+                              ? 'bg-brand-500 border-brand-500'
+                              : 'border-warm-300 hover:border-brand-400'
+                          }`}
+                        >
+                          {selectedIds.includes(prospect.id) && (
+                            <Check className="w-3 h-3 text-white" />
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Prospect info */}
+                      <div className="col-span-4 flex items-center gap-3">
+                        <div className="relative">
+                          <ProspectAvatar
+                            avatar={prospect.avatar}
+                            username={prospect.username}
+                            fullName={prospect.fullName}
+                            size="md"
+                          />
+                          <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center ${
+                            prospect.platform === 'instagram'
+                              ? 'bg-gradient-to-br from-purple-500 to-pink-500'
+                              : 'bg-black'
+                          }`}>
+                            {prospect.platform === 'instagram'
+                              ? <Instagram className="w-2.5 h-2.5 text-white" />
+                              : <TikTokIcon className="w-2.5 h-2.5 text-white" />
+                            }
+                          </div>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium text-warm-900 truncate">@{prospect.username}</p>
+                          <p className="text-xs text-warm-500 truncate">{prospect.fullName}</p>
+                        </div>
+                      </div>
+
+                      {/* Statut */}
+                      <div className="col-span-2 flex items-center">
+                        <span className={`px-2 py-1 rounded-lg text-xs font-medium ${STATUS_CONFIG[prospect.status].color}`}>
+                          {STATUS_CONFIG[prospect.status].label}
+                        </span>
+                      </div>
+
+                      {/* Stats */}
+                      <div className="col-span-2 flex items-center gap-3 text-sm text-warm-500">
+                        <span>{formatNumber(prospect.followers || 0)}</span>
+                        <span className="text-warm-300">•</span>
+                        <span>{prospect.engagement || 0}%</span>
+                      </div>
+
+                      {/* Date */}
+                      <div className="col-span-2 flex items-center text-sm text-warm-500">
+                        {formatDate(prospect.addedAt)}
+                      </div>
+
+                      {/* Actions - Menu trois points */}
+                      <div className="col-span-1 flex items-center justify-end relative" onClick={e => e.stopPropagation()}>
+                        <button
+                          onClick={() => setOpenMenuId(openMenuId === prospect.id ? null : prospect.id)}
+                          className="p-1 hover:bg-warm-100 rounded"
+                        >
+                          <MoreVertical className="w-4 h-4 text-warm-400" />
+                        </button>
+
+                        {/* Dropdown menu */}
+                        {openMenuId === prospect.id && (
+                          <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-warm-200 rounded-xl shadow-lg z-20 overflow-hidden">
+                            <button
+                              onClick={() => {
+                                setSelectedProspect(prospect);
+                                setOpenMenuId(null);
+                              }}
+                              className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-sm text-warm-700 hover:bg-warm-50"
+                            >
+                              <Users className="w-4 h-4" />
+                              Voir les détails
+                            </button>
+                            <button
+                              onClick={() => {
+                                openGenerateModal(prospect, []);
+                                setOpenMenuId(null);
+                              }}
+                              className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-sm text-warm-700 hover:bg-warm-50"
+                            >
+                              <Sparkles className="w-4 h-4" />
+                              Générer un message
+                            </button>
+                            <button
+                              onClick={() => openProfile(prospect)}
+                              className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-sm text-warm-700 hover:bg-warm-50"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                              Voir le profil
+                            </button>
+                            <div className="border-t border-warm-100" />
+                            <button
+                              onClick={() => deleteProspect(prospect.id)}
+                              className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Supprimer
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))
@@ -651,7 +786,14 @@ function ProspectDetailPanel({ prospect, onClose, onStatusChange, onGenerateMess
   };
 
   return (
-    <div className="w-96 card p-6 space-y-6 sticky top-6 max-h-[calc(100vh-6rem)] overflow-y-auto">
+    <>
+      {/* Mobile overlay */}
+      <div
+        className="lg:hidden fixed inset-0 bg-black/50 z-40"
+        onClick={onClose}
+      />
+
+      <div className="fixed lg:relative inset-x-0 bottom-0 lg:inset-auto lg:w-96 card p-6 space-y-6 lg:sticky lg:top-6 max-h-[80vh] lg:max-h-[calc(100vh-6rem)] overflow-y-auto z-50 rounded-t-2xl lg:rounded-xl">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
@@ -892,6 +1034,7 @@ function ProspectDetailPanel({ prospect, onClose, onStatusChange, onGenerateMess
         </Link>
       </div>
     </div>
+    </>
   );
 }
 

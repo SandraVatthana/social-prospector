@@ -14,6 +14,21 @@ export function AuthProvider({ children }) {
   // MODE DEMO : Auto-login pour les tests (mettre à false pour la prod)
   const DEMO_MODE = false;
 
+  // Détecter si l'utilisateur vient de SOS Storytelling (?from=sos)
+  const [fromSOS, setFromSOS] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const isFromSOS = params.get('from') === 'sos';
+    if (isFromSOS) {
+      // Marquer dans localStorage pour les sessions futures
+      localStorage.setItem('prospection_from_sos', 'true');
+      // Nettoyer l'URL
+      const url = new URL(window.location.href);
+      url.searchParams.delete('from');
+      window.history.replaceState({}, '', url.pathname);
+    }
+    return isFromSOS || localStorage.getItem('prospection_from_sos') === 'true';
+  });
+
   // Vérifier l'authentification au chargement
   useEffect(() => {
     // En mode démo, connecter automatiquement
@@ -174,7 +189,9 @@ export function AuthProvider({ children }) {
     completeOnboarding,
     skipOnboardingDemo,
     isAuthenticated: !!user,
-    needsOnboarding: user && onboardingCompleted === false,
+    // Skip l'onboarding si l'utilisateur vient de SOS Storytelling
+    needsOnboarding: user && onboardingCompleted === false && !fromSOS,
+    fromSOS,
   };
 
   return (

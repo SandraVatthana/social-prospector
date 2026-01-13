@@ -52,7 +52,7 @@ export default function WelcomeModal() {
         {/* Contenu */}
         <div className="p-6">
           <p className="text-warm-700 leading-relaxed mb-4">
-            Merci de tester <strong>Social Prospector</strong> ! Vos retours nous aideront à améliorer cette plateforme.
+            Merci de tester <strong>Prospection par DM</strong> ! Vos retours nous aideront à améliorer cette plateforme.
           </p>
 
           <div className="flex items-start gap-3 p-4 bg-brand-50 rounded-xl border border-brand-100 mb-6">

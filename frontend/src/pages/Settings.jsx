@@ -80,7 +80,9 @@ export default function Settings() {
         window.location.reload();
       }, 1500);
     } catch (error) {
-      toast.error('Erreur', 'Impossible de réinitialiser l\'onboarding');
+      console.error('[Settings] Reset onboarding error:', error);
+      const errorMessage = error.response?.data?.error || error.message || 'Erreur inconnue';
+      toast.error('Erreur', `Impossible de réinitialiser: ${errorMessage}`);
     } finally {
       setResettingOnboarding(false);
     }
@@ -458,7 +460,7 @@ export default function Settings() {
 
             <div className="p-4 bg-warm-50 border border-warm-200 rounded-xl">
               <p className="text-sm text-warm-600 leading-relaxed">
-                <strong className="text-warm-900">Avertissement :</strong> Social Prospector propose des limites d'envoi
+                <strong className="text-warm-900">Avertissement :</strong> Prospection par DM propose des limites d'envoi
                 pour proteger votre compte, mais nous ne garantissons pas l'absence de restrictions ou
                 de blocages par Instagram/TikTok. Chaque compte est evalue differemment par les plateformes
                 en fonction de son historique, de son age et de son comportement.

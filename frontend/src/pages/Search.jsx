@@ -575,21 +575,22 @@ export default function Search() {
 
       <div className="p-6 lg:p-8 space-y-6">
         {/* Sélecteur de plateforme */}
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={() => {
               setPlatform(PLATFORMS.INSTAGRAM);
               setHasSearched(false);
               setAllProspects([]);
             }}
-            className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all ${
+            className={`flex items-center gap-2 px-3 sm:px-5 py-2 sm:py-3 rounded-xl font-medium transition-all text-sm sm:text-base ${
               platform === PLATFORMS.INSTAGRAM
                 ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/25'
                 : 'bg-white border border-warm-200 text-warm-600 hover:bg-warm-50'
             }`}
           >
-            <Instagram className="w-5 h-5" />
-            Instagram
+            <Instagram className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="hidden xs:inline">Instagram</span>
+            <span className="xs:hidden">Insta</span>
           </button>
           <button
             onClick={() => {
@@ -597,13 +598,13 @@ export default function Search() {
               setHasSearched(false);
               setAllProspects([]);
             }}
-            className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all ${
+            className={`flex items-center gap-2 px-3 sm:px-5 py-2 sm:py-3 rounded-xl font-medium transition-all text-sm sm:text-base ${
               platform === PLATFORMS.TIKTOK
                 ? 'bg-gradient-to-r from-black to-gray-800 text-white shadow-lg'
                 : 'bg-white border border-warm-200 text-warm-600 hover:bg-warm-50'
             }`}
           >
-            <TikTokIcon className="w-5 h-5" />
+            <TikTokIcon className="w-4 h-4 sm:w-5 sm:h-5" />
             TikTok
           </button>
           <button
@@ -612,13 +613,13 @@ export default function Search() {
               setHasSearched(false);
               setAllProspects([]);
             }}
-            className={`flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all ${
+            className={`flex items-center gap-2 px-3 sm:px-5 py-2 sm:py-3 rounded-xl font-medium transition-all text-sm sm:text-base ${
               platform === PLATFORMS.LINKEDIN
                 ? 'bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-lg shadow-blue-500/25'
                 : 'bg-white border border-warm-200 text-warm-600 hover:bg-warm-50'
             }`}
           >
-            <Linkedin className="w-5 h-5" />
+            <Linkedin className="w-4 h-4 sm:w-5 sm:h-5" />
             LinkedIn
           </button>
         </div>
@@ -753,38 +754,38 @@ export default function Search() {
               </div>
 
               {/* Onglets de source */}
-              <div className="flex border-b border-warm-200 mb-6">
+              <div className="flex overflow-x-auto border-b border-warm-200 mb-6 -mx-2 px-2 sm:mx-0 sm:px-0">
                 <button
                   onClick={() => setSourceType(SOURCE_TYPES.ACCOUNT)}
-                  className={`flex items-center gap-2 px-6 py-3 font-medium transition-all border-b-2 -mb-[2px] ${
+                  className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-2 sm:py-3 font-medium transition-all border-b-2 -mb-[2px] whitespace-nowrap text-sm sm:text-base ${
                     sourceType === SOURCE_TYPES.ACCOUNT
                       ? 'border-brand-500 text-brand-600'
                       : 'border-transparent text-warm-500 hover:text-warm-700'
                   }`}
                 >
-                  <AtSign className="w-5 h-5" />
+                  <AtSign className="w-4 h-4 sm:w-5 sm:h-5" />
                   Compte
                 </button>
                 <button
                   onClick={() => setSourceType(SOURCE_TYPES.HASHTAG)}
-                  className={`flex items-center gap-2 px-6 py-3 font-medium transition-all border-b-2 -mb-[2px] ${
+                  className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-2 sm:py-3 font-medium transition-all border-b-2 -mb-[2px] whitespace-nowrap text-sm sm:text-base ${
                     sourceType === SOURCE_TYPES.HASHTAG
                       ? 'border-brand-500 text-brand-600'
                       : 'border-transparent text-warm-500 hover:text-warm-700'
                   }`}
                 >
-                  <Hash className="w-5 h-5" />
+                  <Hash className="w-4 h-4 sm:w-5 sm:h-5" />
                   Hashtag
                 </button>
                 <button
                   onClick={() => setSourceType(SOURCE_TYPES.LOCATION)}
-                  className={`flex items-center gap-2 px-6 py-3 font-medium transition-all border-b-2 -mb-[2px] ${
+                  className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-2 sm:py-3 font-medium transition-all border-b-2 -mb-[2px] whitespace-nowrap text-sm sm:text-base ${
                     sourceType === SOURCE_TYPES.LOCATION
                       ? 'border-brand-500 text-brand-600'
                       : 'border-transparent text-warm-500 hover:text-warm-700'
                   }`}
                 >
-                  <MapPin className="w-5 h-5" />
+                  <MapPin className="w-4 h-4 sm:w-5 sm:h-5" />
                   Lieu
                 </button>
               </div>

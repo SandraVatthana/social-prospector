@@ -88,7 +88,7 @@ export default function OptOut() {
             Demande de suppression de données
           </h1>
           <p className="text-warm-600">
-            Social Prospector respecte votre vie privée. Si vous souhaitez que vos données soient supprimées, remplissez ce formulaire.
+            SOS Storytelling respecte votre vie privée. Si vous souhaitez que vos données soient supprimées, remplissez ce formulaire.
           </p>
         </div>
 

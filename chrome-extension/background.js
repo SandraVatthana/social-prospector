@@ -10,7 +10,7 @@ const INSTAGRAM_URL = 'https://www.instagram.com';
 const LINKEDIN_DOMAIN = '.linkedin.com';
 
 // URL du backend Social Prospector (Netlify Functions)
-const BACKEND_URL = 'https://socialprospection.com';
+const BACKEND_URL = 'https://sosprospection.com';
 
 // Cookies Instagram importants pour la session
 const SESSION_COOKIES = [

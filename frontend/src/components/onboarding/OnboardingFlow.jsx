@@ -303,7 +303,7 @@ export default function OnboardingFlow({ onComplete, onSkip }) {
                     Ton objectif
                   </h1>
                   <p className="text-warm-500 mt-2">
-                    Tu veux quoi avec Social Prospector ?
+                    Tu veux quoi avec la Prospection par DM ?
                   </p>
                 </div>
 
@@ -417,7 +417,7 @@ export default function OnboardingFlow({ onComplete, onSkip }) {
                       <div className="text-sm text-blue-800">
                         <p className="font-medium mb-1">Note LinkedIn</p>
                         <p>
-                          Pour respecter leurs règles, Social Prospector ne peut pas analyser
+                          Pour respecter leurs règles, Prospection par DM ne peut pas analyser
                           les profils automatiquement. On te suggère des mots-clés et des messages,
                           tu fais la recherche toi-même.
                         </p>
