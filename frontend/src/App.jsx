@@ -22,6 +22,7 @@ import { SidebarProvider } from './contexts/SidebarContext';
 import { ToastProvider } from './components/ui/Toast';
 import WelcomeModal from './components/ui/WelcomeModal';
 import FAQChatbot from './components/ui/FAQChatbot';
+import CookieConsent from './components/ui/CookieConsent';
 
 // Pages légales et publiques
 import OptOut from './pages/OptOut';
@@ -200,6 +201,7 @@ export default function App() {
         <SidebarProvider>
           <ToastProvider>
             <AppContent />
+            <CookieConsent />
           </ToastProvider>
         </SidebarProvider>
       </ClientProvider>

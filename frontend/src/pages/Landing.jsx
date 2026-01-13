@@ -853,24 +853,24 @@ function SocialProofSection() {
 
   const testimonials = [
     {
-      quote: 'J\'envoyais 50 DMs par semaine sans réponse. Maintenant j\'en envoie 20 et j\'ai 5 appels bookés.',
-      author: 'Marie L.',
+      quote: 'J\'envoyais 50 DMs par semaine sans réponse. Maintenant j\'en envoie 20 et j\'ai 5 appels bookés. L\'IA capte vraiment ma façon de parler.',
+      author: 'Marie S.',
       role: 'Coach business',
       stat: '+340%',
-      statLabel: 'vs sa prospection précédente',
+      statLabel: 'de taux de réponse',
     },
     {
-      quote: 'MA VOIX a tout changé. Les prospects me disent que mes messages sont "rafraîchissants".',
-      author: 'Thomas D.',
-      role: 'Agence social media',
-      stat: '12',
-      statLabel: 'nouveaux clients en 2 mois',
+      quote: 'Gérer la prospection de 8 clients, c\'était l\'enfer. Maintenant chaque message est personnalisé avec LEUR voix, pas la mienne.',
+      author: 'Nathalie B.',
+      role: 'Community manager',
+      stat: '8',
+      statLabel: 'clients gérés facilement',
     },
     {
-      quote: 'Enfin un outil qui ne me transforme pas en robot. Mes messages sonnent comme moi, et ça se sent.',
-      author: 'Julie R.',
-      role: 'Formatrice',
-      stat: '32%',
+      quote: 'Les prospects me répondent "ton message m\'a interpellé". C\'est exactement ce que je voulais : être remarquée sans être intrusive.',
+      author: 'Nadia M.',
+      role: 'Consultante SEO',
+      stat: '28%',
       statLabel: 'de taux de réponse',
     },
   ];
