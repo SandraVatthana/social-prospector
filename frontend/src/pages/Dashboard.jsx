@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users,
@@ -21,12 +21,7 @@ import {
 import Header from '../components/layout/Header';
 import { GoalCard, VoiceWidget } from '../components/dashboard';
 import { useAuth } from '../contexts/AuthContext';
-
-// Stats initiales (vides pour la bêta)
-const initialStats = {
-  prospects: { total: 0, trend: null },
-  messages: { total: 0, envoyes: 0, repondus: 0, taux_reponse: 0, trend: null },
-};
+import { api } from '../lib/api';
 
 // Profil MA VOIX par défaut (non configuré)
 const defaultVoiceProfile = {
@@ -35,13 +30,6 @@ const defaultVoiceProfile = {
   tutoiement: '-',
   emojis: [],
   isActive: false,
-};
-
-// Usage initial (bêta = illimité pour l'instant)
-const initialUsage = {
-  prospects: { used: 0, limit: 500 },
-  messages: { used: 0, limit: 500 },
-  searches: { used: 0, limit: 50 },
 };
 
 // Générer les actions suggérées dynamiquement
@@ -146,12 +134,61 @@ function getKpiEncouragement(type, value, previousValue = 0) {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [stats, setStats] = useState({
+    prospects: { total: 0, trend: null },
+    messages: { total: 0, envoyes: 0, repondus: 0, taux_reponse: 0, trend: null },
+  });
+  const [usage, setUsage] = useState({
+    prospects: { used: 0, limit: 500 },
+    messages: { used: 0, limit: 500 },
+    searches: { used: 0, limit: 50 },
+  });
   const [goals, setGoals] = useState({
     monthly_goal_responses: 10,
     monthly_goal_meetings: 3,
     current_responses: 0,
     current_meetings: 0,
   });
+
+  // Charger les stats depuis l'API
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await api.getAnalytics();
+        if (response.data) {
+          const data = response.data;
+          setStats({
+            prospects: {
+              total: data.prospects?.total || 0,
+              trend: null,
+            },
+            messages: {
+              total: data.messages?.total || 0,
+              envoyes: data.messages?.envoyes || 0,
+              repondus: data.messages?.repondus || 0,
+              taux_reponse: data.messages?.taux_reponse || 0,
+              trend: null,
+            },
+          });
+          // Mettre à jour les objectifs avec les vraies valeurs
+          setGoals(prev => ({
+            ...prev,
+            current_responses: data.messages?.repondus || 0,
+            current_meetings: data.conversions?.total || 0,
+          }));
+          // Mettre à jour l'usage
+          setUsage({
+            prospects: { used: data.prospects?.total || 0, limit: 500 },
+            messages: { used: data.messages?.total || 0, limit: 500 },
+            searches: { used: 0, limit: 50 },
+          });
+        }
+      } catch (error) {
+        console.error('Erreur chargement analytics:', error);
+      }
+    };
+    fetchStats();
+  }, []);
 
   const handleSaveGoals = async (newGoals) => {
     setGoals((prev) => ({ ...prev, ...newGoals }));
@@ -174,7 +211,7 @@ export default function Dashboard() {
   const firstName = getUserFirstName();
 
   // Générer les actions suggérées
-  const suggestedActions = getSuggestedActions(initialStats, defaultVoiceProfile, goals);
+  const suggestedActions = getSuggestedActions(stats, defaultVoiceProfile, goals);
 
   return (
     <>
@@ -227,37 +264,37 @@ export default function Dashboard() {
           <ClickableStatCard
             icon={Users}
             label="Prospects totaux"
-            value={initialStats.prospects.total}
-            trend={initialStats.prospects.trend}
+            value={stats.prospects.total}
+            trend={stats.prospects.trend}
             color="brand"
-            encouragement={getKpiEncouragement('prospects', initialStats.prospects.total)}
+            encouragement={getKpiEncouragement('prospects', stats.prospects.total)}
             onClick={() => navigate('/prospects')}
           />
           <ClickableStatCard
             icon={MessageSquare}
             label="Messages générés"
-            value={initialStats.messages.total}
-            trend={initialStats.messages.trend}
+            value={stats.messages.total}
+            trend={stats.messages.trend}
             color="accent"
-            encouragement={getKpiEncouragement('messages', initialStats.messages.total)}
+            encouragement={getKpiEncouragement('messages', stats.messages.total)}
             onClick={() => navigate('/messages')}
           />
           <ClickableStatCard
             icon={Send}
             label="Messages envoyés"
-            value={initialStats.messages.envoyes}
+            value={stats.messages.envoyes}
             trend={null}
             color="green"
-            encouragement={getKpiEncouragement('sent', initialStats.messages.envoyes)}
+            encouragement={getKpiEncouragement('sent', stats.messages.envoyes)}
             onClick={() => navigate('/messages?tab=sent')}
           />
           <ClickableStatCard
             icon={TrendingUp}
             label="Taux de réponse"
-            value={`${initialStats.messages.taux_reponse}%`}
-            subValue={`${initialStats.messages.repondus} réponses`}
+            value={`${stats.messages.taux_reponse}%`}
+            subValue={`${stats.messages.repondus} réponses`}
             color="purple"
-            encouragement={getKpiEncouragement('response', initialStats.messages.taux_reponse)}
+            encouragement={getKpiEncouragement('response', stats.messages.taux_reponse)}
             onClick={() => navigate('/analytics')}
           />
         </div>
@@ -278,7 +315,7 @@ export default function Dashboard() {
               <div className="flex items-center gap-2">
                 <h2 className="font-display font-semibold text-warm-900">Prospects récents</h2>
                 <span className="text-xs bg-warm-100 text-warm-500 px-2 py-0.5 rounded-full">
-                  {initialStats.prospects.total}
+                  {stats.prospects.total}
                 </span>
               </div>
               <button
@@ -326,20 +363,20 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <UsageBar
                 label="Prospects analysés"
-                used={initialUsage.prospects.used}
-                limit={initialUsage.prospects.limit}
+                used={usage.prospects.used}
+                limit={usage.prospects.limit}
                 color="brand"
               />
               <UsageBar
                 label="Messages générés"
-                used={initialUsage.messages.used}
-                limit={initialUsage.messages.limit}
+                used={usage.messages.used}
+                limit={usage.messages.limit}
                 color="accent"
               />
               <UsageBar
                 label="Recherches aujourd'hui"
-                used={initialUsage.searches.used}
-                limit={initialUsage.searches.limit}
+                used={usage.searches.used}
+                limit={usage.searches.limit}
                 color="green"
               />
             </div>

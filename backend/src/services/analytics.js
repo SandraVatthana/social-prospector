@@ -17,54 +17,67 @@ export async function getGlobalStats(userId) {
 
   if (prospErr) throw prospErr;
 
-  // Stats messages (colonnes existantes seulement)
+  // Stats messages avec statuts
   const { data: messagesStats, error: msgErr } = await supabaseAdmin
     .from('messages')
-    .select('id, created_at')
+    .select('id, status, created_at, sent_at, replied_at, converted, response_time_minutes')
     .eq('user_id', userId);
 
   if (msgErr) throw msgErr;
 
-  // Calculs
+  // Calculs prospects
   const totalProspects = prospectsStats?.length || 0;
   const prospectsByStatus = prospectsStats?.reduce((acc, p) => {
     acc[p.status] = (acc[p.status] || 0) + 1;
     return acc;
   }, {}) || {};
 
+  // Calculs messages
   const totalMessages = messagesStats?.length || 0;
-  // Colonnes envoye_at et repondu_at peuvent ne pas exister
-  const messagesEnvoyes = totalMessages;
-  const messagesRepondus = 0;
+  const messagesEnvoyes = messagesStats?.filter(m =>
+    m.status === 'sent' || m.status === 'replied' || m.status === 'converted'
+  )?.length || 0;
+  const messagesRepondus = messagesStats?.filter(m =>
+    m.status === 'replied' || m.status === 'converted'
+  )?.length || 0;
+  const messagesConvertis = messagesStats?.filter(m => m.converted === true)?.length || 0;
 
-  const tauxReponse = 0;
+  // Taux de réponse (sur les messages envoyés)
+  const tauxReponse = messagesEnvoyes > 0
+    ? Math.round((messagesRepondus / messagesEnvoyes) * 100)
+    : 0;
 
-  // Score moyen simplifié (colonne score_pertinence peut ne pas exister)
-  const scoreMoyen = 0;
+  // Temps de réponse moyen
+  const responseTimes = messagesStats
+    ?.filter(m => m.response_time_minutes !== null)
+    ?.map(m => m.response_time_minutes) || [];
+  const tempsReponseMoyen = responseTimes.length > 0
+    ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length)
+    : null;
 
   return {
     prospects: {
       total: totalProspects,
       par_statut: {
-        nouveau: prospectsByStatus.nouveau || 0,
-        message_genere: prospectsByStatus.message_genere || 0,
-        envoye: prospectsByStatus.envoye || 0,
-        repondu: prospectsByStatus.repondu || 0,
-        converti: prospectsByStatus.converti || 0,
-        ignore: prospectsByStatus.ignore || 0,
+        nouveau: prospectsByStatus.nouveau || prospectsByStatus.new || 0,
+        contacted: prospectsByStatus.contacted || 0,
+        replied: prospectsByStatus.replied || 0,
+        converted: prospectsByStatus.converted || 0,
+        ignored: prospectsByStatus.ignored || 0,
       },
-      score_moyen: scoreMoyen,
     },
     messages: {
       total: totalMessages,
       envoyes: messagesEnvoyes,
       repondus: messagesRepondus,
+      convertis: messagesConvertis,
       taux_reponse: tauxReponse,
+      temps_reponse_moyen_minutes: tempsReponseMoyen,
     },
     conversions: {
-      total: prospectsByStatus.converti || 0,
-      taux: totalProspects > 0 
-        ? Math.round(((prospectsByStatus.converti || 0) / totalProspects) * 100)
+      total: messagesConvertis,
+      taux: messagesEnvoyes > 0
+        ? Math.round((messagesConvertis / messagesEnvoyes) * 100)
         : 0,
     }
   };

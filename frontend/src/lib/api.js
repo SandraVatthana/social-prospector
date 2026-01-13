@@ -134,6 +134,18 @@ class API {
     });
   }
 
+  async markMessageReplied(messageId) {
+    return this.request(`/messages/${messageId}/mark-replied`, {
+      method: 'POST',
+    });
+  }
+
+  async markMessageConverted(messageId) {
+    return this.request(`/messages/${messageId}/mark-converted`, {
+      method: 'POST',
+    });
+  }
+
   async updateMessage(messageId, updates) {
     return this.request(`/messages/${messageId}`, {
       method: 'PATCH',

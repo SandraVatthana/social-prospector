@@ -416,6 +416,116 @@ router.post('/:id/mark-sent', requireAuth, async (req, res) => {
   }
 });
 
+/**
+ * POST /api/messages/:id/mark-replied
+ * Marque un message comme ayant reçu une réponse
+ */
+router.post('/:id/mark-replied', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Récupérer le message pour calculer le temps de réponse
+    const { data: message } = await supabaseAdmin
+      .from('messages')
+      .select('sent_at, prospect_id')
+      .eq('id', id)
+      .eq('user_id', req.user.id)
+      .single();
+
+    if (!message) {
+      return res.status(404).json(formatError('Message non trouvé', 'NOT_FOUND'));
+    }
+
+    // Calculer le temps de réponse en minutes
+    const sentAt = message.sent_at ? new Date(message.sent_at) : null;
+    const repliedAt = new Date();
+    const responseTimeMinutes = sentAt
+      ? Math.round((repliedAt - sentAt) / (1000 * 60))
+      : null;
+
+    const { data, error } = await supabaseAdmin
+      .from('messages')
+      .update({
+        status: 'replied',
+        replied_at: repliedAt.toISOString(),
+        response_time_minutes: responseTimeMinutes,
+      })
+      .eq('id', id)
+      .eq('user_id', req.user.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Mettre à jour le statut du prospect
+    if (message.prospect_id) {
+      await supabaseAdmin
+        .from('prospects')
+        .update({ status: 'replied' })
+        .eq('id', message.prospect_id);
+    }
+
+    res.json(formatResponse(data, 'Réponse enregistrée'));
+
+  } catch (error) {
+    console.error('Error marking message as replied:', error);
+    res.status(500).json(formatError('Erreur', 'UPDATE_ERROR'));
+  }
+});
+
+/**
+ * POST /api/messages/:id/mark-converted
+ * Marque un message/prospect comme converti (RDV, vente, etc.)
+ */
+router.post('/:id/mark-converted', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { conversion_type } = req.body; // 'rdv', 'vente', 'lead', etc.
+
+    const { data: message } = await supabaseAdmin
+      .from('messages')
+      .select('prospect_id')
+      .eq('id', id)
+      .eq('user_id', req.user.id)
+      .single();
+
+    if (!message) {
+      return res.status(404).json(formatError('Message non trouvé', 'NOT_FOUND'));
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('messages')
+      .update({
+        status: 'converted',
+        converted: true,
+        converted_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .eq('user_id', req.user.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Mettre à jour le statut du prospect
+    if (message.prospect_id) {
+      await supabaseAdmin
+        .from('prospects')
+        .update({
+          status: 'converted',
+          converted_at: new Date().toISOString(),
+        })
+        .eq('id', message.prospect_id);
+    }
+
+    res.json(formatResponse(data, 'Conversion enregistrée'));
+
+  } catch (error) {
+    console.error('Error marking message as converted:', error);
+    res.status(500).json(formatError('Erreur', 'UPDATE_ERROR'));
+  }
+});
+
 // ============ Helper Functions ============
 
 function buildSystemPrompt(voiceProfile) {

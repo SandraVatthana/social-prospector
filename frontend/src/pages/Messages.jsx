@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   MessageSquare,
   Search,
@@ -18,9 +18,13 @@ import {
   ExternalLink,
   MoreVertical,
   Edit3,
-  MessageCircle
+  MessageCircle,
+  ThumbsUp,
+  Trophy,
+  Loader2
 } from 'lucide-react';
 import Header from '../components/layout/Header';
+import { api } from '../lib/api';
 
 // Icone TikTok custom
 const TikTokIcon = ({ className }) => (
@@ -32,120 +36,62 @@ const TikTokIcon = ({ className }) => (
 // Statuts des messages
 const MESSAGE_STATUS = {
   draft: { label: 'Brouillon', color: 'bg-warm-100 text-warm-600', icon: Edit3 },
-  sent: { label: 'Envoye', color: 'bg-blue-100 text-blue-700', icon: Send },
-  delivered: { label: 'Delivre', color: 'bg-green-100 text-green-700', icon: CheckCircle2 },
+  sent: { label: 'Envoyé', color: 'bg-blue-100 text-blue-700', icon: Send },
+  delivered: { label: 'Délivré', color: 'bg-green-100 text-green-700', icon: CheckCircle2 },
   read: { label: 'Lu', color: 'bg-purple-100 text-purple-700', icon: Eye },
-  replied: { label: 'Reponse', color: 'bg-brand-100 text-brand-700', icon: MessageCircle },
-  failed: { label: 'Echec', color: 'bg-red-100 text-red-600', icon: XCircle },
+  replied: { label: 'Réponse reçue', color: 'bg-brand-100 text-brand-700', icon: MessageCircle },
+  converted: { label: 'Converti', color: 'bg-green-100 text-green-700', icon: CheckCircle2 },
+  failed: { label: 'Échec', color: 'bg-red-100 text-red-600', icon: XCircle },
 };
 
-// Donnees mock
-const mockMessages = [
-  {
-    id: 1,
-    prospect: {
-      username: 'marie_coaching',
-      fullName: 'Marie Dupont',
-      avatar: 'https://i.pravatar.cc/150?img=1',
-      platform: 'instagram',
-    },
-    content: "Salut Marie ! J'ai vu que tu faisais du coaching pour les femmes entrepreneurs, c'est super interessant ! Je travaille aussi dans le developpement personnel et j'ai une methode qui pourrait completer ton offre. Ca te dirait d'en discuter ?",
-    status: 'replied',
-    createdAt: '2024-01-18T14:30:00',
-    sentAt: '2024-01-18T15:00:00',
-    hook: 'coaching femmes',
-    voiceProfile: 'MA VOIX',
-  },
-  {
-    id: 2,
-    prospect: {
-      username: 'fit_with_julie',
-      fullName: 'Julie Martin',
-      avatar: 'https://i.pravatar.cc/150?img=5',
-      platform: 'instagram',
-    },
-    content: "Salut Julie ! Ton contenu fitness est vraiment top, surtout tes programmes de nutrition. Je bosse sur un projet qui pourrait t'interesser pour automatiser ta prospection. On en parle ?",
-    status: 'sent',
-    createdAt: '2024-01-17T10:00:00',
-    sentAt: '2024-01-17T10:30:00',
-    hook: 'fitness nutrition',
-    voiceProfile: 'MA VOIX',
-  },
-  {
-    id: 3,
-    prospect: {
-      username: 'entrepreneurlife_alex',
-      fullName: 'Alexandre Bernard',
-      avatar: 'https://i.pravatar.cc/150?img=12',
-      platform: 'instagram',
-    },
-    content: "Alex ! Ton parcours en e-commerce est inspirant. Je vois que tu cherches a scaler ton business - j'ai justement quelque chose qui pourrait t'aider a generer plus de leads qualifies. Interesse ?",
-    status: 'read',
-    createdAt: '2024-01-14T16:00:00',
-    sentAt: '2024-01-14T16:45:00',
-    hook: 'e-commerce scaling',
-    voiceProfile: 'MA VOIX',
-  },
-  {
-    id: 4,
-    prospect: {
-      username: 'naturo_sophie',
-      fullName: 'Sophie Lemaire',
-      avatar: 'https://i.pravatar.cc/150?img=9',
-      platform: 'instagram',
-    },
-    content: "Bonjour Sophie ! J'adore ton approche de la naturopathie, c'est vraiment ce dont les gens ont besoin. J'ai un outil qui pourrait t'aider a toucher plus de personnes qui cherchent exactement tes services. Ca t'interesse ?",
-    status: 'draft',
-    createdAt: '2024-01-20T09:00:00',
-    sentAt: null,
-    hook: 'naturopathie bien-etre',
-    voiceProfile: 'MA VOIX',
-  },
-  {
-    id: 5,
-    prospect: {
-      username: 'photo_thomas',
-      fullName: 'Thomas Petit',
-      avatar: 'https://i.pravatar.cc/150?img=15',
-      platform: 'tiktok',
-    },
-    content: "Thomas ! Tes tutos photo sont incroyables, tu as vraiment un talent pour expliquer. Je travaille sur un projet qui pourrait t'aider a monetiser ta communaute autrement. On en discute ?",
-    status: 'replied',
-    createdAt: '2024-01-12T11:00:00',
-    sentAt: '2024-01-12T11:30:00',
-    hook: 'photo monetisation',
-    voiceProfile: 'MA VOIX',
-  },
-  {
-    id: 6,
-    prospect: {
-      username: 'yoga_zen_marie',
-      fullName: 'Marie-Claire Roux',
-      avatar: 'https://i.pravatar.cc/150?img=23',
-      platform: 'instagram',
-    },
-    content: "Marie-Claire, ton approche du yoga est vraiment unique ! Je vois que tu proposes des retraites - j'ai une solution qui pourrait t'aider a remplir tes sessions plus facilement. Interesse ?",
-    status: 'failed',
-    createdAt: '2024-01-09T14:00:00',
-    sentAt: '2024-01-09T14:30:00',
-    hook: 'yoga retraites',
-    voiceProfile: 'MA VOIX',
-    errorMessage: 'Compte temporairement restreint',
-  },
-];
-
 export default function Messages() {
-  const [messages, setMessages] = useState(mockMessages);
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
 
+  // Charger les messages depuis l'API
+  useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        setLoading(true);
+        const response = await api.getMessages();
+        // Transformer les données pour correspondre au format attendu
+        const formattedMessages = (response.data || []).map(msg => ({
+          id: msg.id,
+          prospect: {
+            username: msg.prospect?.username || msg.prospect_username || 'unknown',
+            fullName: msg.prospect?.full_name || msg.prospect_name || '',
+            avatar: msg.prospect?.profile_pic_url || `https://i.pravatar.cc/150?u=${msg.id}`,
+            platform: msg.prospect?.platform || msg.platform || 'instagram',
+          },
+          content: msg.content || msg.message_content || '',
+          status: msg.status || 'draft',
+          createdAt: msg.created_at,
+          sentAt: msg.sent_at,
+          repliedAt: msg.replied_at,
+          hook: msg.hook || msg.approach_method || '-',
+          voiceProfile: msg.voice_profile || 'MA VOIX',
+          prospectId: msg.prospect_id,
+        }));
+        setMessages(formattedMessages);
+      } catch (error) {
+        console.error('Erreur chargement messages:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMessages();
+  }, []);
+
   // Stats
   const stats = {
     total: messages.length,
-    sent: messages.filter(m => ['sent', 'delivered', 'read', 'replied'].includes(m.status)).length,
-    replied: messages.filter(m => m.status === 'replied').length,
+    sent: messages.filter(m => ['sent', 'delivered', 'read', 'replied', 'converted'].includes(m.status)).length,
+    replied: messages.filter(m => m.status === 'replied' || m.status === 'converted').length,
+    converted: messages.filter(m => m.status === 'converted').length,
     drafts: messages.filter(m => m.status === 'draft').length,
   };
 
@@ -164,6 +110,37 @@ export default function Messages() {
     await navigator.clipboard.writeText(content);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  // Marquer comme réponse reçue
+  const handleMarkReplied = async (messageId) => {
+    try {
+      await api.markMessageReplied(messageId);
+      // Mettre à jour le message localement
+      setMessages(prev => prev.map(m =>
+        m.id === messageId ? { ...m, status: 'replied' } : m
+      ));
+      if (selectedMessage?.id === messageId) {
+        setSelectedMessage(prev => ({ ...prev, status: 'replied' }));
+      }
+    } catch (error) {
+      console.error('Erreur:', error);
+    }
+  };
+
+  // Marquer comme converti
+  const handleMarkConverted = async (messageId) => {
+    try {
+      await api.markMessageConverted(messageId);
+      setMessages(prev => prev.map(m =>
+        m.id === messageId ? { ...m, status: 'converted' } : m
+      ));
+      if (selectedMessage?.id === messageId) {
+        setSelectedMessage(prev => ({ ...prev, status: 'converted' }));
+      }
+    } catch (error) {
+      console.error('Erreur:', error);
+    }
   };
 
   // Formater la date
@@ -256,7 +233,12 @@ export default function Messages() {
         <div className="flex gap-6">
           {/* Liste */}
           <div className={`flex-1 space-y-3 ${selectedMessage ? 'max-w-2xl' : ''}`}>
-            {filteredMessages.length === 0 ? (
+            {loading ? (
+              <div className="card p-12 text-center">
+                <Loader2 className="w-12 h-12 text-brand-500 mx-auto mb-4 animate-spin" />
+                <p className="text-warm-500">Chargement des messages...</p>
+              </div>
+            ) : filteredMessages.length === 0 ? (
               <div className="card p-12 text-center">
                 <MessageSquare className="w-12 h-12 text-warm-300 mx-auto mb-4" />
                 <p className="text-warm-500">Aucun message trouve</p>
@@ -284,6 +266,8 @@ export default function Messages() {
               onCopy={() => copyMessage(selectedMessage.id, selectedMessage.content)}
               isCopied={copiedId === selectedMessage.id}
               formatDate={formatDate}
+              onMarkReplied={() => handleMarkReplied(selectedMessage.id)}
+              onMarkConverted={() => handleMarkConverted(selectedMessage.id)}
             />
           )}
         </div>
@@ -377,9 +361,13 @@ function MessageCard({ message, isSelected, onClick, onCopy, isCopied, formatDat
 /**
  * Panel detail message
  */
-function MessageDetailPanel({ message, onClose, onCopy, isCopied, formatDate }) {
-  const status = MESSAGE_STATUS[message.status];
+function MessageDetailPanel({ message, onClose, onCopy, isCopied, formatDate, onMarkReplied, onMarkConverted }) {
+  const status = MESSAGE_STATUS[message.status] || MESSAGE_STATUS.draft;
   const StatusIcon = status.icon;
+  const [isMarking, setIsMarking] = useState(false);
+
+  const canMarkReplied = message.status === 'sent' || message.status === 'delivered' || message.status === 'read';
+  const canMarkConverted = message.status === 'replied';
 
   return (
     <div className="w-96 card p-6 space-y-6 sticky top-6">
@@ -465,32 +453,54 @@ function MessageDetailPanel({ message, onClose, onCopy, isCopied, formatDate }) 
       </div>
 
       {/* Actions */}
-      <div className="flex gap-3">
-        <button
-          onClick={onCopy}
-          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-warm-100 hover:bg-warm-200 text-warm-700 font-medium rounded-xl transition-colors"
-        >
-          {isCopied ? (
-            <>
-              <Check className="w-4 h-4 text-green-500" />
-              Copie !
-            </>
-          ) : (
-            <>
-              <Copy className="w-4 h-4" />
-              Copier
-            </>
-          )}
-        </button>
-        {message.status === 'draft' && (
-          <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-xl transition-colors">
-            <Send className="w-4 h-4" />
-            Envoyer
+      <div className="space-y-3">
+        {/* Boutons de tracking */}
+        {canMarkReplied && (
+          <button
+            onClick={onMarkReplied}
+            disabled={isMarking}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50"
+          >
+            <ThumbsUp className="w-4 h-4" />
+            J'ai reçu une réponse
           </button>
         )}
-        <button className="flex items-center justify-center gap-2 px-4 py-2 border border-warm-200 hover:bg-warm-50 rounded-xl transition-colors">
-          <RefreshCw className="w-4 h-4 text-warm-500" />
-        </button>
+        {canMarkConverted && (
+          <button
+            onClick={onMarkConverted}
+            disabled={isMarking}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50"
+          >
+            <Trophy className="w-4 h-4" />
+            Converti (RDV, vente...)
+          </button>
+        )}
+
+        {/* Autres actions */}
+        <div className="flex gap-3">
+          <button
+            onClick={onCopy}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-warm-100 hover:bg-warm-200 text-warm-700 font-medium rounded-xl transition-colors"
+          >
+            {isCopied ? (
+              <>
+                <Check className="w-4 h-4 text-green-500" />
+                Copié !
+              </>
+            ) : (
+              <>
+                <Copy className="w-4 h-4" />
+                Copier
+              </>
+            )}
+          </button>
+          {message.status === 'draft' && (
+            <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-xl transition-colors">
+              <Send className="w-4 h-4" />
+              Envoyer
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Lien profil */}
