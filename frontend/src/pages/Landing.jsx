@@ -1231,8 +1231,8 @@ function Footer() {
             <p className="text-sm">
               Prospection par DM est un produit My Inner Quest
               <br />
-              <a href="mailto:contact@myinnerquest.fr" className="hover:text-white transition-colors">
-                contact@myinnerquest.fr
+              <a href="mailto:contact@sosprospection.com" className="hover:text-white transition-colors">
+                contact@sosprospection.com
               </a>
             </p>
           </div>
@@ -1269,9 +1269,9 @@ function Footer() {
             <h4 className="font-semibold text-white mb-4">Contact</h4>
             <ul className="space-y-2">
               <li>
-                <a href="mailto:contact@myinnerquest.fr" className="hover:text-white transition-colors flex items-center gap-2">
+                <a href="mailto:contact@sosprospection.com" className="hover:text-white transition-colors flex items-center gap-2">
                   <Mail className="w-4 h-4" />
-                  contact@myinnerquest.fr
+                  contact@sosprospection.com
                 </a>
               </li>
             </ul>

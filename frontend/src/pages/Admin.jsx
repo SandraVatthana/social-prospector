@@ -20,7 +20,7 @@ import { api } from '../lib/api';
 // Liste des admins autorisés (accès illimité + page admin)
 const ADMIN_EMAILS = [
   'sandra.devonssay@gmail.com',
-  'contact@myinnerquest.fr',
+  'contact@sosprospection.com',
 ];
 
 export default function Admin() {

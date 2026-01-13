@@ -231,8 +231,8 @@ export default function OptOut() {
         <div className="mt-8 text-center text-sm text-warm-500">
           <p>
             Pour toute question, contactez-nous à{' '}
-            <a href="mailto:privacy@myinnerquest.fr" className="text-brand-600 hover:underline">
-              privacy@myinnerquest.fr
+            <a href="mailto:privacy@sosprospection.com" className="text-brand-600 hover:underline">
+              privacy@sosprospection.com
             </a>
           </p>
         </div>

@@ -57,7 +57,7 @@ const FAQ_DATA = {
         },
         {
           q: 'Comment supprimer mon compte ?',
-          a: 'Contactez-nous à contact@myinnerquest.fr pour demander la suppression de votre compte et de vos données.',
+          a: 'Contactez-nous à contact@sosprospection.com pour demander la suppression de votre compte et de vos données.',
         },
       ],
     },
@@ -291,14 +291,14 @@ export default function FAQChatbot() {
               Vous ne trouvez pas votre réponse ?
             </p>
             <a
-              href="mailto:contact@myinnerquest.fr"
+              href="mailto:contact@sosprospection.com"
               className="flex items-center justify-center gap-2 w-full py-2.5 bg-white hover:bg-warm-100 border border-warm-200 rounded-xl text-sm font-medium text-warm-700 transition-colors"
             >
               <Mail className="w-4 h-4" />
               Contactez-nous
             </a>
             <p className="text-xs text-warm-400 text-center mt-2">
-              contact@myinnerquest.fr
+              contact@sosprospection.com
             </p>
           </div>
         </div>
