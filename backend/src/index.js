@@ -27,9 +27,18 @@ const PORT = process.env.PORT || 3001;
 
 // Security middleware
 app.use(helmet());
+
+// CORS configuration
+const allowedOrigins = [
+  'https://sosprospection.com',
+  'https://www.sosprospection.com',
+  'https://sosprospection.netlify.app',
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? [process.env.FRONTEND_URL].filter(Boolean)
+    ? allowedOrigins
     : true, // Allow all origins in development
   credentials: true,
 }));
