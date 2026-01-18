@@ -1,11 +1,9 @@
 /**
  * Script to prepare Netlify Functions by copying backend source files
  */
-import { cpSync, mkdirSync, existsSync, rmSync } from 'fs';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
+const { cpSync, mkdirSync, existsSync, rmSync } = require('fs');
+const { join } = require('path');
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, '..');
 
 const srcDir = join(rootDir, 'backend', 'src');
