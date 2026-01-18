@@ -1,4 +1,6 @@
 [build]
+  # Base directory - root of repo
+  base = ""
   # Build command:
   # 1. Prepare functions (copy backend source)
   # 2. Install functions dependencies
