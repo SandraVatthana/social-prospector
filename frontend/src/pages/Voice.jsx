@@ -27,7 +27,7 @@ import { API_BASE_URL } from '../lib/api';
 // Profil par défaut (utilisé seulement si aucune donnée n'existe)
 const defaultVoiceProfile = {
   nom: 'MA VOIX',
-  description: 'Configure ta voix pour des messages authentiques',
+  description: 'Ton style unique pour des conversations naturelles',
 
   ton_dominant: 'decontracte',
   tons_secondaires: [],

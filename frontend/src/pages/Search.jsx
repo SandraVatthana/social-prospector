@@ -736,7 +736,7 @@ export default function Search() {
               {/* Micro-phrase bénéfice + étapes */}
               <div className="mb-6">
                 <p className="text-center text-lg font-medium text-warm-800 mb-3">
-                  Trouve des prospects alignés avec ta voix en 1 clic
+                  Prépare tes conversations en quelques clics
                 </p>
                 <div className="flex items-center justify-center gap-2 text-sm text-warm-500">
                   <span className="flex items-center gap-1.5">

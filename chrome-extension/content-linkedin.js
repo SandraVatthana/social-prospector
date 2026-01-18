@@ -635,7 +635,7 @@
     var btn = document.createElement("button");
     btn.id = "sp-extract-btn";
     btn.className = "sp-btn sp-btn-primary";
-    btn.textContent = "Importer vers SOS Prospection";
+    btn.textContent = "Sauvegarder ce contact";
 
     // Bouton Analyser (seulement sur les profils)
     var analyzeBtn = null;
@@ -644,7 +644,7 @@
       analyzeBtn.id = "sp-analyze-btn";
       analyzeBtn.className = "sp-btn sp-btn-analyze";
       analyzeBtn.innerHTML = "🔍 Analyser";
-      analyzeBtn.title = "Analyser ce profil avec l'IA";
+      analyzeBtn.title = "Preparer ma conversation";
     }
 
     var panel = document.createElement("div");

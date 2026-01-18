@@ -99,8 +99,8 @@ function HeroSection() {
             transition={{ delay: 0.2 }}
             className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full border border-brand-200 mb-8"
           >
-            <Sparkles className="w-4 h-4 text-brand-500" />
-            <span className="text-sm font-medium text-brand-700">Nouveau : 4 méthodes d'approche IA</span>
+            <Heart className="w-4 h-4 text-brand-500" />
+            <span className="text-sm font-medium text-brand-700">Ton copilote, pas ton remplaçant</span>
           </motion.div>
 
           {/* Main title */}
@@ -110,10 +110,10 @@ function HeroSection() {
             transition={{ delay: 0.3, duration: 0.8 }}
             className="font-display text-5xl md:text-7xl font-bold text-warm-900 mb-6 leading-tight"
           >
-            La prospection qui parle
+            Moins de messages,
             <br />
             <span className="bg-gradient-to-r from-brand-500 to-accent-500 bg-clip-text text-transparent">
-              avec TA vraie voix
+              plus de vraies conversations
             </span>
           </motion.h1>
 
@@ -124,9 +124,9 @@ function HeroSection() {
             transition={{ delay: 0.5 }}
             className="text-xl md:text-2xl text-warm-600 max-w-3xl mx-auto mb-10"
           >
-            Un outil d'acquisition ET de discernement sur Instagram et TikTok.
+            On t'aide à tenir plus de conversations qualitatives, sans y passer tes journées.
             <br />
-            L'IA analyse les profils pour te dire s'il faut engager, nourrir ou laisser tomber — puis t'aide à écrire des DMs qui sonnent vraiment comme toi.
+            <strong>Automatise la préparation, pas la relation.</strong>
           </motion.p>
 
           {/* CTAs */}
@@ -462,7 +462,7 @@ function ProblemSection() {
           variants={fadeInUp}
         >
           <p className="text-2xl font-display font-semibold text-brand-600">
-            Et si tes messages sonnaient VRAIMENT comme toi ?
+            Et si tu avais un copilote pour tes conversations ?
           </p>
         </motion.div>
       </div>
@@ -522,9 +522,9 @@ function WhyDMSection() {
               </h2>
             </div>
             <p className="text-lg md:text-xl text-warm-700 leading-relaxed">
-              La prospection par DM ciblée et personnalisée te redonne du contrôle :
+              La prospection par DM ciblée te redonne du contrôle — mais pas question d'envoyer des messages robots :
               <span className="block mt-4 font-semibold text-brand-700">
-                tu vas vers les bonnes personnes au lieu d'attendre que l'algorithme montre tes posts.
+                SOS Prospection prépare tes conversations, toi tu crées la relation.
               </span>
             </p>
           </motion.div>
@@ -561,10 +561,10 @@ function MaVoixSection() {
         >
           <span className="inline-flex items-center gap-2 px-4 py-2 bg-brand-50 text-brand-700 rounded-full text-sm font-medium mb-4">
             <Mic className="w-4 h-4" />
-            La fonctionnalité qui change tout
+            Ton style, pas un template
           </span>
           <h2 className="font-display text-4xl md:text-5xl font-bold text-warm-900 mb-4">
-            MA VOIX — Ta signature, amplifiée par l'IA
+            MA VOIX — Des messages qui sonnent comme toi
           </h2>
         </motion.div>
 
@@ -697,9 +697,9 @@ function HowItWorksSection() {
           className="text-center mb-16"
         >
           <h2 className="font-display text-4xl font-bold text-white mb-4">
-            De la recherche au client en 3 étapes
+            Prépare en 2 min ce qui prend 20 min
           </h2>
-          <p className="text-warm-400 text-xl">Simple, rapide, efficace</p>
+          <p className="text-warm-400 text-xl">Tu gardes le contrôle, l'IA fait le travail de recherche</p>
         </motion.div>
 
         <motion.div
@@ -1191,17 +1191,17 @@ function FinalCTASection() {
           variants={fadeInUp}
         >
           <h2 className="font-display text-4xl md:text-5xl font-bold text-white mb-6">
-            Prêt à prospecter avec TA vraie voix ?
+            Prêt à avoir de vraies conversations ?
           </h2>
           <Link
             to="/login"
             className="inline-flex items-center gap-3 px-10 py-5 bg-white text-brand-600 font-bold text-lg rounded-2xl shadow-xl hover:shadow-2xl transition-all hover:-translate-y-1"
           >
             <Rocket className="w-6 h-6" />
-            Commencer gratuitement — 7 jours d'essai
+            Essayer gratuitement — 7 jours
           </Link>
           <p className="mt-6 text-white/80">
-            Sans CB requise • Setup en 2 minutes • Tu gardes le contrôle
+            Sans CB requise • Setup en 2 min • Ton copilote, pas ton remplaçant
           </p>
         </motion.div>
       </div>
@@ -1226,7 +1226,7 @@ function Footer() {
               <span className="font-display font-bold text-xl text-white">Prospection par DM</span>
             </div>
             <p className="text-warm-500 mb-4">
-              La prospection qui parle avec ta vraie voix
+              Ton copilote pour des conversations qui convertissent
             </p>
             <p className="text-sm">
               Prospection par DM est un produit My Inner Quest
