@@ -298,6 +298,55 @@ class API {
   async getClientStats(id) {
     return this.request(`/clients/${id}/stats`);
   }
+
+  // === Response Categorization (CRM) ===
+  async getCategories() {
+    return this.request('/categorization/categories');
+  }
+
+  async analyzeResponse(response, context = {}) {
+    return this.request('/categorization/analyze', {
+      method: 'POST',
+      body: { response, context },
+    });
+  }
+
+  async analyzeResponsesBatch(responses) {
+    return this.request('/categorization/analyze-batch', {
+      method: 'POST',
+      body: { responses },
+    });
+  }
+
+  async categorizeProspect(prospectId, response) {
+    return this.request(`/categorization/prospect/${prospectId}`, {
+      method: 'POST',
+      body: { response },
+    });
+  }
+
+  async overrideCategory(prospectId, newCategory, reason) {
+    return this.request(`/categorization/prospect/${prospectId}/override`, {
+      method: 'PUT',
+      body: { newCategory, reason },
+    });
+  }
+
+  async getCrmDashboard(platform = null) {
+    const query = platform ? `?platform=${platform}` : '';
+    return this.request(`/categorization/dashboard/me${query}`);
+  }
+
+  async getCategorizedProspects(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/categorization/prospects/me${query ? `?${query}` : ''}`);
+  }
+
+  async markProspectHandled(prospectId) {
+    return this.request(`/categorization/mark-handled/${prospectId}`, {
+      method: 'POST',
+    });
+  }
 }
 
 export const api = new API();

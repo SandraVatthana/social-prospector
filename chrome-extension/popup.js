@@ -3,7 +3,7 @@
  * Popup Script
  */
 
-// Éléments DOM
+// Éléments DOM - Instagram
 const statusDot = document.getElementById('statusDot');
 const statusText = document.getElementById('statusText');
 const accountsList = document.getElementById('accountsList');
@@ -14,10 +14,30 @@ const accountNameInput = document.getElementById('accountNameInput');
 const cancelAddBtn = document.getElementById('cancelAddBtn');
 const confirmAddBtn = document.getElementById('confirmAddBtn');
 
+// Éléments DOM - Tabs
+const platformTabs = document.querySelectorAll('.platform-tab');
+const platformContents = document.querySelectorAll('.platform-content');
+
+// Éléments DOM - Settings
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsPanel = document.getElementById('settingsPanel');
+const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+const apiKeyInput = document.getElementById('apiKeyInput');
+const toggleApiKeyBtn = document.getElementById('toggleApiKeyBtn');
+const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
+
+// Éléments DOM - LinkedIn
+const apiStatusDot = document.getElementById('apiStatusDot');
+const apiStatusText = document.getElementById('apiStatusText');
+
+// Éléments DOM - Privacy
+const privacyLink = document.getElementById('privacyLink');
+
 // État
 let currentSessions = [];
 let activeSessionId = null;
 let isLoggedIn = false;
+let hasApiKey = false;
 
 /**
  * Initialiser le popup
@@ -25,6 +45,7 @@ let isLoggedIn = false;
 async function init() {
   await checkCurrentStatus();
   await loadSessions();
+  await checkApiKeyStatus();
   setupEventListeners();
 }
 
@@ -50,21 +71,48 @@ async function checkCurrentStatus() {
       const matchingSession = sessions.find(s => s.userId === response.userId);
 
       if (matchingSession) {
-        statusText.textContent = `Connecté : ${matchingSession.name}`;
+        statusText.textContent = `Connecte : ${matchingSession.name}`;
       } else {
-        statusText.textContent = 'Connecté (compte non sauvegardé)';
+        statusText.textContent = 'Connecte (compte non sauvegarde)';
       }
     } else {
       statusDot.classList.remove('connected');
       statusDot.classList.add('disconnected');
-      statusText.textContent = 'Non connecté à Instagram';
+      statusText.textContent = 'Non connecte a Instagram';
     }
 
     // Activer/désactiver le bouton d'ajout
     addAccountBtn.disabled = !isLoggedIn;
   } catch (error) {
-    console.error('Erreur lors de la vérification du statut:', error);
-    statusText.textContent = 'Erreur de vérification';
+    console.error('Erreur lors de la verification du statut:', error);
+    statusText.textContent = 'Erreur de verification';
+  }
+}
+
+/**
+ * Vérifier le statut de la clé API Claude
+ */
+async function checkApiKeyStatus() {
+  try {
+    const response = await chrome.runtime.sendMessage({ action: 'getClaudeApiKey' });
+
+    hasApiKey = response.hasKey;
+
+    if (hasApiKey) {
+      apiStatusDot.classList.add('connected');
+      apiStatusDot.classList.remove('disconnected');
+      apiStatusText.textContent = 'Cle API configuree';
+      // Masquer l'input et montrer un placeholder
+      apiKeyInput.value = '••••••••••••••••••••';
+    } else {
+      apiStatusDot.classList.remove('connected');
+      apiStatusDot.classList.add('disconnected');
+      apiStatusText.textContent = 'Cle API non configuree';
+      apiKeyInput.value = '';
+    }
+  } catch (error) {
+    console.error('Erreur lors de la verification de la cle API:', error);
+    apiStatusText.textContent = 'Erreur de verification';
   }
 }
 
@@ -111,7 +159,7 @@ function renderAccounts() {
         <div class="account-avatar">${initial}</div>
         <div class="account-info">
           <div class="account-name">${escapeHtml(session.name)}</div>
-          <div class="account-meta">Sauvegardé le ${savedDate}</div>
+          <div class="account-meta">Sauvegarde le ${savedDate}</div>
         </div>
         <div class="account-actions">
           <button class="btn-delete" data-delete="${session.id}" title="Supprimer">
@@ -150,10 +198,32 @@ function renderAccounts() {
  * Configurer les event listeners
  */
 function setupEventListeners() {
+  // Platform Tabs
+  platformTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const platform = tab.dataset.platform;
+      switchPlatformTab(platform);
+    });
+  });
+
+  // Settings
+  settingsBtn.addEventListener('click', openSettings);
+  closeSettingsBtn.addEventListener('click', closeSettings);
+
+  // API Key
+  toggleApiKeyBtn.addEventListener('click', toggleApiKeyVisibility);
+  saveApiKeyBtn.addEventListener('click', saveApiKey);
+  apiKeyInput.addEventListener('focus', () => {
+    // Clear placeholder when focusing
+    if (apiKeyInput.value === '••••••••••••••••••••') {
+      apiKeyInput.value = '';
+    }
+  });
+
   // Bouton d'ajout
   addAccountBtn.addEventListener('click', () => {
     if (!isLoggedIn) {
-      showToast('Connectez-vous d\'abord à Instagram', 'error');
+      showToast('Connectez-vous d\'abord a Instagram', 'error');
       return;
     }
     openAddModal();
@@ -176,6 +246,114 @@ function setupEventListeners() {
       saveCurrentAccount();
     }
   });
+
+  apiKeyInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      saveApiKey();
+    }
+  });
+
+  // Privacy link
+  privacyLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    openSettings();
+    // Scroll to privacy section after a small delay to ensure panel is open
+    setTimeout(() => {
+      const privacySection = document.querySelector('.privacy-section');
+      if (privacySection) {
+        privacySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  });
+}
+
+/**
+ * Changer d'onglet de plateforme
+ */
+function switchPlatformTab(platform) {
+  // Update tabs
+  platformTabs.forEach(tab => {
+    if (tab.dataset.platform === platform) {
+      tab.classList.add('active');
+    } else {
+      tab.classList.remove('active');
+    }
+  });
+
+  // Update content
+  platformContents.forEach(content => {
+    if (content.id === `${platform}-content`) {
+      content.classList.add('active');
+    } else {
+      content.classList.remove('active');
+    }
+  });
+}
+
+/**
+ * Ouvrir les paramètres
+ */
+function openSettings() {
+  settingsPanel.classList.add('open');
+}
+
+/**
+ * Fermer les paramètres
+ */
+function closeSettings() {
+  settingsPanel.classList.remove('open');
+}
+
+/**
+ * Toggle la visibilité de la clé API
+ */
+function toggleApiKeyVisibility() {
+  if (apiKeyInput.type === 'password') {
+    apiKeyInput.type = 'text';
+  } else {
+    apiKeyInput.type = 'password';
+  }
+}
+
+/**
+ * Sauvegarder la clé API
+ */
+async function saveApiKey() {
+  const apiKey = apiKeyInput.value.trim();
+
+  if (!apiKey || apiKey === '••••••••••••••••••••') {
+    showToast('Entrez une cle API valide', 'error');
+    return;
+  }
+
+  if (!apiKey.startsWith('sk-ant-')) {
+    showToast('Format de cle API invalide', 'error');
+    return;
+  }
+
+  saveApiKeyBtn.disabled = true;
+  saveApiKeyBtn.textContent = 'Sauvegarde...';
+
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: 'saveClaudeApiKey',
+      apiKey: apiKey
+    });
+
+    if (response.error) {
+      throw new Error(response.error);
+    }
+
+    showToast('Cle API sauvegardee !', 'success');
+    await checkApiKeyStatus();
+    closeSettings();
+  } catch (error) {
+    console.error('Erreur lors de la sauvegarde de la cle API:', error);
+    showToast(error.message || 'Erreur lors de la sauvegarde', 'error');
+  } finally {
+    saveApiKeyBtn.disabled = false;
+    saveApiKeyBtn.textContent = 'Sauvegarder';
+  }
 }
 
 /**
@@ -219,7 +397,7 @@ async function saveCurrentAccount() {
       throw new Error(response.error);
     }
 
-    showToast('Compte sauvegardé !', 'success');
+    showToast('Compte sauvegarde !', 'success');
     closeAddModal();
     await loadSessions();
     await checkCurrentStatus();
@@ -237,7 +415,7 @@ async function saveCurrentAccount() {
  */
 async function switchToAccount(sessionId) {
   if (sessionId === activeSessionId) {
-    showToast('Ce compte est déjà actif', 'info');
+    showToast('Ce compte est deja actif', 'info');
     return;
   }
 
@@ -256,7 +434,7 @@ async function switchToAccount(sessionId) {
       throw new Error(response.error);
     }
 
-    showToast(`Basculé vers ${response.name}`, 'success');
+    showToast(`Bascule vers ${response.name}`, 'success');
     activeSessionId = sessionId;
     renderAccounts();
     await checkCurrentStatus();
@@ -290,7 +468,7 @@ async function deleteAccount(sessionId) {
       throw new Error(response.error);
     }
 
-    showToast('Compte supprimé', 'success');
+    showToast('Compte supprime', 'success');
     await loadSessions();
   } catch (error) {
     console.error('Erreur lors de la suppression:', error);

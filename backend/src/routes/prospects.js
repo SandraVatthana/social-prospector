@@ -486,6 +486,56 @@ router.post('/linkedin/import', async (req, res) => {
 });
 
 /**
+ * PUT /api/prospects/:id/notes
+ * Met à jour les notes d'un prospect
+ */
+router.put('/:id/notes', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { notes } = req.body;
+    const userId = req.user.id;
+
+    // Vérifier que le prospect appartient à l'utilisateur
+    const { data: existing } = await supabaseAdmin
+      .from('prospects')
+      .select('id')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single();
+
+    if (!existing) {
+      return res.status(404).json(formatError('Prospect non trouvé', 'NOT_FOUND'));
+    }
+
+    // Mettre à jour les notes
+    const { data, error } = await supabaseAdmin
+      .from('prospects')
+      .update({
+        notes: notes || null,
+        notes_updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select('id, notes, notes_updated_at')
+      .single();
+
+    if (error) {
+      console.error('[Prospects] Notes update error:', error);
+      return res.status(500).json(formatError('Erreur lors de la mise à jour', 'UPDATE_ERROR'));
+    }
+
+    res.json(formatResponse({
+      success: true,
+      prospect: data
+    }));
+
+  } catch (error) {
+    console.error('[Prospects] Error:', error);
+    res.status(500).json(formatError('Erreur serveur', 'SERVER_ERROR'));
+  }
+});
+
+/**
  * DELETE /api/prospects/:id
  * Supprime un prospect
  */

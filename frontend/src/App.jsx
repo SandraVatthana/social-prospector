@@ -14,6 +14,8 @@ import AnalyticsAgence from './pages/AnalyticsAgence';
 import LoginPage from './pages/LoginPage';
 import Conversation from './pages/Conversation';
 import Clients from './pages/Clients';
+import CrmDashboard from './pages/CrmDashboard';
+import IcpDashboard from './pages/IcpDashboard';
 import OnboardingProfond from './components/onboarding/OnboardingProfond';
 import GuidedTour, { useTour, STORAGE_KEY } from './components/tour/GuidedTour';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -169,6 +171,8 @@ function AppContent() {
               <Route path="/settings" element={<Settings />} />
               <Route path="/clients" element={<Clients />} />
               <Route path="/conversation/:prospectId" element={<Conversation />} />
+              <Route path="/crm" element={<CrmDashboard />} />
+              <Route path="/icp" element={<IcpDashboard />} />
               {/* Redirections et catch-all */}
               <Route path="/dashboard" element={<Navigate to="/" replace />} />
               <Route path="*" element={<Navigate to="/" replace />} />

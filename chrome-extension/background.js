@@ -3,6 +3,7 @@
  * Background Service Worker
  *
  * Gère les sessions Instagram (cookies) pour le multi-compte
+ * + Analyse de profils LinkedIn avec Claude API
  */
 
 const INSTAGRAM_DOMAIN = '.instagram.com';
@@ -11,6 +12,10 @@ const LINKEDIN_DOMAIN = '.linkedin.com';
 
 // URL du backend Social Prospector (Netlify Functions)
 const BACKEND_URL = 'https://sosprospection.com';
+
+// Claude API configuration
+const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
+const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
 
 // Cookies Instagram importants pour la session
 const SESSION_COOKIES = [
@@ -248,6 +253,98 @@ async function deleteLinkedInProfile(profileUrl) {
   return { success: true, remaining: updatedProfiles.length };
 }
 
+/**
+ * Sauvegarder la clé API Claude
+ */
+async function saveClaudeApiKey(apiKey) {
+  await chrome.storage.local.set({ claudeApiKey: apiKey });
+  return { success: true };
+}
+
+/**
+ * Récupérer la clé API Claude
+ */
+async function getClaudeApiKey() {
+  const { claudeApiKey } = await chrome.storage.local.get('claudeApiKey');
+  return claudeApiKey || null;
+}
+
+/**
+ * Appeler l'API Claude pour l'analyse
+ */
+async function callClaudeAPI(prompt) {
+  const apiKey = await getClaudeApiKey();
+
+  console.log('[Social Prospector] API Key presente:', !!apiKey);
+  console.log('[Social Prospector] API Key commence par:', apiKey ? apiKey.substring(0, 10) + '...' : 'N/A');
+
+  if (!apiKey) {
+    throw new Error('Cle API Claude non configuree. Allez dans les parametres de l\'extension pour l\'ajouter.');
+  }
+
+  const response = await fetch(CLAUDE_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: CLAUDE_MODEL,
+      max_tokens: 2000,
+      messages: [{
+        role: 'user',
+        content: prompt
+      }]
+    })
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    console.log('[Social Prospector] Erreur API:', response.status, errorData);
+    if (response.status === 401) {
+      throw new Error('Cle API invalide. Verifiez votre cle dans les parametres. (Status: 401)');
+    } else if (response.status === 429) {
+      throw new Error('Limite de requetes atteinte. Reessayez dans quelques minutes.');
+    } else if (response.status === 400) {
+      throw new Error('Requete invalide: ' + (errorData.error?.message || 'Erreur inconnue'));
+    } else {
+      throw new Error(errorData.error?.message || 'Erreur API Claude: ' + response.status);
+    }
+  }
+
+  const data = await response.json();
+
+  if (data.error) {
+    throw new Error(data.error.message);
+  }
+
+  // Extraire le texte de la réponse
+  const responseText = data.content[0].text;
+
+  // Essayer de parser en JSON si c'est une analyse
+  try {
+    // Nettoyer le texte (enlever les balises markdown si présentes)
+    let cleanText = responseText.trim();
+    if (cleanText.startsWith('```json')) {
+      cleanText = cleanText.slice(7);
+    }
+    if (cleanText.startsWith('```')) {
+      cleanText = cleanText.slice(3);
+    }
+    if (cleanText.endsWith('```')) {
+      cleanText = cleanText.slice(0, -3);
+    }
+    cleanText = cleanText.trim();
+
+    return JSON.parse(cleanText);
+  } catch (e) {
+    // Si ce n'est pas du JSON, retourner le texte brut
+    return responseText;
+  }
+}
+
 // Écouter les messages du popup et des content scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   const handleAsync = async () => {
@@ -280,6 +377,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         case 'deleteLinkedInProfile':
           return await deleteLinkedInProfile(request.profileUrl);
 
+        case 'saveClaudeApiKey':
+          return await saveClaudeApiKey(request.apiKey);
+
+        case 'getClaudeApiKey':
+          const apiKey = await getClaudeApiKey();
+          return { apiKey, hasKey: !!apiKey };
+
+        case 'callClaudeAPI':
+          const result = await callClaudeAPI(request.prompt);
+          return { result };
+
         default:
           throw new Error('Action inconnue: ' + request.action);
       }
@@ -293,4 +401,4 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 // Log au démarrage
-console.log('Social Prospector Multi-Account extension loaded (Instagram + LinkedIn)');
+console.log('Social Prospector extension loaded (Instagram + LinkedIn + Claude AI Analysis)');

@@ -51,6 +51,61 @@ body {
   border-radius: 12px;
 }
 
+/* Platform Tabs */
+.platform-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.platform-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 12px;
+  background: white;
+  border: 2px solid #dbdbdb;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #8e8e8e;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.platform-tab:hover {
+  border-color: #bbb;
+  color: #262626;
+}
+
+.platform-tab.active {
+  border-color: #E1306C;
+  color: #E1306C;
+  background: linear-gradient(135deg, #fff5f7 0%, #ffffff 100%);
+}
+
+.platform-tab.active[data-platform="linkedin"] {
+  border-color: #0077b5;
+  color: #0077b5;
+  background: linear-gradient(135deg, #f0f7fb 0%, #ffffff 100%);
+}
+
+.platform-tab svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Platform Content */
+.platform-content {
+  display: none;
+}
+
+.platform-content.active {
+  display: block;
+}
+
 /* Status Card */
 .status-card {
   background: white;
@@ -384,4 +439,320 @@ body {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* LinkedIn Content */
+.linkedin-info {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.linkedin-icon {
+  margin-bottom: 12px;
+}
+
+.linkedin-info h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #262626;
+  margin-bottom: 8px;
+}
+
+.linkedin-info > p {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 16px;
+}
+
+.linkedin-features {
+  list-style: none;
+  text-align: left;
+  margin-bottom: 16px;
+}
+
+.linkedin-features li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  font-size: 13px;
+  color: #444;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.linkedin-features li:last-child {
+  border-bottom: none;
+}
+
+.feature-icon {
+  font-size: 16px;
+}
+
+.linkedin-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: #fff8e8;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #666;
+  text-align: left;
+  line-height: 1.5;
+}
+
+.tip-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+/* API Status */
+.api-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-top: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  font-size: 13px;
+}
+
+.api-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #8e8e8e;
+  flex-shrink: 0;
+}
+
+.api-status-dot.connected {
+  background: #00C853;
+  box-shadow: 0 0 8px rgba(0,200,83,0.4);
+}
+
+.api-status-dot.disconnected {
+  background: #ff3b30;
+}
+
+/* Settings Panel */
+.settings-panel {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: white;
+  z-index: 150;
+  flex-direction: column;
+  animation: slideIn 0.2s ease-out;
+}
+
+.settings-panel.open {
+  display: flex;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid #dbdbdb;
+}
+
+.settings-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.settings-header .btn-icon {
+  background: #f0f0f0;
+  color: #666;
+}
+
+.settings-header .btn-icon:hover {
+  background: #e5e5e5;
+  box-shadow: none;
+  transform: none;
+}
+
+.settings-content {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.setting-group {
+  margin-bottom: 24px;
+}
+
+.setting-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #262626;
+  margin-bottom: 4px;
+}
+
+.setting-description {
+  font-size: 12px;
+  color: #8e8e8e;
+  margin-bottom: 12px;
+}
+
+.api-key-input-group {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.api-key-input-group input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #dbdbdb;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: monospace;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.api-key-input-group input:focus {
+  border-color: #0077b5;
+}
+
+.api-key-input-group .btn-icon {
+  width: 40px;
+  height: 40px;
+  background: #f0f0f0;
+  color: #666;
+  flex-shrink: 0;
+}
+
+.api-key-input-group .btn-icon:hover {
+  background: #e5e5e5;
+  box-shadow: none;
+  transform: none;
+}
+
+.setting-group .btn-primary {
+  width: 100%;
+  background: linear-gradient(135deg, #0077b5 0%, #005582 100%);
+}
+
+.setting-group .btn-primary:hover {
+  box-shadow: 0 4px 12px rgba(0,119,181,0.3);
+}
+
+.setting-help {
+  margin-top: 12px;
+  font-size: 12px;
+  text-align: center;
+}
+
+.setting-help a {
+  color: #0077b5;
+  text-decoration: none;
+}
+
+.setting-help a:hover {
+  text-decoration: underline;
+}
+
+/* Privacy Section */
+.privacy-section {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #e9ecef;
+}
+
+.privacy-section label {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: #262626;
+  margin-bottom: 12px;
+}
+
+.privacy-info {
+  font-size: 12px;
+  color: #495057;
+}
+
+.privacy-info h4 {
+  font-size: 12px;
+  font-weight: 600;
+  color: #262626;
+  margin-top: 12px;
+  margin-bottom: 8px;
+}
+
+.privacy-info h4:first-child {
+  margin-top: 0;
+}
+
+.privacy-info ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.privacy-info li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #555;
+}
+
+.privacy-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+  width: 18px;
+  text-align: center;
+}
+
+.privacy-section .setting-description {
+  margin-top: 12px;
+  margin-bottom: 0;
+  text-align: center;
+}
+
+.privacy-section .setting-description a {
+  color: #0077b5;
+  text-decoration: none;
+}
+
+.privacy-section .setting-description a:hover {
+  text-decoration: underline;
+}
+
+/* Footer Improvements */
+.footer-separator {
+  margin: 0 8px;
+  color: #ccc;
+}
+
+.privacy-link {
+  cursor: pointer;
 }

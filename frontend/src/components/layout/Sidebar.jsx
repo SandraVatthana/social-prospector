@@ -10,9 +10,10 @@ import {
   Building2,
   CreditCard,
   Settings,
-  ArrowLeft,
   Menu,
   X,
+  Inbox,
+  Target,
 } from 'lucide-react';
 import { QuotaWidget } from '../dashboard';
 import { useClient } from '../../contexts/ClientContext';
@@ -29,6 +30,8 @@ const navigation = [
 ];
 
 const insights = [
+  { name: 'CRM Dashboard', href: '/crm', icon: Inbox, badge: 'NEW' },
+  { name: 'ICP & Scoring', href: '/icp', icon: Target, badge: 'NEW' },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Analytics Agence', href: '/analytics-agence', icon: Building2, badge: 'PRO', agencyOnly: true },
   { name: 'Mes Clients', href: '/clients', icon: Users, badge: 'PRO', agencyOnly: true },
@@ -84,15 +87,6 @@ export default function Sidebar({ user, prospectsCount = 0, messagesCount = 0 })
           isMobile ? (isOpen ? 'translate-x-0' : '-translate-x-full') : 'translate-x-0'
         }`}
       >
-      {/* Bouton Retour SOS Storytelling */}
-      <a
-        href="https://sosstorytelling.fr/app.html"
-        className="flex items-center gap-2 px-4 py-2 m-3 mb-0 text-sm font-medium text-brand-600 bg-brand-50 hover:bg-brand-100 rounded-lg transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Retour à SOS Storytelling
-      </a>
-
       {/* Logo + Slogan */}
       <div className="p-6 border-b border-warm-100">
         <div className="flex items-center gap-3">

@@ -33,6 +33,9 @@ import {
   Edit3,
   ChevronDown,
   ChevronUp,
+  Download,
+  Chrome,
+  Zap,
 } from 'lucide-react';
 import Header from '../components/layout/Header';
 import SequenceModal from '../components/prospect/SequenceModal';
@@ -1352,17 +1355,57 @@ function LinkedInMode({
 
   return (
     <div className="space-y-6">
-      {/* Avertissement LinkedIn */}
-      <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
-        <div className="flex gap-3">
-          <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-blue-800">
-            <p className="font-medium mb-1">Mode LinkedIn</p>
-            <p>
-              Pour respecter les règles LinkedIn, on ne peut pas analyser les profils automatiquement.
-              Utilise ces suggestions pour chercher sur LinkedIn directement, puis reviens ici
-              pour générer un message personnalisé.
+      {/* Promotion Extension Chrome */}
+      <div className="p-5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
+        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+          <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+            <Chrome className="w-6 h-6 text-white" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-blue-900 mb-1 flex items-center gap-2">
+              <Zap className="w-4 h-4 text-amber-500" />
+              Analyse les profils LinkedIn en 1 clic !
+            </h3>
+            <p className="text-sm text-blue-700 mb-3">
+              Notre extension Chrome analyse automatiquement le <strong>parcours</strong>, les <strong>posts</strong> et génère
+              des accroches personnalisées directement sur LinkedIn. Plus besoin de copier-coller !
             </p>
+            <div className="flex flex-wrap gap-2">
+              {/* TODO: Remplacer par le lien Chrome Web Store une fois publie
+                  Exemple: href="https://chrome.google.com/webstore/detail/social-prospector/EXTENSION_ID"
+                  Et retirer le download et changer le texte en "Installer depuis Chrome Web Store"
+              */}
+              <a
+                href="/extension/social-prospector-extension.zip"
+                download
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                Télécharger l'extension
+              </a>
+              <button
+                onClick={onOpenMessageModal}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-blue-200 hover:bg-blue-50 text-blue-700 text-sm font-medium rounded-lg transition-colors"
+              >
+                <Edit3 className="w-4 h-4" />
+                Générer un message manuellement
+              </button>
+            </div>
+            <details className="mt-3">
+              <summary className="text-xs text-blue-600 cursor-pointer hover:text-blue-800">
+                📋 Comment installer l'extension ?
+              </summary>
+              <ol className="mt-2 text-xs text-blue-700 space-y-1 pl-4 list-decimal">
+                <li>Télécharge et décompresse le fichier ZIP</li>
+                <li>Va sur <code className="bg-blue-100 px-1 rounded">chrome://extensions</code></li>
+                <li>Active le <strong>"Mode développeur"</strong> en haut à droite</li>
+                <li>Clique sur <strong>"Charger l'extension non empaquetée"</strong></li>
+                <li>Sélectionne le dossier décompressé</li>
+              </ol>
+              <p className="mt-2 text-xs text-blue-500 italic">
+                Bientôt disponible sur le Chrome Web Store pour une installation en 1 clic !
+              </p>
+            </details>
           </div>
         </div>
       </div>

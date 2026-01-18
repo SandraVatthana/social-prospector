@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Social Prospector",
   "version": "2.0.0",
-  "description": "Prospection intelligente sur Instagram et LinkedIn. Importez des profils, generez des messages personnalises.",
+  "description": "Prospection intelligente sur Instagram et LinkedIn. Importez des profils, analysez-les avec l'IA, generez des messages personnalises.",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -13,11 +13,13 @@
     "storage",
     "tabs",
     "activeTab",
-    "scripting"
+    "scripting",
+    "clipboardWrite"
   ],
   "host_permissions": [
     "*://*.instagram.com/*",
-    "*://*.linkedin.com/*"
+    "*://*.linkedin.com/*",
+    "https://api.anthropic.com/*"
   ],
   "action": {
     "default_popup": "popup.html",

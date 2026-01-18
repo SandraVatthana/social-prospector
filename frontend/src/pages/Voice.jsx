@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Mic,
@@ -16,32 +16,34 @@ import {
   Settings,
   Smile,
   PenTool,
+  Loader2,
 } from 'lucide-react';
 import Header from '../components/layout/Header';
 import TestVoiceModal from '../components/dashboard/TestVoiceModal';
 import ConfigureVoiceModal from '../components/dashboard/ConfigureVoiceModal';
 import OnboardingProfond from '../components/onboarding/OnboardingProfond';
+import { API_BASE_URL } from '../lib/api';
 
-// Données mock pour la démo
-const mockVoiceProfile = {
-  nom: 'MA VOIX — Sandra',
-  description: 'Un ton décontracté et direct, parfait pour des premières approches authentiques',
+// Profil par défaut (utilisé seulement si aucune donnée n'existe)
+const defaultVoiceProfile = {
+  nom: 'MA VOIX',
+  description: 'Configure ta voix pour des messages authentiques',
 
   ton_dominant: 'decontracte',
-  tons_secondaires: ['direct', 'chaleureux'],
-  niveau_energie: 7,
+  tons_secondaires: [],
+  niveau_energie: 5,
 
-  tutoiement: 'toujours',
+  tutoiement: 'parfois',
   longueur_messages: 'court',
 
   utilisation_emojis: {
-    frequence: 'souvent',
-    favoris: ['🚀', '✨', '💪', '🔥'],
+    frequence: 'parfois',
+    favoris: [],
     position: 'fin',
   },
 
-  expressions_cles: ['Trop bien !', 'J\'adore', 'Carrément', 'On se capte ?'],
-  mots_signature: ['canon', 'top', 'génial', 'impec'],
+  expressions_cles: [],
+  mots_signature: [],
 
   structure_messages: {
     accroche_type: 'compliment',
@@ -49,32 +51,28 @@ const mockVoiceProfile = {
     cta_type: 'question_ouverte',
   },
 
-  a_eviter: ['Formules trop corporate', 'Vouvoiement', 'Messages trop longs'],
+  a_eviter: [],
 
   contexte_business: {
-    activite: 'Création d\'expériences digitales immersives',
-    cible: 'Entrepreneures et créatrices de contenu',
-    proposition_valeur: 'Transformer leur présence en ligne en machine à conversions',
-    differentiation: 'Approche storytelling unique',
-    lead_magnet: 'Guide gratuit "10 hooks qui convertissent"',
+    activite: '',
+    cible: '',
+    proposition_valeur: '',
+    differentiation: '',
+    lead_magnet: '',
     objectif_prospection: 'prise_rdv',
     premier_contact_type: 'dm_personnalise',
   },
 
-  exemples_messages: [
-    'Salut Marie ! 🚀\n\nJ\'ai vu ton profil et j\'adore ce que tu partages sur le coaching !\n\nJe bosse avec des créatrices comme toi sur l\'automatisation — ça te parle ?',
-    'Salut Julie ! ✨\n\nTon contenu sur le marketing digital est canon ! Je me suis dit qu\'on pourrait échanger, j\'ai des tips qui pourraient te plaire.\n\nOn se capte ?',
-  ],
+  exemples_messages: [],
 
   isActive: true,
-  created_at: '2024-01-15',
-  updated_at: '2024-03-20',
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
 
-  // Paramètres avancés
   settings: {
-    reproduire_imperfections: true, // Reproduit abréviations, ponctuation relâchée
-    utiliser_emojis: true, // Active/désactive les emojis
-    niveau_energie_override: null, // Null = utiliser celui détecté, sinon valeur 1-10
+    reproduire_imperfections: true,
+    utiliser_emojis: true,
+    niveau_energie_override: null,
   },
 };
 
@@ -104,14 +102,124 @@ const popularEmojis = ['🚀', '✨', '💪', '🔥', '💫', '🎯', '💜', '�
 
 export default function Voice() {
   const navigate = useNavigate();
-  const [profile, setProfile] = useState(mockVoiceProfile);
+  const [profile, setProfile] = useState(defaultVoiceProfile);
   const [isEditing, setIsEditing] = useState(false);
-  const [editedProfile, setEditedProfile] = useState(mockVoiceProfile);
+  const [editedProfile, setEditedProfile] = useState(defaultVoiceProfile);
   const [showTestModal, setShowTestModal] = useState(false);
   const [showConfigureModal, setShowConfigureModal] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Charger le profil depuis l'API au montage
+  useEffect(() => {
+    const fetchVoiceProfile = async () => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem('token');
+
+        // Récupérer les données d'onboarding (contient le profil MA VOIX complet)
+        const onboardingResponse = await fetch(`${API_BASE_URL}/onboarding/status`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (onboardingResponse.ok) {
+          const onboardingResult = await onboardingResponse.json();
+          const onboardingData = onboardingResult.data?.data;
+
+          if (onboardingData) {
+            // Mapper les données d'onboarding vers le format du profil
+            const mappedProfile = {
+              ...defaultVoiceProfile,
+              nom: `MA VOIX — ${onboardingData.prenom || 'Moi'}`,
+              description: onboardingData.activite ?
+                `${onboardingData.type_activite || 'Professionnel'} en ${onboardingData.activite}` :
+                defaultVoiceProfile.description,
+
+              ton_dominant: Array.isArray(onboardingData.ton) ? onboardingData.ton[0] : (onboardingData.ton || 'decontracte'),
+              tons_secondaires: Array.isArray(onboardingData.ton) ? onboardingData.ton.slice(1) : [],
+              niveau_energie: onboardingData.niveau_energie || 5,
+
+              tutoiement: onboardingData.tutoiement || 'parfois',
+
+              utilisation_emojis: {
+                frequence: onboardingData.utilisation_emojis || 'parfois',
+                favoris: onboardingData.emojis_favoris || [],
+                position: 'fin',
+              },
+
+              expressions_cles: onboardingData.expressions ?
+                onboardingData.expressions.split(',').map(e => e.trim()).filter(Boolean) : [],
+              mots_signature: onboardingData.mots_signature ?
+                onboardingData.mots_signature.split(',').map(e => e.trim()).filter(Boolean) : [],
+
+              a_eviter: onboardingData.a_eviter ?
+                onboardingData.a_eviter.split(',').map(e => e.trim()).filter(Boolean) : [],
+
+              contexte_business: {
+                activite: onboardingData.activite || '',
+                cible: onboardingData.cible_description || onboardingData.client_ideal || '',
+                proposition_valeur: onboardingData.resultat_promis || onboardingData.offre_description || '',
+                differentiation: onboardingData.differentiation || '',
+                lead_magnet: onboardingData.lead_magnet || '',
+                objectif_prospection: onboardingData.objectif_prospection || 'prise_rdv',
+                premier_contact_type: onboardingData.premier_contact_type || 'dm_personnalise',
+              },
+
+              exemples_messages: onboardingData.exemples_messages || [],
+
+              isActive: true,
+              settings: {
+                reproduire_imperfections: true,
+                utiliser_emojis: onboardingData.utilisation_emojis !== 'jamais',
+                niveau_energie_override: null,
+              },
+            };
+
+            setProfile(mappedProfile);
+            setEditedProfile(mappedProfile);
+          }
+        }
+
+        // Récupérer aussi les profils vocaux de la base (pour les training texts, etc.)
+        const voiceResponse = await fetch(`${API_BASE_URL}/voice/profiles`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (voiceResponse.ok) {
+          const voiceResult = await voiceResponse.json();
+          const activeVoiceProfile = voiceResult.data?.find(p => p.is_active) || voiceResult.data?.[0];
+
+          if (activeVoiceProfile) {
+            // Enrichir avec les données du profil vocal si disponibles
+            setProfile(prev => ({
+              ...prev,
+              nom: activeVoiceProfile.name || prev.nom,
+              ton_dominant: activeVoiceProfile.tone || prev.ton_dominant,
+              expressions_cles: activeVoiceProfile.keywords || prev.expressions_cles,
+              a_eviter: activeVoiceProfile.avoid_words || prev.a_eviter,
+              contexte_business: {
+                ...prev.contexte_business,
+                cible: activeVoiceProfile.target_audience || prev.contexte_business.cible,
+                proposition_valeur: activeVoiceProfile.offer_description || prev.contexte_business.proposition_valeur,
+              },
+            }));
+          }
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement du profil:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchVoiceProfile();
+  }, []);
 
   const handleEdit = () => {
     setEditedProfile({ ...profile });
@@ -126,14 +234,41 @@ export default function Voice() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Simuler un appel API
-      await new Promise(resolve => setTimeout(resolve, 800));
+      const token = localStorage.getItem('token');
+
+      // Sauvegarder le profil vocal via l'API
+      const response = await fetch(`${API_BASE_URL}/voice/profiles`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          nom: editedProfile.nom,
+          ton_dominant: editedProfile.ton_dominant,
+          tons_secondaires: editedProfile.tons_secondaires,
+          tutoiement: editedProfile.tutoiement,
+          niveau_energie: editedProfile.niveau_energie,
+          utilisation_emojis: editedProfile.utilisation_emojis,
+          expressions_cles: editedProfile.expressions_cles,
+          mots_signature: editedProfile.mots_signature,
+          a_eviter: editedProfile.a_eviter,
+          contexte_business: editedProfile.contexte_business,
+          isActive: true,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de la sauvegarde');
+      }
+
       setProfile({ ...editedProfile });
       setIsEditing(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (error) {
       console.error('Error saving profile:', error);
+      alert('Erreur lors de la sauvegarde du profil');
     } finally {
       setSaving(false);
     }
@@ -225,6 +360,24 @@ export default function Voice() {
         onComplete={handleOnboardingComplete}
         onSkip={() => setShowOnboarding(false)}
       />
+    );
+  }
+
+  // Afficher un loader pendant le chargement
+  if (loading) {
+    return (
+      <>
+        <Header
+          title="MA VOIX"
+          subtitle="Chargement de ton profil stylistique..."
+        />
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 text-brand-500 animate-spin mx-auto mb-4" />
+            <p className="text-warm-600">Chargement de ton profil...</p>
+          </div>
+        </div>
+      </>
     );
   }
 

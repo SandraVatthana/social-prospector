@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Social Prospector - Multi-Account</title>
+  <title>Social Prospector</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
@@ -18,44 +18,181 @@
         </svg>
         <span>Social Prospector</span>
       </div>
-      <span class="badge">Multi-Account</span>
+      <button class="btn-icon" id="settingsBtn" title="Parametres">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
     </header>
 
-    <!-- Status actuel -->
-    <div class="status-card" id="currentStatus">
-      <div class="status-indicator">
-        <span class="dot" id="statusDot"></span>
-        <span id="statusText">Vérification...</span>
+    <!-- Platform Tabs -->
+    <div class="platform-tabs">
+      <button class="platform-tab active" data-platform="instagram">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+          <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+          <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+        </svg>
+        Instagram
+      </button>
+      <button class="platform-tab" data-platform="linkedin">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/>
+          <rect x="2" y="9" width="4" height="12"/>
+          <circle cx="4" cy="4" r="2"/>
+        </svg>
+        LinkedIn
+      </button>
+    </div>
+
+    <!-- Instagram Content -->
+    <div class="platform-content active" id="instagram-content">
+      <!-- Status actuel -->
+      <div class="status-card" id="currentStatus">
+        <div class="status-indicator">
+          <span class="dot" id="statusDot"></span>
+          <span id="statusText">Verification...</span>
+        </div>
+      </div>
+
+      <!-- Liste des comptes -->
+      <section class="accounts-section">
+        <div class="section-header">
+          <h2>Mes comptes</h2>
+          <button class="btn-icon" id="addAccountBtn" title="Ajouter le compte actuel">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="accounts-list" id="accountsList">
+          <!-- Comptes générés par JS -->
+        </div>
+
+        <p class="empty-state" id="emptyState" style="display: none;">
+          Aucun compte sauvegarde.<br>
+          Connectez-vous a Instagram puis cliquez sur + pour sauvegarder.
+        </p>
+      </section>
+    </div>
+
+    <!-- LinkedIn Content -->
+    <div class="platform-content" id="linkedin-content">
+      <div class="linkedin-info">
+        <div class="linkedin-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#0077b5" stroke-width="1.5">
+            <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/>
+            <rect x="2" y="9" width="4" height="12"/>
+            <circle cx="4" cy="4" r="2"/>
+          </svg>
+        </div>
+        <h3>Analyse LinkedIn avec IA</h3>
+        <p>Va sur un profil LinkedIn et clique sur <strong>"Analyser"</strong> pour :</p>
+        <ul class="linkedin-features">
+          <li>
+            <span class="feature-icon">📝</span>
+            <span>Synthese des derniers posts</span>
+          </li>
+          <li>
+            <span class="feature-icon">💬</span>
+            <span>Idees de commentaires personnalises</span>
+          </li>
+          <li>
+            <span class="feature-icon">✉️</span>
+            <span>Angles pour tes DM</span>
+          </li>
+        </ul>
+        <div class="linkedin-tip">
+          <span class="tip-icon">💡</span>
+          <span>L'analyse fonctionne directement sur le profil LinkedIn. Scrolle sur le profil pour charger les posts avant d'analyser.</span>
+        </div>
+      </div>
+
+      <!-- API Status -->
+      <div class="api-status" id="apiStatus">
+        <div class="api-status-dot" id="apiStatusDot"></div>
+        <span id="apiStatusText">Verification de la cle API...</span>
       </div>
     </div>
 
-    <!-- Liste des comptes -->
-    <section class="accounts-section">
-      <div class="section-header">
-        <h2>Mes comptes</h2>
-        <button class="btn-icon" id="addAccountBtn" title="Ajouter le compte actuel">
+    <!-- Settings Panel -->
+    <div class="settings-panel" id="settingsPanel">
+      <div class="settings-header">
+        <h3>Parametres</h3>
+        <button class="btn-icon" id="closeSettingsBtn">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="12" y1="5" x2="12" y2="19"/>
-            <line x1="5" y1="12" x2="19" y2="12"/>
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
         </button>
       </div>
+      <div class="settings-content">
+        <div class="setting-group">
+          <label for="apiKeyInput">Cle API Claude (Anthropic)</label>
+          <p class="setting-description">Necessaire pour l'analyse de profils LinkedIn avec l'IA.</p>
+          <div class="api-key-input-group">
+            <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-...">
+            <button class="btn-icon" id="toggleApiKeyBtn" title="Afficher/Masquer">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+          <button class="btn btn-primary" id="saveApiKeyBtn">Sauvegarder</button>
+          <p class="setting-help">
+            <a href="https://console.anthropic.com/settings/keys" target="_blank">Obtenir une cle API</a>
+          </p>
+        </div>
 
-      <div class="accounts-list" id="accountsList">
-        <!-- Comptes générés par JS -->
+        <!-- Section Confidentialite -->
+        <div class="setting-group privacy-section">
+          <label>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;margin-right:6px;">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            Confidentialite & Donnees
+          </label>
+
+          <div class="privacy-info">
+            <h4>Ce que l'extension lit :</h4>
+            <ul>
+              <li><span class="privacy-icon">👤</span> Nom, titre et bio du profil</li>
+              <li><span class="privacy-icon">💼</span> Parcours professionnel (5 dernieres experiences)</li>
+              <li><span class="privacy-icon">📝</span> Derniers posts publics (3 max)</li>
+            </ul>
+
+            <h4>Ce qui est envoye a l'IA :</h4>
+            <ul>
+              <li><span class="privacy-icon">🤖</span> Les donnees ci-dessus pour generer l'analyse</li>
+              <li><span class="privacy-icon">🔒</span> Envoye via API securisee (HTTPS)</li>
+              <li><span class="privacy-icon">🗑️</span> Non stocke apres traitement</li>
+            </ul>
+
+            <h4>Ce qui est stocke :</h4>
+            <ul>
+              <li><span class="privacy-icon">💾</span> <strong>Uniquement si tu cliques "Importer"</strong></li>
+              <li><span class="privacy-icon">🎯</span> Stocke dans ton CRM personnel</li>
+              <li><span class="privacy-icon">🚫</span> Jamais de collecte automatique</li>
+            </ul>
+          </div>
+
+          <p class="setting-description" style="margin-top: 12px;">
+            <a href="https://sosprospection.com/confidentialite" target="_blank">Lire la politique de confidentialite complete</a>
+          </p>
+        </div>
       </div>
-
-      <p class="empty-state" id="emptyState" style="display: none;">
-        Aucun compte sauvegardé.<br>
-        Connectez-vous à Instagram puis cliquez sur + pour sauvegarder.
-      </p>
-    </section>
+    </div>
 
     <!-- Modal d'ajout -->
     <div class="modal" id="addModal">
       <div class="modal-content">
         <h3>Sauvegarder ce compte</h3>
-        <p class="modal-description">Donnez un nom à ce compte pour le retrouver facilement</p>
+        <p class="modal-description">Donnez un nom a ce compte pour le retrouver facilement</p>
         <input type="text" id="accountNameInput" placeholder="Ex: Mon compte perso" maxlength="30">
         <div class="modal-actions">
           <button class="btn btn-secondary" id="cancelAddBtn">Annuler</button>
@@ -67,6 +204,8 @@
     <!-- Footer -->
     <footer class="footer">
       <a href="https://sosprospection.com" target="_blank">sosprospection.com</a>
+      <span class="footer-separator">•</span>
+      <a href="#" id="privacyLink" class="privacy-link">Confidentialite</a>
     </footer>
   </div>
 
