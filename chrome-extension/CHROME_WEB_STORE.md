@@ -13,7 +13,7 @@
 
 #### Nom de l'extension
 ```
-Social Prospector - Analyse LinkedIn avec IA
+SOS Prospection - Analyse LinkedIn avec IA
 ```
 
 #### Description courte (132 caracteres max)
@@ -23,7 +23,7 @@ Importez des profils LinkedIn, analysez-les avec Claude AI et generez des messag
 
 #### Description complete
 ```
-Social Prospector est votre assistant de prospection intelligente sur LinkedIn.
+SOS Prospection est votre assistant de prospection intelligente sur LinkedIn.
 
 FONCTIONNALITES PRINCIPALES :
 

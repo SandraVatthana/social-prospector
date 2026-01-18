@@ -1,5 +1,5 @@
 /**
- * Social Prospector - Multi-Account Extension
+ * SOS Prospection - Multi-Account Extension
  * Background Service Worker
  *
  * Gère les sessions Instagram (cookies) pour le multi-compte
@@ -216,4 +216,4 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 // Log au démarrage
-console.log('Social Prospector Multi-Account extension loaded');
+console.log('SOS Prospection Multi-Account extension loaded');

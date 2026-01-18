@@ -341,7 +341,7 @@ social-prospector/
 
 ## 🎉 Projet terminé !
 
-Social Prospector est maintenant complet avec :
+SOS Prospection est maintenant complet avec :
 
 ✅ **Sprint 1** — Fondations (Auth, DB, Layout)
 ✅ **Sprint 2** — MA VOIX (Profils stylistiques)

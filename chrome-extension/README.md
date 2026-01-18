@@ -1,4 +1,4 @@
-# Social Prospector - Multi-Account Chrome Extension
+# SOS Prospection - Multi-Account Chrome Extension
 
 Extension Chrome pour gérer plusieurs comptes Instagram. Permet de sauvegarder les sessions (cookies) et de switcher facilement entre les comptes.
 

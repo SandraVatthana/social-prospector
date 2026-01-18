@@ -1,5 +1,5 @@
 /**
- * Social Prospector - Multi-Account Extension
+ * SOS Prospection - Multi-Account Extension
  * Background Service Worker
  *
  * Gère les sessions Instagram (cookies) pour le multi-compte
@@ -10,7 +10,7 @@ const INSTAGRAM_DOMAIN = '.instagram.com';
 const INSTAGRAM_URL = 'https://www.instagram.com';
 const LINKEDIN_DOMAIN = '.linkedin.com';
 
-// URL du backend Social Prospector (Netlify Functions)
+// URL du backend SOS Prospection (Netlify Functions)
 const BACKEND_URL = 'https://sosprospection.com';
 
 // Claude API configuration
@@ -275,8 +275,8 @@ async function getClaudeApiKey() {
 async function callClaudeAPI(prompt) {
   const apiKey = await getClaudeApiKey();
 
-  console.log('[Social Prospector] API Key presente:', !!apiKey);
-  console.log('[Social Prospector] API Key commence par:', apiKey ? apiKey.substring(0, 10) + '...' : 'N/A');
+  console.log('[SOS Prospection] API Key presente:', !!apiKey);
+  console.log('[SOS Prospection] API Key commence par:', apiKey ? apiKey.substring(0, 10) + '...' : 'N/A');
 
   if (!apiKey) {
     throw new Error('Cle API Claude non configuree. Allez dans les parametres de l\'extension pour l\'ajouter.');
@@ -302,7 +302,7 @@ async function callClaudeAPI(prompt) {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    console.log('[Social Prospector] Erreur API:', response.status, errorData);
+    console.log('[SOS Prospection] Erreur API:', response.status, errorData);
     if (response.status === 401) {
       throw new Error('Cle API invalide. Verifiez votre cle dans les parametres. (Status: 401)');
     } else if (response.status === 429) {
@@ -401,4 +401,4 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 // Log au démarrage
-console.log('Social Prospector extension loaded (Instagram + LinkedIn + Claude AI Analysis)');
+console.log('SOS Prospection extension loaded (Instagram + LinkedIn + Claude AI Analysis)');

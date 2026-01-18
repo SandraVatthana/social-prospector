@@ -1,5 +1,5 @@
 /**
- * Social Prospector - Multi-Account Extension
+ * SOS Prospection - Multi-Account Extension
  * Popup Script
  */
 

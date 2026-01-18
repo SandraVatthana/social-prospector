@@ -25,10 +25,10 @@
 
   function extractSearchResults() {
     var profiles = [];
-    console.log('[Social Prospector] Extracting search results...');
+    console.log('[SOS Prospection] Extracting search results...');
 
     var profileLinks = document.querySelectorAll('a[href*="/in/"]');
-    console.log('[Social Prospector] Found profile links:', profileLinks.length);
+    console.log('[SOS Prospection] Found profile links:', profileLinks.length);
 
     var seenUrls = {};
     profileLinks.forEach(function(link) {
@@ -66,7 +66,7 @@
       }
     });
 
-    console.log('[Social Prospector] Extracted profiles:', profiles.length);
+    console.log('[SOS Prospection] Extracted profiles:', profiles.length);
     return profiles;
   }
 
@@ -136,12 +136,12 @@
 
   function scrapeExperiences() {
     var experiences = [];
-    console.log('[Social Prospector] Scraping experiences...');
+    console.log('[SOS Prospection] Scraping experiences...');
 
     // Chercher la section Experience
     var expSection = document.querySelector('#experience');
     if (!expSection) {
-      console.log('[Social Prospector] Experience section not found');
+      console.log('[SOS Prospection] Experience section not found');
       return experiences;
     }
 
@@ -153,7 +153,7 @@
                    expParent.querySelectorAll('[data-view-name="profile-component-entity"]') ||
                    expParent.querySelectorAll('.pvs-list__paged-list-item');
 
-    console.log('[Social Prospector] Found experience items:', expItems.length);
+    console.log('[SOS Prospection] Found experience items:', expItems.length);
 
     expItems.forEach(function(item, index) {
       if (index >= 5) return; // Limiter aux 5 dernières expériences
@@ -186,7 +186,7 @@
       }
     });
 
-    console.log('[Social Prospector] Scraped experiences:', experiences.length);
+    console.log('[SOS Prospection] Scraped experiences:', experiences.length);
     return experiences;
   }
 
@@ -200,7 +200,7 @@
 
   async function scrapeLinkedInPosts() {
     var posts = [];
-    console.log('[Social Prospector] Scraping LinkedIn posts...');
+    console.log('[SOS Prospection] Scraping LinkedIn posts...');
 
     // Methode 1: Chercher la section Activite sur le profil
     var activitySection = document.querySelector('[data-section="activity"]') ||
@@ -223,7 +223,7 @@
       }
     }
 
-    console.log('[Social Prospector] Found post elements:', postElements.length);
+    console.log('[SOS Prospection] Found post elements:', postElements.length);
 
     postElements.forEach(function(post, index) {
       if (index < 3) {
@@ -254,11 +254,11 @@
       var seeAllLink = document.querySelector('a[href*="/recent-activity/"]') ||
                        document.querySelector('a[href*="/detail/recent-activity/"]');
       if (seeAllLink) {
-        console.log('[Social Prospector] Need to scroll to activity section for more posts');
+        console.log('[SOS Prospection] Need to scroll to activity section for more posts');
       }
     }
 
-    console.log('[Social Prospector] Scraped posts:', posts.length);
+    console.log('[SOS Prospection] Scraped posts:', posts.length);
     return posts;
   }
 
@@ -312,8 +312,8 @@
       var profileInfo = scrapeProfileInfo();
       var posts = await scrapeLinkedInPosts();
 
-      console.log('[Social Prospector] Profile info:', profileInfo);
-      console.log('[Social Prospector] Posts found:', posts.length);
+      console.log('[SOS Prospection] Profile info:', profileInfo);
+      console.log('[SOS Prospection] Posts found:', posts.length);
 
       if (posts.length === 0) {
         showAnalysisPanel({
@@ -339,7 +339,7 @@
       showAnalysisPanel(analysis, profileInfo);
 
     } catch (error) {
-      console.error('[Social Prospector] Erreur analyse:', error);
+      console.error('[SOS Prospection] Erreur analyse:', error);
       showAnalysisPanel({ error: error.message });
     } finally {
       if (btn) {
@@ -483,7 +483,7 @@
   // ============================================
 
   async function generateFullDM(angleData, profileInfo, btn) {
-    console.log('[Social Prospector] Generating DM with:', { angleData, profileInfo });
+    console.log('[SOS Prospection] Generating DM with:', { angleData, profileInfo });
 
     var prompt = 'Tu es un expert en prospection LinkedIn qui ecrit des DM ultra naturels.\n\nCONTEXTE :\n- Destinataire : ' + (profileInfo.name || 'cette personne') + '\n- Titre : ' + (profileInfo.headline || 'non renseigne') + '\n- Contexte : ' + (angleData.contexte || '') + '\n- Angle : ' + (angleData.angle || '') + '\n- Accroche suggeree : ' + (angleData.accroche || '') + '\n\nREGLES STRICTES :\n- MAX 200 caracteres (court = mieux)\n- Commence par une minuscule (ex: "salut" pas "Salut", "hey" pas "Hey")\n- Oublie parfois une virgule ou un point volontairement\n- PAS de pave de texte - 2-3 lignes MAX\n- Ton decontracte, comme un vrai humain qui ecrit vite\n- UNE seule question courte a la fin\n- JAMAIS de "J\'espere que tu vas bien" ou formules bateau\n- JAMAIS de pitch ou de demande directe\n- Utilise "tu" pas "vous"\n\nEXEMPLES DE BON FORMAT :\n"salut [prenom], j\'ai vu ton post sur [sujet] et ca m\'a parle. t\'as deja teste [chose] ?"\n"hey j\'ai lu ton truc sur [sujet], interessant. tu bosses sur quoi en ce moment"\n\nGenere UN SEUL message court et naturel (texte brut uniquement, sans guillemets) :';
 
@@ -492,7 +492,7 @@
 
     try {
       var dmText = await callClaudeAPI(prompt);
-      console.log('[Social Prospector] DM generated:', dmText);
+      console.log('[SOS Prospection] DM generated:', dmText);
 
       // Si la reponse est du JSON, extraire le texte
       if (typeof dmText === 'object') {
@@ -510,7 +510,7 @@
       showGeneratedDM(dmText, angleData, profileInfo);
 
     } catch (error) {
-      console.error('[Social Prospector] DM generation error:', error);
+      console.error('[SOS Prospection] DM generation error:', error);
       alert('Erreur : ' + error.message);
     } finally {
       btn.innerHTML = '✍️ Generer DM';
@@ -635,7 +635,7 @@
     var btn = document.createElement("button");
     btn.id = "sp-extract-btn";
     btn.className = "sp-btn sp-btn-primary";
-    btn.textContent = "Importer vers Social Prospector";
+    btn.textContent = "Importer vers SOS Prospection";
 
     // Bouton Analyser (seulement sur les profils)
     var analyzeBtn = null;
@@ -650,7 +650,7 @@
     var panel = document.createElement("div");
     panel.id = "sp-extract-panel";
     panel.className = "sp-panel sp-hidden";
-    panel.innerHTML = "<div class=sp-panel-header><h3>Social Prospector</h3><button id=sp-close-panel class=sp-btn-icon>x</button></div><div class=sp-panel-content><div id=sp-status><span class=sp-status-text>Analyse...</span></div><div id=sp-profiles-list></div><div id=sp-actions class=sp-hidden><button id=sp-select-all class=sp-btn>Tout</button><button id=sp-import-selected class=sp-btn>Importer</button></div></div>";
+    panel.innerHTML = "<div class=sp-panel-header><h3>SOS Prospection</h3><button id=sp-close-panel class=sp-btn-icon>x</button></div><div class=sp-panel-content><div id=sp-status><span class=sp-status-text>Analyse...</span></div><div id=sp-profiles-list></div><div id=sp-actions class=sp-hidden><button id=sp-select-all class=sp-btn>Tout</button><button id=sp-import-selected class=sp-btn>Importer</button></div></div>";
 
     // Container pour les boutons
     var btnContainer = document.createElement("div");
@@ -737,7 +737,7 @@
       '<li>URL du profil LinkedIn</li>' +
       '</ul>' +
       '<h4>📍 Ou seront-elles stockees ?</h4>' +
-      '<p>Dans votre CRM Social Prospector personnel, accessible uniquement par vous.</p>' +
+      '<p>Dans votre CRM SOS Prospection personnel, accessible uniquement par vous.</p>' +
       '</div>' +
       '<label class="sp-consent-checkbox">' +
       '<input type="checkbox" id="sp-consent-check">' +
@@ -820,7 +820,7 @@
   // ============================================
 
   function init() {
-    console.log("[Social Prospector] LinkedIn content script loaded with AI analysis");
+    console.log("[SOS Prospection] LinkedIn content script loaded with AI analysis");
     setTimeout(createFloatingButton, 1500);
     observePageChanges();
   }

@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Social Prospector",
+  "name": "SOS Prospection",
   "version": "2.0.0",
   "description": "Prospection intelligente sur Instagram et LinkedIn. Importez des profils, analysez-les avec l'IA, generez des messages personnalises.",
   "icons": {
@@ -28,7 +28,7 @@
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     },
-    "default_title": "Social Prospector"
+    "default_title": "SOS Prospection"
   },
   "background": {
     "service_worker": "background.js"

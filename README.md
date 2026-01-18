@@ -1,4 +1,4 @@
-# Social Prospector 🚀
+# SOS Prospection 🚀
 
 **La prospection qui parle avec ta vraie voix**
 
@@ -8,7 +8,7 @@ SaaS de prospection intelligente Instagram/TikTok avec génération de messages 
 
 ## 🎯 Concept
 
-Social Prospector permet aux entrepreneurs, freelances et agences de :
+SOS Prospection permet aux entrepreneurs, freelances et agences de :
 1. **Trouver** des prospects qualifiés sur Instagram et TikTok (via hashtags, lieux, profils similaires)
 2. **Analyser** automatiquement leurs profils avec l'IA
 3. **Générer** des messages d'approche ultra-personnalisés qui sonnent comme TOI (pas comme un robot)
@@ -128,7 +128,7 @@ L'onboarding capture l'essence de l'utilisateur en 6 étapes :
 ### 1. Donne ce ZIP à Claude Code avec ce prompt :
 
 ```
-Voici le projet Social Prospector, un SaaS de prospection Instagram/TikTok.
+Voici le projet SOS Prospection, un SaaS de prospection Instagram/TikTok.
 
 Stack : React + Tailwind (frontend), Node.js + Express (backend), Supabase, Apify, Claude API, Lemon Squeezy.
 

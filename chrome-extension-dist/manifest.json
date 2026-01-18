@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Social Prospector - Multi-Account",
+  "name": "SOS Prospection - Multi-Account",
   "version": "1.0.0",
   "description": "Gérez plusieurs comptes Instagram facilement. Switchez entre vos comptes en un clic.",
   "icons": {
@@ -24,7 +24,7 @@
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     },
-    "default_title": "Social Prospector Multi-Account"
+    "default_title": "SOS Prospection Multi-Account"
   },
   "background": {
     "service_worker": "background.js"

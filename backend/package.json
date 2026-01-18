@@ -1,7 +1,7 @@
 {
   "name": "social-prospector-backend",
   "version": "1.0.0",
-  "description": "Backend API for Social Prospector",
+  "description": "Backend API for SOS Prospection",
   "main": "src/index.js",
   "type": "module",
   "scripts": {

@@ -16,7 +16,7 @@ Ce sprint ajoute un système complet de facturation avec :
 ### Créer un compte et un store
 
 1. Allez sur [lemonsqueezy.com](https://lemonsqueezy.com) et créez un compte
-2. Créez un Store pour Social Prospector
+2. Créez un Store pour SOS Prospection
 3. Dans Settings > API, générez une **API Key**
 
 ### Créer les produits

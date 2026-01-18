@@ -373,7 +373,7 @@ function DiscernementSection() {
             Discernement avant tout
           </h2>
           <p className="text-xl text-warm-600 max-w-2xl mx-auto">
-            Social Prospector analyse le profil et les derniers contenus pour te dire exactement quoi faire :
+            SOS Prospection analyse le profil et les derniers contenus pour te dire exactement quoi faire :
           </p>
         </motion.div>
 

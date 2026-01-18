@@ -1,4 +1,4 @@
-# Onboarding Profond — Social Prospector
+# Onboarding Profond — SOS Prospection
 
 ## Vue d'ensemble
 
@@ -228,7 +228,7 @@ L'IA génère un profil complet qui sera utilisé pour la génération de messag
 
 ## Design
 
-- **Couleurs** : Palette Social Prospector (brand-500, accent-500, warm-*)
+- **Couleurs** : Palette SOS Prospection (brand-500, accent-500, warm-*)
 - **Cards** : Fond blanc, border-radius 3xl, shadow-2xl
 - **Boutons suggestions** : Chips avec border-2, hover states
 - **Progress** : Dots avec animation de largeur
@@ -257,4 +257,4 @@ Le composant est **autonome** et prêt à l'emploi. Il suffit de :
 3. Ajouter les méthodes API
 4. Intégrer la vérification du statut d'onboarding dans l'app
 
-Le style utilise les mêmes classes Tailwind que le reste de Social Prospector (warm-*, brand-*, accent-*).
+Le style utilise les mêmes classes Tailwind que le reste de SOS Prospection (warm-*, brand-*, accent-*).

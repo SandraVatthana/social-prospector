@@ -1,7 +1,7 @@
 {
   "name": "social-prospector-extension",
   "version": "2.0.0",
-  "description": "Extension Chrome Social Prospector - Prospection LinkedIn avec IA",
+  "description": "Extension Chrome SOS Prospection - Prospection LinkedIn avec IA",
   "scripts": {
     "icons": "node generate-icons.js",
     "package": "node scripts/package.js",

@@ -1,6 +1,6 @@
 /**
  * Routes pour l'ICP (Ideal Customer Profile)
- * Social Prospector - ICP Extraction & Matching
+ * SOS Prospection - ICP Extraction & Matching
  */
 
 import express from 'express';

@@ -1,6 +1,6 @@
 /**
  * Routes pour la Catégorisation IA des Réponses
- * Social Prospector - CRM Dashboard
+ * SOS Prospection - CRM Dashboard
  */
 
 import express from 'express';

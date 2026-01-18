@@ -1,6 +1,6 @@
 /**
  * Routes pour l'Export Multi-Formats
- * Social Prospector - Export CSV, Markdown, JSON
+ * SOS Prospection - Export CSV, Markdown, JSON
  */
 
 import express from 'express';
