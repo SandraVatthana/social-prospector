@@ -35,7 +35,7 @@ export default function MobileBlocker() {
         {/* Logo */}
         <div className="flex items-center justify-center gap-2 text-brand-600">
           <img
-            src="/logo-square-100.png"
+            src="/logofinal.png"
             alt="Prospection par DM"
             className="w-8 h-8 rounded-lg"
           />

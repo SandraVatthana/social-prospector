@@ -164,19 +164,49 @@ export default function MessageGenerator({
       {/* Zone de message généré */}
       {generatedMessage && (
         <div className="space-y-4">
-          {/* Badge méthode utilisée */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-warm-500">Méthode utilisée :</span>
-              <span className="text-sm font-medium text-warm-700 flex items-center gap-1">
+          {/* Badges méthode + profil Eisenberg */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Méthode utilisée */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-warm-50 rounded-lg">
+              <span className="text-xs text-warm-500">Méthode :</span>
+              <span className="text-xs font-medium text-warm-700">
                 {APPROACH_METHODS[generatedMessage.approach_method]?.name || 'Mini-AIDA'}
               </span>
             </div>
+
+            {/* Profil Eisenberg détecté */}
+            {generatedMessage.buyer_profile && (
+              <div className="group relative flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-warm-50 to-warm-100 rounded-lg border border-warm-200">
+                <span className="text-xs text-warm-500">Profil :</span>
+                <span className="text-xs font-medium text-warm-700 flex items-center gap-1">
+                  {generatedMessage.buyer_profile === 'competitive' && '🔴 Compétitif'}
+                  {generatedMessage.buyer_profile === 'spontaneous' && '🟡 Spontané'}
+                  {generatedMessage.buyer_profile === 'methodical' && '🔵 Méthodique'}
+                  {generatedMessage.buyer_profile === 'humanist' && '🟢 Humaniste'}
+                </span>
+
+                {/* Tooltip avec les signaux détectés */}
+                {generatedMessage.buyer_profile_signals?.length > 0 && (
+                  <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-10">
+                    <div className="bg-warm-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg max-w-xs">
+                      <p className="font-medium mb-1">Signaux détectés :</p>
+                      <ul className="list-disc list-inside space-y-0.5">
+                        {generatedMessage.buyer_profile_signals.map((signal, idx) => (
+                          <li key={idx} className="text-warm-200">{signal}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Bouton changer méthode */}
             <button
               onClick={() => setShowMethodSelector(!showMethodSelector)}
-              className="text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1"
+              className="ml-auto text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1"
             >
-              Changer de méthode
+              Changer
               <ChevronDown className={`w-3 h-3 transition-transform ${showMethodSelector ? 'rotate-180' : ''}`} />
             </button>
           </div>

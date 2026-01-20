@@ -105,6 +105,132 @@ Exemple :
 };
 
 /**
+ * Configuration des profils d'acheteurs (Eisenberg Brothers)
+ * L'IA détecte automatiquement le profil probable et adapte le message
+ */
+export const BUYER_PROFILES = {
+  competitive: {
+    id: 'competitive',
+    name: 'Compétitif',
+    emoji: '🔴',
+    description: 'Veut des résultats, vite, avec des preuves',
+    signals: [
+      'Bio avec chiffres, résultats, métriques',
+      '"CEO", "Founder", "X en Y jours/mois"',
+      'Posts orientés performance, succès, croissance',
+      'Vocabulaire : scale, ROI, objectifs, résultats',
+      'Peu d\'emojis, ton direct et professionnel'
+    ],
+    messaging: {
+      tone: 'Direct, factuel, orienté résultats',
+      do: [
+        'Aller droit au but',
+        'Mentionner des résultats concrets (chiffres si possible)',
+        'Montrer que tu respectes son temps',
+        'Poser une question précise et actionnable'
+      ],
+      avoid: [
+        'Longs discours émotionnels',
+        'Tournures vagues ou floues',
+        'Trop de contexte avant d\'arriver au point',
+        'Excès d\'emojis ou ton trop casual'
+      ],
+      example: 'J\'ai vu que tu as scalé à [X]. La plupart bloquent à [Y]. Tu as trouvé quoi comme levier ?'
+    }
+  },
+
+  spontaneous: {
+    id: 'spontaneous',
+    name: 'Spontané',
+    emoji: '🟡',
+    description: 'Achète au coup de cœur, veut du fun et se projeter',
+    signals: [
+      'Beaucoup d\'emojis, ton enthousiaste',
+      'Bio créative, originale, personnelle',
+      'Posts lifestyle, voyage, expériences',
+      'Vocabulaire : vibes, énergie, passion, kiff',
+      'Photos colorées, esthétique soignée'
+    ],
+    messaging: {
+      tone: 'Enthousiaste, léger, inspirant',
+      do: [
+        'Créer une connexion émotionnelle rapide',
+        'Utiliser des emojis (avec modération)',
+        'Parler de vision, de possibilités',
+        'Montrer que ça peut être fun/excitant'
+      ],
+      avoid: [
+        'Cadre trop rigide ou processus complexes',
+        'Ton trop corporate ou froid',
+        'Listes de contraintes',
+        'Messages trop longs ou détaillés'
+      ],
+      example: 'Ton univers est canon ✨ J\'adore l\'énergie qui se dégage de [élément]. C\'est quoi qui t\'inspire le plus en ce moment ?'
+    }
+  },
+
+  methodical: {
+    id: 'methodical',
+    name: 'Méthodique',
+    emoji: '🔵',
+    description: 'Vérifie tout, prend son temps, veut être sûr',
+    signals: [
+      'Bio détaillée, structurée, complète',
+      'Certifications, diplômes, expertise affichée',
+      'Posts éducatifs, how-to, processus',
+      'Vocabulaire : méthode, étapes, analyse, stratégie',
+      'Contenu long et approfondi'
+    ],
+    messaging: {
+      tone: 'Posé, précis, respectueux de son processus',
+      do: [
+        'Être spécifique et factuel',
+        'Montrer que tu as vraiment analysé son profil',
+        'Laisser de l\'espace pour réfléchir',
+        'Poser une question qui invite à l\'analyse'
+      ],
+      avoid: [
+        'Urgence artificielle ("offre limitée")',
+        'Promesses trop belles pour être vraies',
+        'Pression ou relances agressives',
+        'Généralités sans substance'
+      ],
+      example: 'J\'ai lu ton article sur [sujet]. Ta partie sur [détail précis] m\'a interpellé. Comment t\'en es arrivée à cette approche ?'
+    }
+  },
+
+  humanist: {
+    id: 'humanist',
+    name: 'Humaniste',
+    emoji: '🟢',
+    description: 'Achète sur la confiance et l\'alignement de valeurs',
+    signals: [
+      'Valeurs affichées dans la bio (impact, mission)',
+      'Posts sur la communauté, l\'entraide, le sens',
+      'Vocabulaire : alignement, authentique, valeurs, impact',
+      'Engagement fort avec sa communauté',
+      'Ton bienveillant et inclusif'
+    ],
+    messaging: {
+      tone: 'Chaleureux, authentique, orienté valeurs',
+      do: [
+        'Créer un lien humain sincère',
+        'Montrer tes valeurs communes',
+        'Être transparent et authentique',
+        'Poser une question sur son "pourquoi"'
+      ],
+      avoid: [
+        'Pression commerciale',
+        'Environnement compétitif',
+        'Ton transactionnel',
+        'Focus uniquement sur les résultats business'
+      ],
+      example: 'Ce que tu partages sur [valeur/mission] résonne beaucoup avec moi. C\'est quoi qui t\'a amenée à te lancer là-dedans ?'
+    }
+  }
+};
+
+/**
  * Génère le prompt système pour la génération de message
  */
 function buildSystemPrompt(voiceProfile, method) {
@@ -113,10 +239,14 @@ function buildSystemPrompt(voiceProfile, method) {
                           voiceProfile?.tutoiement === 'Jamais' ? 'Tu vouvoies TOUJOURS, jamais de tutoiement.' :
                           'Tu tutoies par défaut (style Instagram/TikTok).';
 
-  return `Tu es un expert en prospection personnalisée sur les réseaux sociaux (Instagram/TikTok).
+  return `Tu es un expert en CONVERSATION AUTHENTIQUE sur les réseaux sociaux (Instagram/TikTok).
 
 ## TON RÔLE
-Générer un message de prospection court, authentique et personnalisé qui donne envie de répondre.
+Générer un PREMIER message qui ressemble à celui d'une vraie personne curieuse — PAS à un message de prospection.
+
+## MINDSET ESSENTIEL
+Imagine que tu découvres quelqu'un d'intéressant sur Instagram. Tu as vraiment regardé son profil, ses posts. Tu veux engager une conversation naturelle.
+Ce n'est PAS un pitch. C'est une conversation humaine qui PEUT mener à quelque chose plus tard, mais pour l'instant tu veux juste connecter.
 
 ## FORME D'ADRESSE
 ${tutoiementStyle}
@@ -135,24 +265,82 @@ Voici le profil "MA VOIX" de l'expéditeur. Tu dois écrire EXACTEMENT comme cet
 ## MÉTHODE D'APPROCHE : ${APPROACH_METHODS[method]?.name || 'Mini-AIDA'}
 ${APPROACH_METHODS[method]?.template || APPROACH_METHODS.mini_aida.template}
 
+## DÉTECTION ÉMOTIONNELLE (CONDITIONNELLE)
+UNIQUEMENT si l'offre de l'utilisateur aide directement avec des problématiques humaines/entrepreneuriales (coaching, consulting, accompagnement, formation mindset/productivité, thérapie, etc.) :
+
+Analyse discrètement la bio et les posts du prospect pour détecter d'éventuels signaux :
+- Charge mentale, fatigue, surmenage
+- Syndrome de l'imposteur, doutes
+- Solitude entrepreneuriale
+- Perfectionnisme paralysant
+- Dispersion, TDAH-like
+
+Si tu détectes ces signaux ET que l'offre est pertinente pour y répondre :
+- N'en fais JAMAIS mention explicite dans le message
+- Intègre subtilement des formulations INCLUSIVES et BIENVEILLANTES :
+  → "Beaucoup de [profil_cible] vivent ça..."
+  → "Si tu te reconnais dans..."
+  → "C'est normal de..."
+- Le ton reste léger, jamais diagnostic ni jugement
+- La personne doit se sentir comprise, pas "profilée"
+
+Si l'offre n'a PAS de lien avec ces problématiques (produits physiques, services techniques sans lien humain, etc.) :
+- IGNORE cette section
+- Reste sur une approche factuelle basée sur les centres d'intérêt du prospect
+
+## DÉTECTION DU PROFIL D'ACHETEUR (Méthode Eisenberg)
+Analyse le profil et les posts du prospect pour identifier son profil d'acheteur probable, puis ADAPTE ton message en conséquence.
+
+🔴 COMPÉTITIF - Signaux : chiffres dans la bio, "CEO/Founder", résultats affichés, ton direct, peu d'emojis
+   → Message : Direct, factuel, va droit au but. Respecte son temps. Question précise et actionnable.
+   → Évite : Longs discours, flou, trop d'émotions, tournures vagues.
+
+🟡 SPONTANÉ - Signaux : beaucoup d'emojis, bio créative/fun, lifestyle, "vibes/énergie/passion"
+   → Message : Enthousiaste, léger, connexion émotionnelle rapide. Emojis OK (avec modération).
+   → Évite : Cadre rigide, ton froid/corporate, process complexes.
+
+🔵 MÉTHODIQUE - Signaux : bio détaillée/structurée, certifications, posts éducatifs/how-to, contenu long
+   → Message : Posé, précis, spécifique. Montre que tu as VRAIMENT analysé. Laisse-lui le temps.
+   → Évite : Urgence artificielle, promesses trop belles, pression, généralités.
+
+🟢 HUMANISTE - Signaux : valeurs/mission affichées, posts sur l'impact/communauté, ton bienveillant
+   → Message : Chaleureux, authentique, orienté valeurs. Question sur son "pourquoi".
+   → Évite : Pression, compétition, ton transactionnel, focus uniquement business.
+
+IMPORTANT : Tu dois identifier LE profil dominant et adapter ton message. Ne mentionne JAMAIS le profil explicitement.
+
 ## RÈGLES STRICTES
 1. Maximum 4 phrases (vraiment court !)
-2. Termine TOUJOURS par une question ouverte
-3. Mentionne un élément SPÉCIFIQUE du prospect (pas de générique)
-4. INTERDIT : "j'adore ton contenu", "ton profil est super", phrases bateau
-5. INTERDIT : Commencer par "Hey" + emoji (trop commercial)
-6. Pas de points d'exclamation excessifs
-7. Sois naturel comme dans une vraie conversation
+2. Termine par une question ouverte sur ELLE/LUI (pas sur ton offre)
+3. Mentionne un élément SPÉCIFIQUE et PRÉCIS de son profil/post (prouve que tu as regardé)
+4. Le message doit pouvoir être envoyé par quelqu'un qui n'a RIEN à vendre
+
+INTERDIT (trop commercial/pushy):
+❌ "J'adore ton contenu", "Ton profil est super" (générique)
+❌ Commencer par "Hey" + emoji
+❌ Points d'exclamation excessifs
+❌ "Tu veux que je te montre ?", "Ça te dit qu'on en parle ?"
+❌ "J'aide les X à...", "Je propose...", "Mon expertise..."
+❌ Tout CTA qui pousse vers une action commerciale
+❌ Pointer directement un signal émotionnel détecté
+
+OBLIGATOIRE (naturel/humain):
+✅ Référence à un VRAI détail spécifique (post, phrase de bio, projet)
+✅ Curiosité sincère sur ce qu'ELLE fait, pas ce que TU fais
+✅ Ton conversationnel comme un DM à une connaissance
+✅ Question ouverte qui invite à partager son expérience
 
 ## FORMAT DE RÉPONSE (JSON STRICT)
 {
   "message": "Le message généré ici",
   "approach_method": "${method}",
+  "buyer_profile": "competitive | spontaneous | methodical | humanist",
+  "buyer_profile_signals": ["signal 1 détecté", "signal 2 détecté"],
   "hook_type": "post_reference | story_reference | common_point | direct_offer | question | compliment",
   "variables_used": {
     "element_specifique": "ce que tu as utilisé du prospect",
-    "probleme_identifie": "le pain point",
-    "solution_proposee": "ce que tu proposes"
+    "probleme_identifie": "le pain point (si détecté)",
+    "adaptation_profil": "comment tu as adapté le ton au profil détecté"
   }
 }`;
 }
@@ -178,7 +366,9 @@ ${prospect.ai_analysis || prospect.analysis || 'Pas d\'analyse disponible'}
 ${voiceProfile?.offer || voiceProfile?.value_proposition || 'Service de prospection personnalisée'}
 
 ## TA MISSION
-Génère un message de prospection en utilisant la méthode indiquée. Le message doit être ultra-personnalisé et donner envie de répondre.
+1. Analyse le profil pour identifier le type d'acheteur (Compétitif/Spontané/Méthodique/Humaniste)
+2. Adapte ton ton et ton approche à ce profil
+3. Génère un message ultra-personnalisé qui donne envie de répondre
 
 Réponds UNIQUEMENT avec le JSON demandé, rien d'autre.`;
 }
@@ -316,10 +506,26 @@ export function getAvailableMethods() {
   }));
 }
 
+/**
+ * Liste des profils d'acheteurs (Eisenberg) pour le frontend
+ */
+export function getBuyerProfiles() {
+  return Object.values(BUYER_PROFILES).map(profile => ({
+    id: profile.id,
+    name: profile.name,
+    emoji: profile.emoji,
+    description: profile.description,
+    signals: profile.signals,
+    messaging: profile.messaging,
+  }));
+}
+
 export default {
   APPROACH_METHODS,
+  BUYER_PROFILES,
   generateMessage,
   generateMultipleVersions,
   getRecommendedMethod,
   getAvailableMethods,
+  getBuyerProfiles,
 };

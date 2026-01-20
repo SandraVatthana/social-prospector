@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ChevronLeft, ChevronRight, Mic, Search, Users, MessageSquare, AlertTriangle, PartyPopper, Reply, Sparkles, Lock, Instagram } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Mic, Search, Users, MessageSquare, AlertTriangle, PartyPopper, Reply, Sparkles, Lock, Instagram, Inbox, Target, BarChart3 } from 'lucide-react';
 
 const STORAGE_KEY = 'social_prospector_tour_completed';
 
@@ -59,6 +59,24 @@ const TOUR_STEPS = [
     important: true,
   },
   {
+    id: 'crm-dashboard',
+    target: '[data-tour="crm"]',
+    title: 'CRM Dashboard',
+    content: 'Ta vue Kanban pour gérer tes prospects ! Organise-les par catégorie : 🔥 Lead chaud, 🟡 Lead tiède, 📅 Demande RDV, ❓ Question... Glisse-dépose pour changer de statut rapidement.',
+    icon: Inbox,
+    position: 'right',
+    important: true,
+  },
+  {
+    id: 'icp-scoring',
+    target: '[data-tour="icp"]',
+    title: 'ICP & Scoring',
+    content: 'L\'IA analyse tes meilleurs clients pour créer ton Profil Client Idéal (ICP). Chaque prospect reçoit un score de compatibilité. Concentre-toi sur les prospects avec le meilleur score !',
+    icon: Target,
+    position: 'right',
+    important: true,
+  },
+  {
     id: 'status',
     target: '[data-tour="status"]',
     title: 'Statuts',
@@ -81,6 +99,14 @@ const TOUR_STEPS = [
     title: 'Messages',
     content: 'Tous tes messages générés. Utilise le bouton "Copier & ouvrir Instagram" pour copier le message et ouvrir directement les DMs du prospect !',
     icon: MessageSquare,
+    position: 'right',
+  },
+  {
+    id: 'analytics',
+    target: '[data-tour="analytics"]',
+    title: 'Analytics',
+    content: 'Suis tes performances : taux de réponse, messages envoyés, conversions... Identifie ce qui fonctionne le mieux pour optimiser ta prospection !',
+    icon: BarChart3,
     position: 'right',
   },
   {

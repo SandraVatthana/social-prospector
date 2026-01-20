@@ -794,6 +794,15 @@ function ProspectDetailPanel({ prospect, onClose, onStatusChange, onGenerateMess
       />
 
       <div className="fixed lg:relative inset-x-0 bottom-0 lg:inset-auto lg:w-96 card p-6 space-y-6 lg:sticky lg:top-6 max-h-[80vh] lg:max-h-[calc(100vh-6rem)] overflow-y-auto z-50 rounded-t-2xl lg:rounded-xl">
+
+      {/* Loading banner */}
+      {loadingPosts && (
+        <div className="flex items-center gap-3 p-3 bg-brand-50 border border-brand-100 rounded-xl text-brand-700 -mt-2 mb-2">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span className="text-sm font-medium">Patientez un instant, chargement du profil...</span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">

@@ -64,6 +64,14 @@ router.get('/approach-methods', requireAuth, (req, res) => {
 });
 
 /**
+ * GET /api/messages/buyer-profiles
+ * Liste les profils d'acheteurs Eisenberg
+ */
+router.get('/buyer-profiles', requireAuth, (req, res) => {
+  res.json(formatResponse(messageGenerator.getBuyerProfiles()));
+});
+
+/**
  * GET /api/messages/approach-recommendation
  * Obtient la méthode recommandée basée sur les stats de l'utilisateur
  */

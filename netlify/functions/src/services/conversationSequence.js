@@ -388,33 +388,24 @@ RÈGLES:
   if (goal === 'network') {
     prompt += `
 
-IMPORTANT - OBJECTIF "CRÉER UNE RELATION":
-- C'est une approche 100% RELATIONNELLE, PAS commerciale
-- INTERDIT: parler de tes services, ton offre, ce que tu fais
-- INTERDIT: "je propose", "j'aide les X à", "mon expertise"
+⚠️ MODE "CRÉER UNE RELATION" - ZÉRO VENTE ⚠️
 
-FINS DE MESSAGE INTERDITES (CTA commerciaux):
-- "Tu veux que je te montre ?"
-- "On en discute ?"
-- "Je t'envoie plus d'infos ?"
-- "Ça te dit qu'on en parle ?"
-- "Je peux t'aider avec ça"
-- Toute proposition de call/échange/démo
+Tu n'es PAS en train de prospecter. Tu continues une conversation comme un humain curieux.
 
-FINS DE MESSAGE OBLIGATOIRES (questions ouvertes sur ELLE):
-- "Qu'en penses-tu ?"
-- "Ça te parle ?"
-- "Comment tu gères ça toi ?"
-- "T'en es où sur ce sujet ?"
-- "C'est quoi ton approche ?"
-- Questions sur SON expérience, SON avis, SES projets
+ABSOLUMENT INTERDIT:
+❌ Mentionner ton activité, tes services, ton offre
+❌ "J'aide les X à...", "Je propose...", "Mon truc c'est..."
+❌ "Tu veux que je te montre ?", "On en discute ?", "Je t'envoie des infos ?"
+❌ Proposer un call, un échange, une démo
+❌ Toute phrase qui sous-entend que tu veux quelque chose d'elle
 
-STRUCTURE DU MESSAGE:
-1. Accroche personnalisée (référence à un VRAI contenu récent)
-2. Point commun OU compliment sincère et spécifique
-3. Question ouverte sur SON expérience/avis (pas sur ton offre)
+CE QUE TU DOIS FAIRE:
+✅ Répondre naturellement à ce qu'elle a dit
+✅ Montrer un intérêt sincère pour SON expérience
+✅ Poser des questions sur ELLE, pas sur tes services
+✅ Écrire comme une vraie conversation entre humains
 
-Le message doit donner envie de répondre par curiosité, pas par intérêt commercial.`;
+Le message doit être IMPOSSIBLE à distinguer d'une conversation naturelle.`;
   }
 
   if (voiceProfile) {
@@ -511,33 +502,35 @@ RÈGLES:
   if (goal === 'network') {
     prompt += `
 
-IMPORTANT - OBJECTIF "CRÉER UNE RELATION":
-- Ce n'est PAS de la prospection commerciale, c'est du NETWORKING
-- Tu veux juste créer une connexion authentique avec cette personne
-- INTERDIT: mentionner tes services, ton offre, ton expertise
-- INTERDIT: "j'aide les X à", "je propose", "je fais du"
+⚠️ MODE "CRÉER UNE RELATION" - ZÉRO VENTE ⚠️
 
-FINS DE MESSAGE INTERDITES (CTA commerciaux):
-- "Tu veux que je te montre ?"
-- "On en discute ?"
-- "Je t'envoie plus d'infos ?"
-- "Ça te dit qu'on en parle ?"
-- "Je peux t'aider avec ça"
-- Toute proposition de call/échange/démo
+Tu n'es PAS en train de prospecter. Tu es quelqu'un qui a VRAIMENT regardé ce profil et qui veut juste échanger, comme un humain curieux.
 
-FINS DE MESSAGE OBLIGATOIRES (questions ouvertes sur ELLE):
-- "Qu'en penses-tu ?"
-- "Ça te parle ?"
-- "Comment tu gères ça toi ?"
-- "T'en es où sur ce sujet ?"
-- "C'est quoi ton approche ?"
+MINDSET: Imagine que tu découvres quelqu'un d'intéressant à une soirée. Tu veux juste discuter, pas vendre.
 
-STRUCTURE DU MESSAGE:
-1. Accroche personnalisée (référence à un VRAI contenu récent)
-2. Point commun OU compliment sincère et spécifique
-3. Question ouverte sur SON expérience/avis (pas sur ton offre)
+ABSOLUMENT INTERDIT:
+❌ Mentionner ton activité, tes services, ton offre, ton expertise
+❌ "J'aide les X à...", "Je propose...", "Mon truc c'est..."
+❌ Toute forme de pitch même subtil
+❌ "Tu veux que je te montre ?", "On en discute ?", "Je t'envoie des infos ?"
+❌ Proposer un call, un échange, une démo, quoi que ce soit
+❌ Phrases qui sous-entendent que tu veux quelque chose d'elle
+❌ "Ça pourrait t'intéresser", "Si jamais tu as besoin"
 
-Le message doit ressembler à ce qu'un ami curieux écrirait.`;
+CE QUE TU DOIS FAIRE:
+✅ Référencer un VRAI élément spécifique de son profil/post récent
+✅ Montrer que tu as vraiment regardé son contenu (détail précis)
+✅ Exprimer une curiosité sincère sur ce qu'ELLE fait/pense
+✅ Poser une question ouverte sur SON expérience, SON avis, SES projets
+✅ Écrire comme si tu parlais à une future amie, pas une future cliente
+
+EXEMPLES DE FINS DE MESSAGE:
+- "Comment t'es arrivée à cette approche ?"
+- "Ça fait longtemps que tu bosses sur ce sujet ?"
+- "C'est quoi le truc qui t'a le plus marquée là-dedans ?"
+- "T'as des ressources que tu recommandes ?"
+
+Le message doit être IMPOSSIBLE à distinguer d'un vrai message spontané d'une personne curieuse.`;
   }
 
   if (voiceProfile) {

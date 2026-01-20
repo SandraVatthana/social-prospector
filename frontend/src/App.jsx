@@ -23,7 +23,7 @@ import { ClientProvider } from './contexts/ClientContext';
 import { SidebarProvider } from './contexts/SidebarContext';
 import { ToastProvider } from './components/ui/Toast';
 import WelcomeModal from './components/ui/WelcomeModal';
-import FAQChatbot from './components/ui/FAQChatbot';
+import TawkTo from './components/ui/TawkTo';
 import CookieConsent from './components/ui/CookieConsent';
 
 // Pages légales et publiques
@@ -188,11 +188,11 @@ function AppContent() {
           onNavigate={handleTourNavigate}
         />
 
-        {/* Pop-up de bienvenue (bêta) */}
+        {/* Pop-up de bienvenue */}
         <WelcomeModal />
 
-        {/* Chatbot FAQ flottant */}
-        <FAQChatbot />
+        {/* Chat Tawk.to */}
+        <TawkTo />
       </div>
     </TourContext.Provider>
   );

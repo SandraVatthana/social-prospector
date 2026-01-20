@@ -30,9 +30,9 @@ const navigation = [
 ];
 
 const insights = [
-  { name: 'CRM Dashboard', href: '/crm', icon: Inbox, badge: 'NEW' },
-  { name: 'ICP & Scoring', href: '/icp', icon: Target, badge: 'NEW' },
-  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
+  { name: 'CRM Dashboard', href: '/crm', icon: Inbox, badge: 'NEW', tourId: 'crm' },
+  { name: 'ICP & Scoring', href: '/icp', icon: Target, badge: 'NEW', tourId: 'icp' },
+  { name: 'Analytics', href: '/analytics', icon: BarChart3, tourId: 'analytics' },
   { name: 'Analytics Agence', href: '/analytics-agence', icon: Building2, badge: 'PRO', agencyOnly: true },
   { name: 'Mes Clients', href: '/clients', icon: Users, badge: 'PRO', agencyOnly: true },
   { name: 'Abonnement', href: '/billing', icon: CreditCard, disabled: true, badge: 'Bientôt' },
@@ -91,7 +91,7 @@ export default function Sidebar({ user, prospectsCount = 0, messagesCount = 0 })
       <div className="p-6 border-b border-warm-100">
         <div className="flex items-center gap-3">
           <img
-            src="/logo-square-100.png"
+            src="/logofinal.png"
             alt="Prospection par DM"
             className="w-10 h-10 rounded-xl"
           />
@@ -169,6 +169,7 @@ export default function Sidebar({ user, prospectsCount = 0, messagesCount = 0 })
             <NavLink
               key={item.name}
               to={item.href}
+              data-tour={item.tourId}
               onClick={handleNavClick}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
