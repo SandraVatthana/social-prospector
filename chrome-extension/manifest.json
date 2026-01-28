@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "SOS Prospection",
-  "version": "2.0.0",
-  "description": "Prospection intelligente sur Instagram et LinkedIn. Importez des profils, analysez-les avec l'IA, generez des messages personnalises.",
+  "version": "3.1.0",
+  "description": "Prospection intelligente sur Instagram, LinkedIn et TikTok. Importez des profils, generez des messages personnalises via l'app SOS Prospection.",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -19,7 +19,9 @@
   "host_permissions": [
     "*://*.instagram.com/*",
     "*://*.linkedin.com/*",
-    "https://api.anthropic.com/*"
+    "*://*.tiktok.com/*",
+    "https://sosprospection.com/*",
+    "http://localhost:5178/*"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -36,15 +38,32 @@
   "content_scripts": [
     {
       "matches": ["*://*.linkedin.com/*"],
-      "js": ["content-linkedin.js"],
-      "css": ["content-linkedin.css"],
+      "js": ["content-common.js", "content-linkedin.js"],
+      "css": ["content-common.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["*://*.instagram.com/*"],
+      "js": ["content-common.js", "content-instagram.js"],
+      "css": ["content-common.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["*://*.tiktok.com/*"],
+      "js": ["content-common.js", "content-tiktok.js"],
+      "css": ["content-common.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://sosprospection.com/*", "http://localhost:5178/*", "http://localhost:5173/*"],
+      "js": ["content-app.js"],
       "run_at": "document_idle"
     }
   ],
   "web_accessible_resources": [
     {
       "resources": ["icons/*"],
-      "matches": ["*://*.linkedin.com/*", "*://*.instagram.com/*"]
+      "matches": ["*://*.linkedin.com/*", "*://*.instagram.com/*", "*://*.tiktok.com/*"]
     }
   ]
 }

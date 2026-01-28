@@ -92,6 +92,12 @@ body {
   background: linear-gradient(135deg, #f0f7fb 0%, #ffffff 100%);
 }
 
+.platform-tab.active[data-platform="tiktok"] {
+  border-color: #ff0050;
+  color: #ff0050;
+  background: linear-gradient(135deg, #fff5f8 0%, #ffffff 100%);
+}
+
 .platform-tab svg {
   width: 16px;
   height: 16px;
@@ -536,6 +542,35 @@ body {
 }
 
 .api-status-dot.disconnected {
+  background: #ff3b30;
+}
+
+/* App Auth Status */
+.app-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.app-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #8e8e8e;
+  flex-shrink: 0;
+}
+
+.app-status-dot.connected {
+  background: #00C853;
+  box-shadow: 0 0 8px rgba(0,200,83,0.4);
+}
+
+.app-status-dot.disconnected {
   background: #ff3b30;
 }
 

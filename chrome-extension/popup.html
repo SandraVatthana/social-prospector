@@ -44,6 +44,12 @@
         </svg>
         LinkedIn
       </button>
+      <button class="platform-tab" data-platform="tiktok">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/>
+        </svg>
+        TikTok
+      </button>
     </div>
 
     <!-- Instagram Content -->
@@ -89,32 +95,57 @@
             <circle cx="4" cy="4" r="2"/>
           </svg>
         </div>
-        <h3>Prepare ta conversation</h3>
-        <p>Va sur un profil LinkedIn et clique sur <strong>"Analyser"</strong> pour :</p>
+        <h3>Prospecte sur LinkedIn</h3>
+        <p>Va sur un profil LinkedIn pour :</p>
         <ul class="linkedin-features">
           <li>
-            <span class="feature-icon">📝</span>
-            <span>Comprendre ses sujets et son style</span>
-          </li>
-          <li>
-            <span class="feature-icon">💬</span>
-            <span>Idees pour engager naturellement</span>
+            <span class="feature-icon">📥</span>
+            <span><strong>Importer</strong> le profil dans ton CRM</span>
           </li>
           <li>
             <span class="feature-icon">✉️</span>
-            <span>Accroches pour demarrer une vraie conversation</span>
+            <span><strong>Preparer un DM</strong> personnalise via l'app</span>
+          </li>
+          <li>
+            <span class="feature-icon">📋</span>
+            <span><strong>Import en masse</strong> depuis les recherches</span>
           </li>
         </ul>
         <div class="linkedin-tip">
           <span class="tip-icon">💡</span>
-          <span>L'IA prepare, toi tu converses. Scrolle sur le profil pour charger les posts avant d'analyser.</span>
+          <span>Scrolle sur le profil pour charger les posts avant d'importer.</span>
         </div>
       </div>
+    </div>
 
-      <!-- API Status -->
-      <div class="api-status" id="apiStatus">
-        <div class="api-status-dot" id="apiStatusDot"></div>
-        <span id="apiStatusText">Verification de la cle API...</span>
+    <!-- TikTok Content -->
+    <div class="platform-content" id="tiktok-content">
+      <div class="linkedin-info">
+        <div class="linkedin-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ff0050" stroke-width="1.5">
+            <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/>
+          </svg>
+        </div>
+        <h3>Prospecte sur TikTok</h3>
+        <p>Va sur un profil TikTok pour :</p>
+        <ul class="linkedin-features">
+          <li>
+            <span class="feature-icon">📥</span>
+            <span><strong>Importer</strong> le profil dans ton CRM</span>
+          </li>
+          <li>
+            <span class="feature-icon">✉️</span>
+            <span><strong>Preparer un DM</strong> personnalise via l'app</span>
+          </li>
+          <li>
+            <span class="feature-icon">🎵</span>
+            <span>Analyse des dernieres videos</span>
+          </li>
+        </ul>
+        <div class="linkedin-tip">
+          <span class="tip-icon">💡</span>
+          <span>Les boutons apparaissent automatiquement sur les profils TikTok.</span>
+        </div>
       </div>
     </div>
 
@@ -130,22 +161,22 @@
         </button>
       </div>
       <div class="settings-content">
+        <!-- Section Connexion App -->
         <div class="setting-group">
-          <label for="apiKeyInput">Cle API Claude (Anthropic)</label>
-          <p class="setting-description">Necessaire pour l'analyse de profils LinkedIn avec l'IA.</p>
-          <div class="api-key-input-group">
-            <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-...">
-            <button class="btn-icon" id="toggleApiKeyBtn" title="Afficher/Masquer">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                <circle cx="12" cy="12" r="3"/>
-              </svg>
-            </button>
+          <label>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;margin-right:6px;">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+              <polyline points="10 17 15 12 10 7"/>
+              <line x1="15" y1="12" x2="3" y2="12"/>
+            </svg>
+            Connexion a l'app
+          </label>
+          <div class="app-status" id="appAuthStatus">
+            <div class="app-status-dot disconnected" id="appAuthDot"></div>
+            <span id="appAuthText">Non connecte</span>
           </div>
-          <button class="btn btn-primary" id="saveApiKeyBtn">Sauvegarder</button>
-          <p class="setting-help">
-            <a href="https://console.anthropic.com/settings/keys" target="_blank">Obtenir une cle API</a>
-          </p>
+          <p class="setting-description">Connecte-toi a l'app SOS Prospection pour importer des profils et generer des messages.</p>
+          <button class="btn btn-primary" id="openAppBtn">Ouvrir l'app</button>
         </div>
 
         <!-- Section Confidentialite -->
@@ -162,15 +193,15 @@
             <h4>Ce que l'extension lit :</h4>
             <ul>
               <li><span class="privacy-icon">👤</span> Nom, titre et bio du profil</li>
-              <li><span class="privacy-icon">💼</span> Parcours professionnel (5 dernieres experiences)</li>
-              <li><span class="privacy-icon">📝</span> Derniers posts publics (3 max)</li>
+              <li><span class="privacy-icon">💼</span> Parcours professionnel (LinkedIn)</li>
+              <li><span class="privacy-icon">📝</span> Derniers posts/videos publics</li>
             </ul>
 
-            <h4>Ce qui est envoye a l'IA :</h4>
+            <h4>Ce qui est envoye :</h4>
             <ul>
-              <li><span class="privacy-icon">🤖</span> Les donnees ci-dessus pour generer l'analyse</li>
-              <li><span class="privacy-icon">🔒</span> Envoye via API securisee (HTTPS)</li>
-              <li><span class="privacy-icon">🗑️</span> Non stocke apres traitement</li>
+              <li><span class="privacy-icon">📤</span> Les donnees sont envoyees a l'app SOS Prospection</li>
+              <li><span class="privacy-icon">🔒</span> Connexion securisee (HTTPS)</li>
+              <li><span class="privacy-icon">🤖</span> L'IA genere les messages cote serveur</li>
             </ul>
 
             <h4>Ce qui est stocke :</h4>

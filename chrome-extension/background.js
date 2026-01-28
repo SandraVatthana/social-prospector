@@ -1,23 +1,27 @@
 /**
- * SOS Prospection - Multi-Account Extension
+ * SOS Prospection - Multi-Platform Extension
  * Background Service Worker
  *
- * Gère les sessions Instagram (cookies) pour le multi-compte
- * + Analyse de profils LinkedIn avec Claude API
+ * Handles:
+ * - Instagram multi-account session management
+ * - Communication with SOS Prospection app API
+ * - Prospect import and DM generation via app
  */
+
+// ============================================
+// CONFIGURATION
+// ============================================
+
+const CONFIG = {
+  APP_URL: 'https://sosprospection.com',
+  DEV_URL: 'http://localhost:5178',
+  API_TIMEOUT: 30000
+};
 
 const INSTAGRAM_DOMAIN = '.instagram.com';
 const INSTAGRAM_URL = 'https://www.instagram.com';
-const LINKEDIN_DOMAIN = '.linkedin.com';
 
-// URL du backend SOS Prospection (Netlify Functions)
-const BACKEND_URL = 'https://sosprospection.com';
-
-// Claude API configuration
-const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
-const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
-
-// Cookies Instagram importants pour la session
+// Session cookies for Instagram multi-account
 const SESSION_COOKIES = [
   'sessionid',
   'csrftoken',
@@ -28,8 +32,209 @@ const SESSION_COOKIES = [
   'rur'
 ];
 
+// ============================================
+// API HELPERS
+// ============================================
+
 /**
- * Récupérer tous les cookies Instagram actuels
+ * Get the API base URL (production or dev)
+ */
+async function getApiUrl() {
+  // Check if we have a custom URL stored
+  const { customApiUrl } = await chrome.storage.local.get('customApiUrl');
+  return customApiUrl || CONFIG.APP_URL;
+}
+
+/**
+ * Get auth token for API calls
+ */
+async function getAuthToken() {
+  const { authToken } = await chrome.storage.local.get('authToken');
+  return authToken;
+}
+
+/**
+ * Make authenticated API call to SOS Prospection
+ */
+async function apiCall(endpoint, method = 'GET', body = null) {
+  const baseUrl = await getApiUrl();
+  const token = await getAuthToken();
+
+  const headers = {
+    'Content-Type': 'application/json'
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const options = {
+    method,
+    headers
+  };
+
+  if (body && method !== 'GET') {
+    options.body = JSON.stringify(body);
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), CONFIG.API_TIMEOUT);
+
+  try {
+    const response = await fetch(`${baseUrl}${endpoint}`, {
+      ...options,
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        throw new Error('Non authentifié - connectez-vous à l\'app SOS Prospection');
+      }
+      throw new Error(errorData.error?.message || `API error: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('Requête timeout - vérifiez votre connexion');
+    }
+    throw error;
+  }
+}
+
+// ============================================
+// PROSPECT IMPORT
+// ============================================
+
+/**
+ * Import a single prospect to the app
+ */
+async function importProspect(platform, profile, posts = []) {
+  console.log('[SOS] Importing prospect:', { platform, profile });
+
+  // First, store locally
+  const { importedProspects = [] } = await chrome.storage.local.get('importedProspects');
+
+  const prospectData = {
+    id: `${platform}_${profile.username || profile.fullName}_${Date.now()}`,
+    platform,
+    ...profile,
+    posts,
+    importedAt: new Date().toISOString()
+  };
+
+  // Check for duplicates
+  const existingIndex = importedProspects.findIndex(p =>
+    p.platform === platform && p.username === profile.username
+  );
+
+  if (existingIndex >= 0) {
+    importedProspects[existingIndex] = prospectData;
+  } else {
+    importedProspects.push(prospectData);
+  }
+
+  await chrome.storage.local.set({ importedProspects });
+
+  // Then try to sync with backend
+  try {
+    const result = await apiCall('/api/prospects/extension/import', 'POST', {
+      platform,
+      profile,
+      posts
+    });
+
+    return {
+      success: true,
+      prospectId: result.data?.prospectId || prospectData.id,
+      synced: true
+    };
+  } catch (error) {
+    console.warn('[SOS] Backend sync failed, stored locally:', error.message);
+    return {
+      success: true,
+      prospectId: prospectData.id,
+      synced: false,
+      warning: 'Stocké localement - synchronisation en attente'
+    };
+  }
+}
+
+/**
+ * Import multiple prospects (bulk)
+ */
+async function importProspects(platform, profiles) {
+  console.log('[SOS] Bulk importing prospects:', profiles.length);
+
+  const results = [];
+
+  for (const profile of profiles) {
+    try {
+      const result = await importProspect(platform, profile, []);
+      results.push({ ...result, profile });
+    } catch (error) {
+      results.push({
+        success: false,
+        error: error.message,
+        profile
+      });
+    }
+  }
+
+  const successful = results.filter(r => r.success).length;
+
+  return {
+    success: true,
+    imported: successful,
+    failed: results.length - successful,
+    total: results.length,
+    results
+  };
+}
+
+// ============================================
+// DM GENERATION VIA APP
+// ============================================
+
+/**
+ * Generate DM via app API
+ */
+async function generateDM(platform, prospect) {
+  console.log('[SOS] Generating DM for:', { platform, prospect: prospect.username });
+
+  try {
+    const result = await apiCall('/api/sequence/first-dm', 'POST', {
+      prospect: {
+        ...prospect,
+        platform
+      }
+    });
+
+    if (result.data?.dm?.message) {
+      return {
+        success: true,
+        message: result.data.dm.message,
+        metadata: result.data.dm
+      };
+    }
+
+    throw new Error('Réponse invalide de l\'API');
+  } catch (error) {
+    console.error('[SOS] DM generation failed:', error);
+    throw new Error('Échec de la génération: ' + error.message);
+  }
+}
+
+// ============================================
+// INSTAGRAM SESSION MANAGEMENT
+// ============================================
+
+/**
+ * Get all Instagram cookies
  */
 async function getInstagramCookies() {
   const cookies = await chrome.cookies.getAll({ domain: INSTAGRAM_DOMAIN });
@@ -37,7 +242,7 @@ async function getInstagramCookies() {
 }
 
 /**
- * Sauvegarder la session actuelle
+ * Save current Instagram session
  */
 async function saveCurrentSession(accountName) {
   const cookies = await getInstagramCookies();
@@ -46,13 +251,11 @@ async function saveCurrentSession(accountName) {
     throw new Error('Aucune session Instagram détectée. Connectez-vous d\'abord à Instagram.');
   }
 
-  // Vérifier qu'on a bien un sessionid (= connecté)
   const sessionCookie = cookies.find(c => c.name === 'sessionid');
   if (!sessionCookie || !sessionCookie.value) {
     throw new Error('Vous n\'êtes pas connecté à Instagram. Connectez-vous d\'abord.');
   }
 
-  // Récupérer le ds_user_id pour identifier le compte
   const userIdCookie = cookies.find(c => c.name === 'ds_user_id');
   const userId = userIdCookie?.value || 'unknown';
 
@@ -73,27 +276,21 @@ async function saveCurrentSession(accountName) {
     savedAt: new Date().toISOString()
   };
 
-  // Récupérer les sessions existantes
   const { sessions = [] } = await chrome.storage.local.get('sessions');
-
-  // Vérifier si ce compte existe déjà (même userId)
   const existingIndex = sessions.findIndex(s => s.userId === userId);
 
   if (existingIndex >= 0) {
-    // Mettre à jour la session existante
     sessions[existingIndex] = session;
   } else {
-    // Ajouter la nouvelle session
     sessions.push(session);
   }
 
   await chrome.storage.local.set({ sessions });
-
   return session;
 }
 
 /**
- * Charger une session (remplacer les cookies)
+ * Load an Instagram session
  */
 async function loadSession(sessionId) {
   const { sessions = [] } = await chrome.storage.local.get('sessions');
@@ -103,7 +300,7 @@ async function loadSession(sessionId) {
     throw new Error('Session introuvable');
   }
 
-  // Supprimer tous les cookies Instagram actuels
+  // Remove current cookies
   const currentCookies = await getInstagramCookies();
   for (const cookie of currentCookies) {
     await chrome.cookies.remove({
@@ -112,7 +309,7 @@ async function loadSession(sessionId) {
     });
   }
 
-  // Restaurer les cookies de la session
+  // Restore session cookies
   for (const cookie of session.cookies) {
     try {
       await chrome.cookies.set({
@@ -127,25 +324,22 @@ async function loadSession(sessionId) {
         expirationDate: cookie.expirationDate
       });
     } catch (e) {
-      console.warn(`Erreur lors de la restauration du cookie ${cookie.name}:`, e);
+      console.warn(`Error restoring cookie ${cookie.name}:`, e);
     }
   }
 
-  // Sauvegarder la session active
   await chrome.storage.local.set({ activeSessionId: sessionId });
-
   return session;
 }
 
 /**
- * Supprimer une session
+ * Delete an Instagram session
  */
 async function deleteSession(sessionId) {
   const { sessions = [] } = await chrome.storage.local.get('sessions');
   const updatedSessions = sessions.filter(s => s.id !== sessionId);
   await chrome.storage.local.set({ sessions: updatedSessions });
 
-  // Si c'était la session active, la retirer
   const { activeSessionId } = await chrome.storage.local.get('activeSessionId');
   if (activeSessionId === sessionId) {
     await chrome.storage.local.remove('activeSessionId');
@@ -153,20 +347,16 @@ async function deleteSession(sessionId) {
 }
 
 /**
- * Récupérer toutes les sessions
+ * Get all saved sessions
  */
 async function getSessions() {
   const { sessions = [] } = await chrome.storage.local.get('sessions');
   const { activeSessionId } = await chrome.storage.local.get('activeSessionId');
-
-  return {
-    sessions,
-    activeSessionId
-  };
+  return { sessions, activeSessionId };
 }
 
 /**
- * Détecter le compte actuellement connecté
+ * Detect current Instagram account
  */
 async function detectCurrentAccount() {
   const cookies = await getInstagramCookies();
@@ -180,7 +370,7 @@ async function detectCurrentAccount() {
 }
 
 /**
- * Recharger l'onglet Instagram actif
+ * Reload Instagram tabs
  */
 async function reloadInstagramTab() {
   const tabs = await chrome.tabs.query({ url: '*://*.instagram.com/*' });
@@ -189,167 +379,68 @@ async function reloadInstagramTab() {
   }
 }
 
+// ============================================
+// AUTH TOKEN MANAGEMENT
+// ============================================
 
 /**
- * Importer des profils LinkedIn vers le backend
+ * Save auth token for API calls
  */
-async function importLinkedInProfiles(profiles) {
-  if (!profiles || profiles.length === 0) {
-    throw new Error('Aucun profil a importer');
-  }
-
-  const { linkedinProfiles = [] } = await chrome.storage.local.get('linkedinProfiles');
-  const existingUrls = new Set(linkedinProfiles.map(p => p.profileUrl));
-  const newProfiles = profiles.filter(p => !existingUrls.has(p.profileUrl));
-
-  const updatedProfiles = [...linkedinProfiles, ...newProfiles.map(p => ({
-    ...p,
-    importedAt: new Date().toISOString(),
-    source: 'linkedin'
-  }))];
-
-  await chrome.storage.local.set({ linkedinProfiles: updatedProfiles });
-
-  try {
-    const response = await fetch(`${BACKEND_URL}/api/prospects/linkedin/import`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        profiles: newProfiles,
-        importedAt: new Date().toISOString()
-      })
-    });
-
-    if (!response.ok) {
-      console.warn('Erreur backend, profils stockes localement uniquement');
-    }
-  } catch (e) {
-    console.warn('Backend non disponible, profils stockes localement:', e.message);
-  }
-
-  return {
-    success: true,
-    imported: newProfiles.length,
-    duplicates: profiles.length - newProfiles.length,
-    total: updatedProfiles.length
-  };
-}
-
-/**
- * Recuperer les profils LinkedIn stockes
- */
-async function getLinkedInProfiles() {
-  const { linkedinProfiles = [] } = await chrome.storage.local.get('linkedinProfiles');
-  return linkedinProfiles;
-}
-
-/**
- * Supprimer un profil LinkedIn
- */
-async function deleteLinkedInProfile(profileUrl) {
-  const { linkedinProfiles = [] } = await chrome.storage.local.get('linkedinProfiles');
-  const updatedProfiles = linkedinProfiles.filter(p => p.profileUrl !== profileUrl);
-  await chrome.storage.local.set({ linkedinProfiles: updatedProfiles });
-  return { success: true, remaining: updatedProfiles.length };
-}
-
-/**
- * Sauvegarder la clé API Claude
- */
-async function saveClaudeApiKey(apiKey) {
-  await chrome.storage.local.set({ claudeApiKey: apiKey });
+async function saveAuthToken(token) {
+  await chrome.storage.local.set({ authToken: token });
   return { success: true };
 }
 
 /**
- * Récupérer la clé API Claude
+ * Get auth status
  */
-async function getClaudeApiKey() {
-  const { claudeApiKey } = await chrome.storage.local.get('claudeApiKey');
-  return claudeApiKey || null;
+async function getAuthStatus() {
+  const token = await getAuthToken();
+  return {
+    isAuthenticated: !!token,
+    hasToken: !!token
+  };
+}
+
+// ============================================
+// LEGACY LINKEDIN SUPPORT
+// ============================================
+
+/**
+ * Import LinkedIn profiles (legacy support)
+ */
+async function importLinkedInProfiles(profiles) {
+  return importProspects('linkedin', profiles);
 }
 
 /**
- * Appeler l'API Claude pour l'analyse
+ * Get stored LinkedIn profiles
  */
-async function callClaudeAPI(prompt) {
-  const apiKey = await getClaudeApiKey();
-
-  console.log('[SOS Prospection] API Key presente:', !!apiKey);
-  console.log('[SOS Prospection] API Key commence par:', apiKey ? apiKey.substring(0, 10) + '...' : 'N/A');
-
-  if (!apiKey) {
-    throw new Error('Cle API Claude non configuree. Allez dans les parametres de l\'extension pour l\'ajouter.');
-  }
-
-  const response = await fetch(CLAUDE_API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
-      model: CLAUDE_MODEL,
-      max_tokens: 2000,
-      messages: [{
-        role: 'user',
-        content: prompt
-      }]
-    })
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    console.log('[SOS Prospection] Erreur API:', response.status, errorData);
-    if (response.status === 401) {
-      throw new Error('Cle API invalide. Verifiez votre cle dans les parametres. (Status: 401)');
-    } else if (response.status === 429) {
-      throw new Error('Limite de requetes atteinte. Reessayez dans quelques minutes.');
-    } else if (response.status === 400) {
-      throw new Error('Requete invalide: ' + (errorData.error?.message || 'Erreur inconnue'));
-    } else {
-      throw new Error(errorData.error?.message || 'Erreur API Claude: ' + response.status);
-    }
-  }
-
-  const data = await response.json();
-
-  if (data.error) {
-    throw new Error(data.error.message);
-  }
-
-  // Extraire le texte de la réponse
-  const responseText = data.content[0].text;
-
-  // Essayer de parser en JSON si c'est une analyse
-  try {
-    // Nettoyer le texte (enlever les balises markdown si présentes)
-    let cleanText = responseText.trim();
-    if (cleanText.startsWith('```json')) {
-      cleanText = cleanText.slice(7);
-    }
-    if (cleanText.startsWith('```')) {
-      cleanText = cleanText.slice(3);
-    }
-    if (cleanText.endsWith('```')) {
-      cleanText = cleanText.slice(0, -3);
-    }
-    cleanText = cleanText.trim();
-
-    return JSON.parse(cleanText);
-  } catch (e) {
-    // Si ce n'est pas du JSON, retourner le texte brut
-    return responseText;
-  }
+async function getLinkedInProfiles() {
+  const { importedProspects = [] } = await chrome.storage.local.get('importedProspects');
+  return importedProspects.filter(p => p.platform === 'linkedin');
 }
 
-// Écouter les messages du popup et des content scripts
+// ============================================
+// MESSAGE HANDLER
+// ============================================
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   const handleAsync = async () => {
     try {
       switch (request.action) {
+        // Prospect import
+        case 'importProspect':
+          return await importProspect(request.platform, request.profile, request.posts);
+
+        case 'importProspects':
+          return await importProspects(request.platform, request.profiles);
+
+        // DM generation
+        case 'generateDM':
+          return await generateDM(request.platform, request.prospect);
+
+        // Instagram sessions
         case 'getSessions':
           return await getSessions();
 
@@ -368,37 +459,90 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         case 'detectAccount':
           return await detectCurrentAccount();
 
+        // Auth
+        case 'saveAuthToken':
+          return await saveAuthToken(request.token);
+
+        case 'getAuthStatus':
+          return await getAuthStatus();
+
+        // Legacy LinkedIn support
         case 'importLinkedInProfiles':
           return await importLinkedInProfiles(request.profiles);
 
         case 'getLinkedInProfiles':
           return await getLinkedInProfiles();
 
-        case 'deleteLinkedInProfile':
-          return await deleteLinkedInProfile(request.profileUrl);
-
-        case 'saveClaudeApiKey':
-          return await saveClaudeApiKey(request.apiKey);
-
-        case 'getClaudeApiKey':
-          const apiKey = await getClaudeApiKey();
-          return { apiKey, hasKey: !!apiKey };
-
-        case 'callClaudeAPI':
-          const result = await callClaudeAPI(request.prompt);
-          return { result };
-
         default:
           throw new Error('Action inconnue: ' + request.action);
       }
     } catch (error) {
+      console.error('[SOS] Error handling message:', error);
       return { error: error.message };
     }
   };
 
   handleAsync().then(sendResponse);
-  return true; // Indique une réponse asynchrone
+  return true;
 });
 
-// Log au démarrage
-console.log('SOS Prospection extension loaded (Instagram + LinkedIn + Claude AI Analysis)');
+// ============================================
+// EXTERNAL MESSAGE HANDLER (from app)
+// ============================================
+
+/**
+ * Listen for messages from the SOS Prospection app
+ * This allows the app to send the auth token to the extension
+ */
+chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => {
+  // Verify the sender is from our app domain
+  const allowedOrigins = [
+    'https://sosprospection.com',
+    'http://localhost:5178',
+    'http://localhost:5173'
+  ];
+
+  if (!sender.url || !allowedOrigins.some(origin => sender.url.startsWith(origin))) {
+    console.warn('[SOS] Rejected external message from:', sender.url);
+    sendResponse({ error: 'Unauthorized origin' });
+    return;
+  }
+
+  console.log('[SOS] Received external message:', request.action);
+
+  if (request.action === 'setAuthToken') {
+    saveAuthToken(request.token)
+      .then(() => {
+        console.log('[SOS] Auth token saved from app');
+        sendResponse({ success: true });
+      })
+      .catch(err => {
+        console.error('[SOS] Failed to save auth token:', err);
+        sendResponse({ error: err.message });
+      });
+    return true; // Keep channel open for async response
+  }
+
+  if (request.action === 'getAuthStatus') {
+    getAuthStatus()
+      .then(status => sendResponse(status))
+      .catch(err => sendResponse({ error: err.message }));
+    return true;
+  }
+
+  if (request.action === 'clearAuthToken') {
+    chrome.storage.local.remove('authToken', () => {
+      console.log('[SOS] Auth token cleared');
+      sendResponse({ success: true });
+    });
+    return true;
+  }
+
+  sendResponse({ error: 'Unknown action' });
+});
+
+// ============================================
+// STARTUP
+// ============================================
+
+console.log('[SOS Prospection] Extension loaded v3.1 - Multi-platform support');

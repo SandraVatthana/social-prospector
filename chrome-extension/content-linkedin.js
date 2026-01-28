@@ -1,34 +1,198 @@
+/**
+ * SOS Prospection - LinkedIn Content Script
+ * Scrapes LinkedIn profiles and posts, sends to app, prefills DMs
+ *
+ * Depends on: content-common.js (loaded first via manifest)
+ */
+
 (function() {
-  "use strict";
-  var CONFIG = { APP_URL: "http://localhost:5178" };
-  var extractedProfiles = [];
+  'use strict';
+
+  var PLATFORM = 'linkedin';
 
   // ============================================
-  // DETECTION DES PAGES
+  // PAGE DETECTION
   // ============================================
 
   function detectPageType() {
     var url = window.location.href;
-    if (url.indexOf("/search/results/people") > -1) return "search";
-    if (url.indexOf("/in/") > -1) return "profile";
-    return "unknown";
+    if (url.indexOf('/search/results/people') > -1) return 'search';
+    if (url.indexOf('/in/') > -1) return 'profile';
+    if (url.indexOf('/messaging/') > -1) return 'messaging';
+    return 'unknown';
   }
 
-  function isLinkedInProfile() {
-    return window.location.hostname.includes('linkedin.com') &&
-           window.location.pathname.includes('/in/');
+  function isProfilePage() {
+    return detectPageType() === 'profile';
   }
 
   // ============================================
-  // EXTRACTION DES PROFILS (existant)
+  // PROFILE SCRAPING
+  // ============================================
+
+  function scrapeProfileInfo() {
+    var name = '';
+    var nameEl = document.querySelector('.text-heading-xlarge') ||
+                 document.querySelector('h1.text-heading-xlarge');
+    if (nameEl) name = nameEl.innerText.trim();
+
+    var headline = '';
+    var headlineEl = document.querySelector('.text-body-medium.break-words');
+    if (headlineEl) headline = headlineEl.innerText.trim();
+
+    var about = '';
+    var aboutSection = document.querySelector('#about');
+    if (aboutSection) {
+      var aboutParent = aboutSection.closest('section');
+      if (aboutParent) {
+        var aboutText = aboutParent.querySelector('.pv-shared-text-with-see-more span[aria-hidden="true"]') ||
+                        aboutParent.querySelector('.inline-show-more-text span[aria-hidden="true"]') ||
+                        aboutParent.querySelector('.pv-about__summary-text');
+        if (aboutText) about = aboutText.innerText.trim();
+      }
+    }
+
+    var experiences = scrapeExperiences();
+    var profileUrl = window.location.href.split('?')[0];
+    var parts = profileUrl.split('/in/');
+    var username = parts[1] ? parts[1].split('/')[0] : '';
+
+    // Try to get first name
+    var firstName = name.split(' ')[0] || '';
+
+    return {
+      platform: PLATFORM,
+      username: username,
+      fullName: name || 'Inconnu',
+      firstName: firstName,
+      headline: headline,
+      bio: about.substring(0, 500),
+      about: about,
+      experiences: experiences,
+      profileUrl: profileUrl,
+      source: 'profile'
+    };
+  }
+
+  function scrapeExperiences() {
+    var experiences = [];
+    sosLog('Scraping experiences...');
+
+    var expSection = document.querySelector('#experience');
+    if (!expSection) {
+      sosLog('Experience section not found');
+      return experiences;
+    }
+
+    var expParent = expSection.closest('section');
+    if (!expParent) return experiences;
+
+    var expItems = expParent.querySelectorAll('.artdeco-list__item') ||
+                   expParent.querySelectorAll('[data-view-name="profile-component-entity"]') ||
+                   expParent.querySelectorAll('.pvs-list__paged-list-item');
+
+    sosLog('Found experience items:', expItems.length);
+
+    expItems.forEach(function(item, index) {
+      if (index >= 5) return;
+
+      var exp = {};
+
+      var titleEl = item.querySelector('.t-bold span[aria-hidden="true"]') ||
+                    item.querySelector('.mr1.hoverable-link-text span[aria-hidden="true"]') ||
+                    item.querySelector('.t-bold');
+      if (titleEl) exp.title = titleEl.innerText.trim();
+
+      var companyEl = item.querySelector('.t-normal span[aria-hidden="true"]') ||
+                      item.querySelector('.t-14.t-normal span[aria-hidden="true"]');
+      if (companyEl) exp.company = companyEl.innerText.trim();
+
+      var durationEl = item.querySelector('.t-black--light span[aria-hidden="true"]') ||
+                       item.querySelector('.pvs-entity__caption-wrapper');
+      if (durationEl) exp.duration = durationEl.innerText.trim();
+
+      var descEl = item.querySelector('.pv-shared-text-with-see-more span[aria-hidden="true"]') ||
+                   item.querySelector('.inline-show-more-text span[aria-hidden="true"]');
+      if (descEl) exp.description = descEl.innerText.trim().substring(0, 300);
+
+      if (exp.title || exp.company) {
+        experiences.push(exp);
+      }
+    });
+
+    sosLog('Scraped experiences:', experiences.length);
+    return experiences;
+  }
+
+  // ============================================
+  // POST SCRAPING
+  // ============================================
+
+  function detectPostType(postElement) {
+    if (postElement.querySelector('video')) return 'video';
+    if (postElement.querySelector('.feed-shared-document')) return 'document';
+    if (postElement.querySelector('.feed-shared-carousel')) return 'carousel';
+    if (postElement.querySelector('img.feed-shared-image')) return 'image';
+    return 'text';
+  }
+
+  function scrapeLinkedInPosts() {
+    var posts = [];
+    sosLog('Scraping LinkedIn posts...');
+
+    var postElements = document.querySelectorAll('.feed-shared-update-v2');
+
+    if (postElements.length === 0) {
+      postElements = document.querySelectorAll('[data-urn*="activity"]');
+    }
+
+    if (postElements.length === 0) {
+      var mainContent = document.querySelector('main');
+      if (mainContent) {
+        postElements = mainContent.querySelectorAll('.feed-shared-update-v2, .occludable-update');
+      }
+    }
+
+    sosLog('Found post elements:', postElements.length);
+
+    postElements.forEach(function(post, index) {
+      if (index < 3) {
+        var textElement = post.querySelector('.feed-shared-text span[dir="ltr"]') ||
+                          post.querySelector('.feed-shared-text') ||
+                          post.querySelector('.break-words span[dir="ltr"]') ||
+                          post.querySelector('.break-words');
+
+        var dateElement = post.querySelector('.feed-shared-actor__sub-description') ||
+                          post.querySelector('time') ||
+                          post.querySelector('.update-components-actor__sub-description');
+
+        if (textElement) {
+          var text = textElement.innerText.trim();
+          if (text.length > 50) {
+            posts.push({
+              text: text.substring(0, 1500),
+              date: dateElement ? dateElement.innerText.trim() : 'Date inconnue',
+              type: detectPostType(post)
+            });
+          }
+        }
+      }
+    });
+
+    sosLog('Scraped posts:', posts.length);
+    return posts;
+  }
+
+  // ============================================
+  // SEARCH RESULTS EXTRACTION
   // ============================================
 
   function extractSearchResults() {
     var profiles = [];
-    console.log('[SOS Prospection] Extracting search results...');
+    sosLog('Extracting search results...');
 
     var profileLinks = document.querySelectorAll('a[href*="/in/"]');
-    console.log('[SOS Prospection] Found profile links:', profileLinks.length);
+    sosLog('Found profile links:', profileLinks.length);
 
     var seenUrls = {};
     profileLinks.forEach(function(link) {
@@ -57,8 +221,10 @@
         profiles.push({
           id: 'linkedin_' + username + '_' + profiles.length,
           username: username,
-          platform: 'linkedin',
+          platform: PLATFORM,
           fullName: name.replace(/View.*profile/i, '').trim(),
+          firstName: name.split(' ')[0] || '',
+          headline: headline,
           bio: headline,
           profileUrl: href.split('?')[0],
           source: 'search'
@@ -66,768 +232,333 @@
       }
     });
 
-    console.log('[SOS Prospection] Extracted profiles:', profiles.length);
+    sosLog('Extracted profiles:', profiles.length);
     return profiles;
   }
 
-  function extractCurrentProfile() {
-    var nameEl = document.querySelector("h1.text-heading-xlarge");
-    var headlineEl = document.querySelector(".text-body-medium.break-words");
-    var profileUrl = window.location.href.split("?")[0];
-    var parts = profileUrl.split("/in/");
-    var username = parts[1] ? parts[1].split("/")[0] : "";
-    if (nameEl) {
-      return {
-        id: "linkedin_" + (username || Date.now()),
-        username: username, platform: "linkedin",
-        fullName: nameEl.textContent.trim(),
-        bio: headlineEl ? headlineEl.textContent.trim() : "",
-        profileUrl: profileUrl, source: "profile"
-      };
-    }
-    return null;
-  }
-
-  function extractProfiles() {
-    var pageType = detectPageType();
-    if (pageType === "search") return extractSearchResults();
-    if (pageType === "profile") { var p = extractCurrentProfile(); return p ? [p] : []; }
-    return [];
-  }
-
-  function escapeHtml(t) { var d = document.createElement("div"); d.textContent = t || ""; return d.innerHTML; }
-
   // ============================================
-  // SCRAPING DES POSTS LINKEDIN
+  // FULL PROFILE DATA COLLECTION
   // ============================================
 
-  function scrapeProfileInfo() {
-    var name = '';
-    var nameEl = document.querySelector('.text-heading-xlarge') ||
-                 document.querySelector('h1.text-heading-xlarge');
-    if (nameEl) name = nameEl.innerText.trim();
-
-    var headline = '';
-    var headlineEl = document.querySelector('.text-body-medium.break-words');
-    if (headlineEl) headline = headlineEl.innerText.trim();
-
-    var about = '';
-    var aboutSection = document.querySelector('#about');
-    if (aboutSection) {
-      var aboutParent = aboutSection.closest('section');
-      if (aboutParent) {
-        var aboutText = aboutParent.querySelector('.pv-shared-text-with-see-more span[aria-hidden="true"]') ||
-                        aboutParent.querySelector('.inline-show-more-text span[aria-hidden="true"]') ||
-                        aboutParent.querySelector('.pv-about__summary-text');
-        if (aboutText) about = aboutText.innerText.trim();
-      }
-    }
-
-    // Scraper le parcours (expériences)
-    var experiences = scrapeExperiences();
+  function collectFullProfileData() {
+    var profileInfo = scrapeProfileInfo();
+    var posts = scrapeLinkedInPosts();
 
     return {
-      name: name || 'Inconnu',
-      headline: headline,
-      about: about.substring(0, 500),
-      experiences: experiences
+      platform: PLATFORM,
+      profile: profileInfo,
+      posts: posts,
+      scrapedAt: new Date().toISOString()
     };
   }
 
-  function scrapeExperiences() {
-    var experiences = [];
-    console.log('[SOS Prospection] Scraping experiences...');
-
-    // Chercher la section Experience
-    var expSection = document.querySelector('#experience');
-    if (!expSection) {
-      console.log('[SOS Prospection] Experience section not found');
-      return experiences;
-    }
-
-    var expParent = expSection.closest('section');
-    if (!expParent) return experiences;
-
-    // Chercher les items d'expérience
-    var expItems = expParent.querySelectorAll('.artdeco-list__item') ||
-                   expParent.querySelectorAll('[data-view-name="profile-component-entity"]') ||
-                   expParent.querySelectorAll('.pvs-list__paged-list-item');
-
-    console.log('[SOS Prospection] Found experience items:', expItems.length);
-
-    expItems.forEach(function(item, index) {
-      if (index >= 5) return; // Limiter aux 5 dernières expériences
-
-      var exp = {};
-
-      // Titre du poste
-      var titleEl = item.querySelector('.t-bold span[aria-hidden="true"]') ||
-                    item.querySelector('.mr1.hoverable-link-text span[aria-hidden="true"]') ||
-                    item.querySelector('.t-bold');
-      if (titleEl) exp.title = titleEl.innerText.trim();
-
-      // Entreprise
-      var companyEl = item.querySelector('.t-normal span[aria-hidden="true"]') ||
-                      item.querySelector('.t-14.t-normal span[aria-hidden="true"]');
-      if (companyEl) exp.company = companyEl.innerText.trim();
-
-      // Durée
-      var durationEl = item.querySelector('.t-black--light span[aria-hidden="true"]') ||
-                       item.querySelector('.pvs-entity__caption-wrapper');
-      if (durationEl) exp.duration = durationEl.innerText.trim();
-
-      // Description (si visible)
-      var descEl = item.querySelector('.pv-shared-text-with-see-more span[aria-hidden="true"]') ||
-                   item.querySelector('.inline-show-more-text span[aria-hidden="true"]');
-      if (descEl) exp.description = descEl.innerText.trim().substring(0, 300);
-
-      if (exp.title || exp.company) {
-        experiences.push(exp);
-      }
-    });
-
-    console.log('[SOS Prospection] Scraped experiences:', experiences.length);
-    return experiences;
-  }
-
-  function detectPostType(postElement) {
-    if (postElement.querySelector('video')) return 'video';
-    if (postElement.querySelector('.feed-shared-document')) return 'document';
-    if (postElement.querySelector('.feed-shared-carousel')) return 'carousel';
-    if (postElement.querySelector('img.feed-shared-image')) return 'image';
-    return 'text';
-  }
-
-  async function scrapeLinkedInPosts() {
-    var posts = [];
-    console.log('[SOS Prospection] Scraping LinkedIn posts...');
-
-    // Methode 1: Chercher la section Activite sur le profil
-    var activitySection = document.querySelector('[data-section="activity"]') ||
-                          document.querySelector('.pv-recent-activity-section') ||
-                          document.querySelector('#content_collections');
-
-    // Methode 2: Chercher les posts dans la section "Activite"
-    var postElements = document.querySelectorAll('.feed-shared-update-v2');
-
-    if (postElements.length === 0) {
-      // Essayer d'autres selecteurs
-      postElements = document.querySelectorAll('[data-urn*="activity"]');
-    }
-
-    if (postElements.length === 0) {
-      // Chercher dans le main content
-      var mainContent = document.querySelector('main');
-      if (mainContent) {
-        postElements = mainContent.querySelectorAll('.feed-shared-update-v2, .occludable-update');
-      }
-    }
-
-    console.log('[SOS Prospection] Found post elements:', postElements.length);
-
-    postElements.forEach(function(post, index) {
-      if (index < 3) {
-        var textElement = post.querySelector('.feed-shared-text span[dir="ltr"]') ||
-                          post.querySelector('.feed-shared-text') ||
-                          post.querySelector('.break-words span[dir="ltr"]') ||
-                          post.querySelector('.break-words');
-
-        var dateElement = post.querySelector('.feed-shared-actor__sub-description') ||
-                          post.querySelector('time') ||
-                          post.querySelector('.update-components-actor__sub-description');
-
-        if (textElement) {
-          var text = textElement.innerText.trim();
-          if (text.length > 50) {
-            posts.push({
-              text: text.substring(0, 1500),
-              date: dateElement ? dateElement.innerText.trim() : 'Date inconnue',
-              type: detectPostType(post)
-            });
-          }
-        }
-      }
-    });
-
-    // Si pas assez de posts, chercher le lien "Voir toute l'activite"
-    if (posts.length < 2) {
-      var seeAllLink = document.querySelector('a[href*="/recent-activity/"]') ||
-                       document.querySelector('a[href*="/detail/recent-activity/"]');
-      if (seeAllLink) {
-        console.log('[SOS Prospection] Need to scroll to activity section for more posts');
-      }
-    }
-
-    console.log('[SOS Prospection] Scraped posts:', posts.length);
-    return posts;
-  }
-
   // ============================================
-  // ANALYSE IA
+  // SEND TO APP
   // ============================================
 
-  function buildAnalysisPrompt(profileInfo, posts) {
-    var postsText = posts.map(function(p, i) {
-      return '\nPOST ' + (i + 1) + ' (' + p.type + ', ' + p.date + '):\n' + p.text;
-    }).join('\n---\n');
+  function sendToApp(profileData) {
+    sosLog('Sending to app:', profileData);
 
-    // Formatter le parcours
-    var experiencesText = '';
-    if (profileInfo.experiences && profileInfo.experiences.length > 0) {
-      experiencesText = '\n\nPARCOURS PROFESSIONNEL :';
-      profileInfo.experiences.forEach(function(exp, i) {
-        experiencesText += '\n' + (i + 1) + '. ' + (exp.title || 'Poste') + ' @ ' + (exp.company || 'Entreprise');
-        if (exp.duration) experiencesText += ' (' + exp.duration + ')';
-        if (exp.description) experiencesText += '\n   ' + exp.description.substring(0, 150) + '...';
-      });
-    }
-
-    return 'Tu es un expert en prospection LinkedIn. Analyse ce profil, son parcours et ses derniers posts.\n\nPROFIL :\nNom : ' + profileInfo.name + '\nTitre : ' + profileInfo.headline + '\nA propos : ' + (profileInfo.about || 'Non renseigne') + experiencesText + '\n\nDERNIERS POSTS :' + postsText + '\n\nANALYSE DEMANDEE (reponds en JSON) :\n\n{\n  "synthese": {\n    "sujets_principaux": ["sujet1", "sujet2", "sujet3"],\n    "ton": "description du ton utilise (ex: expert, accessible, provocateur, inspirant...)",\n    "valeurs": ["valeur1", "valeur2"],\n    "problemes_evoques": ["probleme qu\'il/elle mentionne ou que son audience a"],\n    "parcours_insight": "Ce qui ressort de son parcours (ex: ex-cadre reconvertie, serial entrepreneur, expert du secteur X...)"\n  },\n  "angles_commentaire": [\n    {\n      "post_ref": 1,\n      "post_debut": "Les 8-10 premiers mots du post pour l\'identifier...",\n      "post_resume": "Resume en 1 phrase de ce que dit le post",\n      "angle": "Description de l\'angle de commentaire",\n      "exemple": "Un exemple de commentaire de 2-3 lignes"\n    },\n    {\n      "post_ref": 2,\n      "post_debut": "Les 8-10 premiers mots du post...",\n      "post_resume": "Resume en 1 phrase",\n      "angle": "Description de l\'angle",\n      "exemple": "Un exemple de commentaire"\n    }\n  ],\n  "angles_dm": [\n    {\n      "contexte": "Pourquoi ce DM ferait sens (peut inclure un element du parcours)",\n      "accroche": "Message COURT (max 150 car), minuscule au debut, ton decontracte, une question a la fin",\n      "angle": "L\'angle a developper"\n    }\n  ],\n  "a_eviter": ["Ce qu\'il ne faut PAS dire a cette personne"]\n}\n\nIMPORTANT : \n- Pour chaque angle_commentaire, inclus TOUJOURS post_debut (les premiers mots du post) et post_resume (un resume en 1 phrase) pour que l\'utilisateur puisse identifier facilement de quel post il s\'agit.\n- Pour les angles_dm, l\'accroche doit etre un MESSAGE COMPLET pret a envoyer : court (max 150 caracteres), commence par une minuscule, ton naturel/decontracte, tutoiement, parfois oublie une virgule, termine par une question simple. Exemples de style : "salut j\'ai vu ton post sur X, ca m\'a parle. t\'as deja teste Y ?" ou "hey ton truc sur X etait cool, tu bosses sur quoi en ce moment"\n- Utilise le PARCOURS pour personnaliser les angles (ex: "j\'ai vu que t\'etais passe par X, ca a du etre intense")\n\nReponds UNIQUEMENT avec le JSON, sans markdown ni explication.';
-  }
-
-  async function callClaudeAPI(prompt) {
-    // Recuperer la cle API depuis le storage via background script
-    return new Promise(function(resolve, reject) {
-      chrome.runtime.sendMessage({ action: 'callClaudeAPI', prompt: prompt }, function(response) {
-        if (response && response.error) {
-          reject(new Error(response.error));
-        } else if (response && response.result) {
-          resolve(response.result);
-        } else {
-          reject(new Error('Reponse invalide de l\'API'));
-        }
-      });
-    });
-  }
-
-  async function analyzeProfile() {
-    var btn = document.getElementById('sp-analyze-btn');
-    if (!btn) return;
-
-    btn.innerHTML = '<span class="sp-spinner"></span> Analyse...';
-    btn.disabled = true;
-
-    try {
-      // 1. Scraper les donnees
-      var profileInfo = scrapeProfileInfo();
-      var posts = await scrapeLinkedInPosts();
-
-      console.log('[SOS Prospection] Profile info:', profileInfo);
-      console.log('[SOS Prospection] Posts found:', posts.length);
-
-      if (posts.length === 0) {
-        showAnalysisPanel({
-          error: "Aucun post trouve sur ce profil.",
-          instructions: [
-            "1. Scrolle vers le bas jusqu'a la section 'Activite'",
-            "2. Attends que les posts se chargent (2-3 secondes)",
-            "3. Clique a nouveau sur 'Analyser'",
-            "",
-            "Note : Les Reels/videos ne sont pas analyses, seulement les posts texte."
-          ]
-        });
-        return;
-      }
-
-      // 2. Preparer le prompt
-      var analysisPrompt = buildAnalysisPrompt(profileInfo, posts);
-
-      // 3. Appeler l'API Claude
-      var analysis = await callClaudeAPI(analysisPrompt);
-
-      // 4. Afficher les resultats
-      showAnalysisPanel(analysis, profileInfo);
-
-    } catch (error) {
-      console.error('[SOS Prospection] Erreur analyse:', error);
-      showAnalysisPanel({ error: error.message });
-    } finally {
-      if (btn) {
-        btn.innerHTML = '🔍 Analyser';
-        btn.disabled = false;
-      }
-    }
-  }
-
-  // ============================================
-  // AFFICHAGE DU PANEL D'ANALYSE
-  // ============================================
-
-  function showAnalysisPanel(analysis, profileInfo) {
-    profileInfo = profileInfo || {};
-
-    // Supprimer l'ancien panel s'il existe
-    var oldPanel = document.getElementById('sp-analysis-panel');
-    if (oldPanel) oldPanel.remove();
-
-    // Creer le panel
-    var panel = document.createElement('div');
-    panel.id = 'sp-analysis-panel';
-
-    if (analysis.error) {
-      var instructionsHtml = '';
-      if (analysis.instructions && analysis.instructions.length > 0) {
-        instructionsHtml = '<div class="sp-instructions">' +
-          '<h4>📋 Comment faire :</h4>' +
-          '<ul>' + analysis.instructions.map(function(i) {
-            return i ? '<li>' + escapeHtml(i) + '</li>' : '<li class="sp-spacer"></li>';
-          }).join('') + '</ul>' +
-          '</div>';
-      } else {
-        instructionsHtml = '<p class="sp-error-help">Verifiez que :<br>- Votre cle API Claude est configuree<br>- Vous avez scrolle sur le profil pour charger les posts</p>';
-      }
-      panel.innerHTML = '<div class="sp-analysis-header">' +
-        '<span>❌ Erreur</span>' +
-        '<button class="sp-close-btn" id="sp-close-analysis">×</button>' +
-        '</div>' +
-        '<div class="sp-analysis-body">' +
-        '<p class="sp-error-msg">' + escapeHtml(analysis.error) + '</p>' +
-        instructionsHtml +
-        '</div>';
-    } else {
-      var synthese = analysis.synthese || {};
-      var sujets = (synthese.sujets_principaux || []).map(function(s) {
-        return '<span class="sp-tag">' + escapeHtml(s) + '</span>';
-      }).join('');
-
-      var parcoursInsight = synthese.parcours_insight ?
-        '<p><strong>💼 Parcours :</strong> ' + escapeHtml(synthese.parcours_insight) + '</p>' : '';
-
-      var commentaires = (analysis.angles_commentaire || []).map(function(a) {
-        var postDebut = a.post_debut ? escapeHtml(a.post_debut) : 'Post ' + a.post_ref;
-        var postResume = a.post_resume ? '<div class="sp-post-resume">📄 ' + escapeHtml(a.post_resume) + '</div>' : '';
-        return '<div class="sp-suggestion">' +
-          '<div class="sp-suggestion-header">' +
-          '<span class="sp-badge">💬</span>' +
-          '<span class="sp-post-start">"' + postDebut + '"</span>' +
-          '</div>' +
-          postResume +
-          '<div class="sp-suggestion-angle"><strong>Angle :</strong> ' + escapeHtml(a.angle) + '</div>' +
-          '<div class="sp-suggestion-example">"' + escapeHtml(a.exemple) + '"</div>' +
-          '<button class="sp-copy-btn" data-text="' + escapeHtml(a.exemple).replace(/"/g, '&quot;') + '">📋 Copier</button>' +
-          '</div>';
-      }).join('');
-
-      var dms = (analysis.angles_dm || []).map(function(a, i) {
-        return '<div class="sp-suggestion">' +
-          '<div class="sp-suggestion-context">' + escapeHtml(a.contexte) + '</div>' +
-          '<div class="sp-suggestion-example"><strong>Accroche :</strong> "' + escapeHtml(a.accroche) + '"</div>' +
-          '<div class="sp-suggestion-angle"><strong>Angle :</strong> ' + escapeHtml(a.angle) + '</div>' +
-          '<div class="sp-btn-group">' +
-          '<button class="sp-copy-btn" data-text="' + escapeHtml(a.accroche).replace(/"/g, '&quot;') + '">📋 Copier</button>' +
-          '<button class="sp-generate-btn" data-angle=\'' + encodeURIComponent(JSON.stringify(a)) + '\' data-profile=\'' + encodeURIComponent(JSON.stringify(profileInfo)) + '\'>✍️ Generer DM</button>' +
-          '</div>' +
-          '</div>';
-      }).join('');
-
-      var aEviter = (analysis.a_eviter || []).map(function(a) {
-        return '<li>' + escapeHtml(a) + '</li>';
-      }).join('');
-
-      panel.innerHTML = '<div class="sp-analysis-header">' +
-        '<span>🔍 Analyse de ' + escapeHtml(profileInfo.name || 'ce profil') + '</span>' +
-        '<button class="sp-close-btn" id="sp-close-analysis">×</button>' +
-        '</div>' +
-        '<div class="sp-analysis-body">' +
-        '<div class="sp-section">' +
-        '<h4>📝 Synthese</h4>' +
-        '<div class="sp-tags">' + sujets + '</div>' +
-        '<p><strong>Ton :</strong> ' + escapeHtml(synthese.ton || '') + '</p>' +
-        '<p><strong>Valeurs :</strong> ' + escapeHtml((synthese.valeurs || []).join(', ')) + '</p>' +
-        parcoursInsight +
-        '</div>' +
-        '<div class="sp-section">' +
-        '<h4>💬 Idees de commentaires</h4>' +
-        commentaires +
-        '</div>' +
-        '<div class="sp-section">' +
-        '<h4>✉️ Idees de DM</h4>' +
-        dms +
-        '</div>' +
-        '<div class="sp-section sp-warning">' +
-        '<h4>⚠️ A eviter</h4>' +
-        '<ul>' + aEviter + '</ul>' +
-        '</div>' +
-        '<div class="sp-section sp-tip">' +
-        '<p>💡 <strong>Tip :</strong> Les Reels/videos ne sont pas analyses. Pour plus de posts, scrolle vers "Activite" et relance l\'analyse.</p>' +
-        '</div>' +
-        '</div>';
-    }
-
-    document.body.appendChild(panel);
-
-    // Event listeners
-    document.getElementById('sp-close-analysis').addEventListener('click', function() {
-      panel.remove();
-    });
-
-    panel.querySelectorAll('.sp-copy-btn').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        navigator.clipboard.writeText(btn.dataset.text);
-        btn.innerHTML = '✅ Copie !';
-        setTimeout(function() { btn.innerHTML = '📋 Copier'; }, 2000);
-      });
-    });
-
-    panel.querySelectorAll('.sp-generate-btn').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        var angleData = JSON.parse(decodeURIComponent(btn.dataset.angle));
-        var profileData = JSON.parse(decodeURIComponent(btn.dataset.profile));
-        generateFullDM(angleData, profileData, btn);
-      });
+    return sosSendMessage('importProspect', {
+      platform: PLATFORM,
+      profile: profileData.profile || profileData,
+      posts: profileData.posts || []
     });
   }
 
   // ============================================
-  // GENERATION DE DM COMPLET
+  // GENERATE DM VIA APP
   // ============================================
 
-  async function generateFullDM(angleData, profileInfo, btn) {
-    console.log('[SOS Prospection] Generating DM with:', { angleData, profileInfo });
+  function generateDMViaApp(prospectData) {
+    sosLog('Requesting DM generation from app:', prospectData);
 
-    var prompt = 'Tu es un expert en prospection LinkedIn qui ecrit des DM ultra naturels.\n\nCONTEXTE :\n- Destinataire : ' + (profileInfo.name || 'cette personne') + '\n- Titre : ' + (profileInfo.headline || 'non renseigne') + '\n- Contexte : ' + (angleData.contexte || '') + '\n- Angle : ' + (angleData.angle || '') + '\n- Accroche suggeree : ' + (angleData.accroche || '') + '\n\nREGLES STRICTES :\n- MAX 200 caracteres (court = mieux)\n- Commence par une minuscule (ex: "salut" pas "Salut", "hey" pas "Hey")\n- Oublie parfois une virgule ou un point volontairement\n- PAS de pave de texte - 2-3 lignes MAX\n- Ton decontracte, comme un vrai humain qui ecrit vite\n- UNE seule question courte a la fin\n- JAMAIS de "J\'espere que tu vas bien" ou formules bateau\n- JAMAIS de pitch ou de demande directe\n- Utilise "tu" pas "vous"\n\nEXEMPLES DE BON FORMAT :\n"salut [prenom], j\'ai vu ton post sur [sujet] et ca m\'a parle. t\'as deja teste [chose] ?"\n"hey j\'ai lu ton truc sur [sujet], interessant. tu bosses sur quoi en ce moment"\n\nGenere UN SEUL message court et naturel (texte brut uniquement, sans guillemets) :';
-
-    btn.innerHTML = '⏳ Generation...';
-    btn.disabled = true;
-
-    try {
-      var dmText = await callClaudeAPI(prompt);
-      console.log('[SOS Prospection] DM generated:', dmText);
-
-      // Si la reponse est du JSON, extraire le texte
-      if (typeof dmText === 'object') {
-        dmText = dmText.message || dmText.text || JSON.stringify(dmText);
-      }
-
-      // Nettoyer le texte
-      dmText = String(dmText).trim();
-
-      // Retirer les guillemets au debut et a la fin si presents
-      if ((dmText.startsWith('"') && dmText.endsWith('"')) || (dmText.startsWith("'") && dmText.endsWith("'"))) {
-        dmText = dmText.slice(1, -1);
-      }
-
-      showGeneratedDM(dmText, angleData, profileInfo);
-
-    } catch (error) {
-      console.error('[SOS Prospection] DM generation error:', error);
-      alert('Erreur : ' + error.message);
-    } finally {
-      btn.innerHTML = '✍️ Generer DM';
-      btn.disabled = false;
-    }
+    return sosSendMessage('generateDM', {
+      platform: PLATFORM,
+      prospect: prospectData
+    });
   }
 
-  var lastDMContext = null;
+  // ============================================
+  // PREFILL DM
+  // ============================================
 
-  function showGeneratedDM(dmText, angleData, profileInfo) {
-    // Sauvegarder le contexte pour pouvoir regenerer
-    if (angleData && profileInfo) {
-      lastDMContext = { angleData: angleData, profileInfo: profileInfo };
+  function prefillDM(message, prospectData) {
+    sosLog('Prefilling DM:', { message: message, prospect: prospectData });
+
+    // Method 1: If we're on messaging page
+    if (detectPageType() === 'messaging') {
+      var messageInput = document.querySelector('.msg-form__contenteditable') ||
+                         document.querySelector('[contenteditable="true"]') ||
+                         document.querySelector('.msg-form__message-texteditor');
+
+      if (messageInput) {
+        messageInput.focus();
+        messageInput.innerHTML = '<p>' + message + '</p>';
+
+        // Trigger input event for LinkedIn to recognize change
+        var inputEvent = new Event('input', { bubbles: true });
+        messageInput.dispatchEvent(inputEvent);
+
+        sosShowToast('Message pré-rempli !', 'success');
+        return true;
+      }
     }
 
-    var oldModal = document.getElementById('sp-dm-modal');
-    if (oldModal) oldModal.remove();
+    // Method 2: Open messaging and try to prefill
+    var profileUrl = prospectData.profileUrl || window.location.href.split('?')[0];
+    var username = profileUrl.split('/in/')[1];
+    if (username) {
+      username = username.split('/')[0];
+    }
 
-    var charClass = dmText.length > 300 ? 'sp-char-warning' : '';
+    // Try to find and click the message button
+    var messageBtn = document.querySelector('button[aria-label*="Message"]') ||
+                     document.querySelector('.pvs-profile-actions__action[aria-label*="Message"]') ||
+                     document.querySelector('.message-anywhere-button');
 
-    var modal = document.createElement('div');
-    modal.id = 'sp-dm-modal';
-    modal.innerHTML = '<div class="sp-dm-modal-content">' +
-      '<div class="sp-dm-modal-header">' +
-      '<h3>✉️ DM genere</h3>' +
-      '<button id="sp-close-dm-modal">×</button>' +
-      '</div>' +
-      '<div class="sp-dm-modal-body">' +
-      '<textarea id="sp-dm-text" rows="4">' + escapeHtml(dmText) + '</textarea>' +
-      '<div class="sp-dm-meta ' + charClass + '">' + dmText.length + '/300 caracteres</div>' +
-      '</div>' +
-      '<div class="sp-dm-modal-footer">' +
-      '<button class="sp-btn sp-btn-secondary" id="sp-regenerate-dm">🔄 Regenerer</button>' +
-      '<button class="sp-btn sp-btn-primary" id="sp-copy-dm">📋 Copier</button>' +
-      '</div>' +
-      '</div>';
+    if (messageBtn) {
+      messageBtn.click();
 
-    document.body.appendChild(modal);
-
-    document.getElementById('sp-close-dm-modal').addEventListener('click', function() {
-      modal.remove();
-    });
-
-    document.getElementById('sp-copy-dm').addEventListener('click', function() {
-      var text = document.getElementById('sp-dm-text').value;
-      navigator.clipboard.writeText(text);
-      document.getElementById('sp-copy-dm').innerHTML = '✅ Copie !';
+      // Wait for modal and prefill
       setTimeout(function() {
-        var copyBtn = document.getElementById('sp-copy-dm');
-        if (copyBtn) copyBtn.innerHTML = '📋 Copier';
-      }, 2000);
-    });
+        var messageInput = document.querySelector('.msg-form__contenteditable') ||
+                           document.querySelector('[contenteditable="true"]');
 
-    // Bouton Regenerer
-    document.getElementById('sp-regenerate-dm').addEventListener('click', async function() {
-      if (!lastDMContext) {
-        alert('Impossible de regenerer. Relance l\'analyse du profil.');
-        return;
-      }
-      var regenBtn = document.getElementById('sp-regenerate-dm');
-      regenBtn.innerHTML = '⏳ ...';
-      regenBtn.disabled = true;
+        if (messageInput) {
+          messageInput.focus();
+          messageInput.innerHTML = '<p>' + message + '</p>';
 
-      try {
-        var prompt = 'Tu es un expert en prospection LinkedIn qui ecrit des DM ultra naturels.\n\nCONTEXTE :\n- Destinataire : ' + (lastDMContext.profileInfo.name || 'cette personne') + '\n- Titre : ' + (lastDMContext.profileInfo.headline || 'non renseigne') + '\n- Contexte : ' + (lastDMContext.angleData.contexte || '') + '\n- Angle : ' + (lastDMContext.angleData.angle || '') + '\n\nREGLES STRICTES :\n- MAX 200 caracteres (court = mieux)\n- Commence par une minuscule (ex: "salut" pas "Salut")\n- Oublie parfois une virgule ou un point volontairement\n- PAS de pave de texte - 2-3 lignes MAX\n- Ton decontracte, comme un vrai humain qui ecrit vite\n- UNE seule question courte a la fin\n- JAMAIS de formules bateau\n- Utilise "tu" pas "vous"\n- ECRIS UN MESSAGE DIFFERENT du precedent\n\nGenere UN SEUL message court et naturel (texte brut uniquement, sans guillemets) :';
+          var inputEvent = new Event('input', { bubbles: true });
+          messageInput.dispatchEvent(inputEvent);
 
-        var dmText = await callClaudeAPI(prompt);
-        if (typeof dmText === 'object') {
-          dmText = dmText.message || dmText.text || JSON.stringify(dmText);
+          sosShowToast('Message pré-rempli !', 'success');
+        } else {
+          // Fallback: copy to clipboard
+          sosCopyToClipboard(message);
+          sosShowToast('Message copié - collez-le dans la conversation', 'info');
         }
-        dmText = String(dmText).trim();
-        if ((dmText.startsWith('"') && dmText.endsWith('"')) || (dmText.startsWith("'") && dmText.endsWith("'"))) {
-          dmText = dmText.slice(1, -1);
-        }
+      }, 1500);
 
-        document.getElementById('sp-dm-text').value = dmText;
-        var meta = document.querySelector('.sp-dm-meta');
-        if (meta) {
-          meta.textContent = dmText.length + '/300 caracteres';
-          meta.className = 'sp-dm-meta' + (dmText.length > 300 ? ' sp-char-warning' : '');
-        }
-      } catch (error) {
-        alert('Erreur : ' + error.message);
-      } finally {
-        regenBtn.innerHTML = '🔄 Regenerer';
-        regenBtn.disabled = false;
-      }
-    });
+      return true;
+    }
 
-    // Mettre a jour le compteur de caracteres
-    document.getElementById('sp-dm-text').addEventListener('input', function(e) {
-      var meta = document.querySelector('.sp-dm-meta');
-      if (meta) {
-        var len = e.target.value.length;
-        meta.textContent = len + '/300 caracteres';
-        meta.className = 'sp-dm-meta' + (len > 300 ? ' sp-char-warning' : '');
-      }
-    });
-
-    // Fermer en cliquant en dehors
-    modal.addEventListener('click', function(e) {
-      if (e.target === modal) {
-        modal.remove();
-      }
-    });
+    // Fallback: just copy
+    sosCopyToClipboard(message);
+    sosShowToast('Message copié - ouvrez une conversation pour le coller', 'info');
+    return false;
   }
 
   // ============================================
-  // INTERFACE UTILISATEUR
+  // UI HANDLERS
   // ============================================
 
-  function createFloatingButton() {
-    var existing = document.getElementById("sp-linkedin-extractor");
-    if (existing) existing.remove();
-
-    var c = document.createElement("div");
-    c.id = "sp-linkedin-extractor";
-
+  function handleImport() {
     var pageType = detectPageType();
 
-    // Bouton Import (pour tous les types de page)
-    var btn = document.createElement("button");
-    btn.id = "sp-extract-btn";
-    btn.className = "sp-btn sp-btn-primary";
-    btn.textContent = "Sauvegarder ce contact";
-
-    // Bouton Analyser (seulement sur les profils)
-    var analyzeBtn = null;
-    if (pageType === "profile") {
-      analyzeBtn = document.createElement("button");
-      analyzeBtn.id = "sp-analyze-btn";
-      analyzeBtn.className = "sp-btn sp-btn-analyze";
-      analyzeBtn.innerHTML = "🔍 Analyser";
-      analyzeBtn.title = "Preparer ma conversation";
-    }
-
-    var panel = document.createElement("div");
-    panel.id = "sp-extract-panel";
-    panel.className = "sp-panel sp-hidden";
-    panel.innerHTML = "<div class=sp-panel-header><h3>SOS Prospection</h3><button id=sp-close-panel class=sp-btn-icon>x</button></div><div class=sp-panel-content><div id=sp-status><span class=sp-status-text>Analyse...</span></div><div id=sp-profiles-list></div><div id=sp-actions class=sp-hidden><button id=sp-select-all class=sp-btn>Tout</button><button id=sp-import-selected class=sp-btn>Importer</button></div></div>";
-
-    // Container pour les boutons
-    var btnContainer = document.createElement("div");
-    btnContainer.className = "sp-btn-container";
-
-    if (analyzeBtn) {
-      btnContainer.appendChild(analyzeBtn);
-    }
-    btnContainer.appendChild(btn);
-
-    c.appendChild(btnContainer);
-    c.appendChild(panel);
-    document.body.appendChild(c);
-
-    document.getElementById("sp-extract-btn").onclick = togglePanel;
-    document.getElementById("sp-close-panel").onclick = closePanel;
-    document.getElementById("sp-select-all").onclick = selectAll;
-    document.getElementById("sp-import-selected").onclick = importSelected;
-
-    if (analyzeBtn) {
-      analyzeBtn.addEventListener('click', analyzeProfile);
+    if (pageType === 'search') {
+      handleSearchImport();
+    } else if (pageType === 'profile') {
+      handleProfileImport();
+    } else {
+      sosShowToast('Cette page ne permet pas l\'import', 'warning');
     }
   }
 
-  function togglePanel() {
-    document.getElementById("sp-extract-panel").classList.toggle("sp-hidden");
-    if (!document.getElementById("sp-extract-panel").classList.contains("sp-hidden")) {
-      extractedProfiles = extractProfiles();
-      renderProfiles();
+  function handleProfileImport() {
+    var data = collectFullProfileData();
+
+    if (!data.profile.fullName || data.profile.fullName === 'Inconnu') {
+      sosShowToast('Impossible de lire le profil. Scrollez un peu et réessayez.', 'error');
+      return;
     }
+
+    // Show import modal
+    sosShowImportModal(
+      Object.assign({}, data.profile, { posts: data.posts }),
+      function(profileData) {
+        return sendToApp({
+          profile: profileData,
+          posts: data.posts
+        });
+      }
+    );
   }
 
-  function closePanel() { document.getElementById("sp-extract-panel").classList.add("sp-hidden"); }
+  function handleSearchImport() {
+    var profiles = extractSearchResults();
 
-  function renderProfiles() {
-    var list = document.getElementById("sp-profiles-list");
-    var actions = document.getElementById("sp-actions");
-    document.querySelector(".sp-status-text").textContent = extractedProfiles.length + " profil(s)";
-    if (extractedProfiles.length === 0) { list.innerHTML = "<p>Aucun profil trouve</p>"; actions.classList.add("sp-hidden"); return; }
-    var html = "";
-    extractedProfiles.forEach(function(p, i) {
-      html += "<div class=sp-profile-item><input type=checkbox class=sp-checkbox checked data-index=" + i + "><span>" + escapeHtml(p.fullName) + " - " + escapeHtml(p.bio) + "</span></div>";
-    });
-    list.innerHTML = html; actions.classList.remove("sp-hidden");
+    if (profiles.length === 0) {
+      sosShowToast('Aucun profil trouvé sur cette page', 'warning');
+      return;
+    }
+
+    // Show selection modal for bulk import
+    showBulkImportModal(profiles);
   }
 
-  function selectAll() {
-    var cbs = document.querySelectorAll(".sp-checkbox");
-    var allChecked = true;
-    cbs.forEach(function(cb) { if (!cb.checked) allChecked = false; });
-    cbs.forEach(function(cb) { cb.checked = !allChecked; });
-  }
-
-  function importSelected() {
-    var selected = [];
-    document.querySelectorAll(".sp-checkbox:checked").forEach(function(cb) {
-      selected.push(extractedProfiles[parseInt(cb.getAttribute("data-index"))]);
-    });
-    if (selected.length === 0) return;
-
-    // Show consent modal before importing
-    showConsentModal(selected);
-  }
-
-  function showConsentModal(profiles) {
-    // Remove old modal if exists
-    var oldModal = document.getElementById('sp-consent-modal');
-    if (oldModal) oldModal.remove();
+  function showBulkImportModal(profiles) {
+    var existing = document.getElementById('sos-bulk-modal');
+    if (existing) existing.remove();
 
     var modal = document.createElement('div');
-    modal.id = 'sp-consent-modal';
-    modal.innerHTML = '<div class="sp-consent-modal-content">' +
-      '<div class="sp-consent-modal-header">' +
-      '<h3>📥 Confirmer l\'import</h3>' +
-      '<button id="sp-close-consent-modal" class="sp-close-btn">×</button>' +
+    modal.id = 'sos-bulk-modal';
+    modal.className = 'sos-modal';
+
+    var profilesHtml = profiles.map(function(p, i) {
+      return '<label class="sos-bulk-item">' +
+        '<input type="checkbox" checked data-index="' + i + '">' +
+        '<span class="sos-bulk-name">' + sosEscapeHtml(p.fullName) + '</span>' +
+        '<span class="sos-bulk-headline">' + sosEscapeHtml(p.headline || '') + '</span>' +
+        '</label>';
+    }).join('');
+
+    modal.innerHTML = '<div class="sos-modal-overlay"></div>' +
+      '<div class="sos-modal-content">' +
+      '<div class="sos-modal-header">' +
+      '<h3>📥 Importer ' + profiles.length + ' profil(s)</h3>' +
+      '<button class="sos-modal-close" id="sos-close-bulk">×</button>' +
       '</div>' +
-      '<div class="sp-consent-modal-body">' +
-      '<p class="sp-consent-count"><strong>' + profiles.length + ' profil(s)</strong> selectionne(s)</p>' +
-      '<div class="sp-consent-info">' +
-      '<h4>🔒 Donnees importees :</h4>' +
-      '<ul>' +
-      '<li>Nom et prenom</li>' +
-      '<li>Titre professionnel</li>' +
-      '<li>URL du profil LinkedIn</li>' +
-      '</ul>' +
-      '<h4>📍 Ou seront-elles stockees ?</h4>' +
-      '<p>Dans votre CRM SOS Prospection personnel, accessible uniquement par vous.</p>' +
+      '<div class="sos-modal-body">' +
+      '<div class="sos-bulk-list">' + profilesHtml + '</div>' +
+      '<div class="sos-bulk-actions">' +
+      '<button class="sos-btn sos-btn-secondary" id="sos-select-all">Tout sélectionner</button>' +
       '</div>' +
-      '<label class="sp-consent-checkbox">' +
-      '<input type="checkbox" id="sp-consent-check">' +
-      '<span>J\'accepte d\'importer ces donnees dans mon CRM personnel</span>' +
+      '<label class="sos-checkbox-label">' +
+      '<input type="checkbox" id="sos-bulk-consent">' +
+      '<span>J\'accepte d\'importer ces données dans mon CRM</span>' +
       '</label>' +
       '</div>' +
-      '<div class="sp-consent-modal-footer">' +
-      '<button class="sp-btn sp-btn-secondary" id="sp-cancel-import">Annuler</button>' +
-      '<button class="sp-btn sp-btn-primary" id="sp-confirm-import" disabled>Importer</button>' +
+      '<div class="sos-modal-footer">' +
+      '<button class="sos-btn sos-btn-cancel" id="sos-cancel-bulk">Annuler</button>' +
+      '<button class="sos-btn sos-btn-primary" id="sos-confirm-bulk" disabled>Importer</button>' +
       '</div>' +
       '</div>';
 
     document.body.appendChild(modal);
 
-    // Event listeners
-    document.getElementById('sp-close-consent-modal').addEventListener('click', function() {
-      modal.remove();
+    setTimeout(function() {
+      modal.classList.add('sos-modal-visible');
+    }, 10);
+
+    var closeModal = function() {
+      modal.classList.remove('sos-modal-visible');
+      setTimeout(function() { modal.remove(); }, 300);
+    };
+
+    document.getElementById('sos-close-bulk').addEventListener('click', closeModal);
+    document.getElementById('sos-cancel-bulk').addEventListener('click', closeModal);
+    document.querySelector('.sos-modal-overlay').addEventListener('click', closeModal);
+
+    document.getElementById('sos-select-all').addEventListener('click', function() {
+      var checkboxes = modal.querySelectorAll('.sos-bulk-item input');
+      var allChecked = Array.from(checkboxes).every(function(cb) { return cb.checked; });
+      checkboxes.forEach(function(cb) { cb.checked = !allChecked; });
     });
 
-    document.getElementById('sp-cancel-import').addEventListener('click', function() {
-      modal.remove();
-    });
+    var consentCheckbox = document.getElementById('sos-bulk-consent');
+    var confirmBtn = document.getElementById('sos-confirm-bulk');
 
-    var checkbox = document.getElementById('sp-consent-check');
-    var confirmBtn = document.getElementById('sp-confirm-import');
-
-    checkbox.addEventListener('change', function() {
-      confirmBtn.disabled = !checkbox.checked;
+    consentCheckbox.addEventListener('change', function() {
+      confirmBtn.disabled = !consentCheckbox.checked;
     });
 
     confirmBtn.addEventListener('click', function() {
-      if (!checkbox.checked) return;
+      var selected = [];
+      modal.querySelectorAll('.sos-bulk-item input:checked').forEach(function(cb) {
+        selected.push(profiles[parseInt(cb.dataset.index)]);
+      });
 
-      confirmBtn.innerHTML = '⏳ Import...';
+      if (selected.length === 0) {
+        sosShowToast('Sélectionnez au moins un profil', 'warning');
+        return;
+      }
+
       confirmBtn.disabled = true;
+      confirmBtn.innerHTML = '<span class="sos-spinner"></span> Import...';
 
-      chrome.runtime.sendMessage({ action: "importLinkedInProfiles", profiles: profiles })
-        .then(function(r) {
-          if (r && r.success) {
-            document.querySelector(".sp-status-text").textContent = "Importe!";
-            modal.remove();
-            window.open(CONFIG.APP_URL + "/prospects?source=linkedin", "_blank");
-          } else {
-            confirmBtn.innerHTML = 'Importer';
-            confirmBtn.disabled = false;
-            alert('Erreur lors de l\'import');
-          }
+      sosSendMessage('importProspects', {
+        platform: PLATFORM,
+        profiles: selected
+      })
+        .then(function(result) {
+          sosShowToast(selected.length + ' profil(s) importé(s) !', 'success');
+          closeModal();
+          window.open(window.SOS_CONFIG.APP_URL + '/prospects?source=linkedin', '_blank');
         })
         .catch(function(err) {
-          confirmBtn.innerHTML = 'Importer';
+          sosError('Bulk import failed', err);
+          sosShowToast('Erreur: ' + err.message, 'error');
           confirmBtn.disabled = false;
-          alert('Erreur : ' + err.message);
+          confirmBtn.innerHTML = 'Importer';
         });
     });
+  }
 
-    // Close on click outside
-    modal.addEventListener('click', function(e) {
-      if (e.target === modal) {
-        modal.remove();
-      }
+  function handlePrepareDM() {
+    if (!isProfilePage()) {
+      sosShowToast('Allez sur un profil pour préparer un DM', 'warning');
+      return;
+    }
+
+    var profileData = scrapeProfileInfo();
+    var posts = scrapeLinkedInPosts();
+
+    if (!profileData.fullName || profileData.fullName === 'Inconnu') {
+      sosShowToast('Impossible de lire le profil', 'error');
+      return;
+    }
+
+    // Merge posts into profile data
+    profileData.posts = posts;
+    profileData.recentPost = posts.length > 0 ? posts[0].text : '';
+
+    sosShowPrepareDMModal(profileData, function(prospect) {
+      return generateDMViaApp(prospect);
     });
   }
 
   // ============================================
-  // OBSERVATION DES CHANGEMENTS DE PAGE
+  // EVENT LISTENERS
   // ============================================
 
-  function observePageChanges() {
-    var lastUrl = location.href;
-    new MutationObserver(function() {
-      if (location.href !== lastUrl) {
-        lastUrl = location.href;
-        setTimeout(createFloatingButton, 1500);
-      }
-    }).observe(document.body, { childList: true, subtree: true });
+  function setupEventListeners() {
+    // Listen for prefill-dm event from common modal
+    document.addEventListener('sos-prefill-dm', function(e) {
+      var detail = e.detail || {};
+      prefillDM(detail.message, detail.prospect);
+    });
   }
 
   // ============================================
-  // INITIALISATION
+  // INITIALIZATION
   // ============================================
+
+  function initUI() {
+    var pageType = detectPageType();
+
+    if (pageType === 'profile' || pageType === 'search') {
+      sosCreateFloatingButton({
+        platform: PLATFORM,
+        onImport: handleImport,
+        onPrepare: handlePrepareDM,
+        showPrepare: pageType === 'profile'
+      });
+    }
+  }
 
   function init() {
-    console.log("[SOS Prospection] LinkedIn content script loaded with AI analysis");
-    setTimeout(createFloatingButton, 1500);
-    observePageChanges();
+    sosLog('LinkedIn content script loaded');
+    setupEventListeners();
+    setTimeout(initUI, 1500);
+    sosObserveUrlChanges(initUI);
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
+  // Start
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
   } else {
     init();
   }
+
 })();

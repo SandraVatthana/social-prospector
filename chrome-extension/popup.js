@@ -1,5 +1,5 @@
 /**
- * SOS Prospection - Multi-Account Extension
+ * SOS Prospection - Multi-Platform Extension
  * Popup Script
  */
 
@@ -22,22 +22,23 @@ const platformContents = document.querySelectorAll('.platform-content');
 const settingsBtn = document.getElementById('settingsBtn');
 const settingsPanel = document.getElementById('settingsPanel');
 const closeSettingsBtn = document.getElementById('closeSettingsBtn');
-const apiKeyInput = document.getElementById('apiKeyInput');
-const toggleApiKeyBtn = document.getElementById('toggleApiKeyBtn');
-const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
 
-// Éléments DOM - LinkedIn
-const apiStatusDot = document.getElementById('apiStatusDot');
-const apiStatusText = document.getElementById('apiStatusText');
+// Éléments DOM - App Auth
+const appAuthDot = document.getElementById('appAuthDot');
+const appAuthText = document.getElementById('appAuthText');
+const openAppBtn = document.getElementById('openAppBtn');
 
 // Éléments DOM - Privacy
 const privacyLink = document.getElementById('privacyLink');
+
+// Configuration
+const APP_URL = 'https://sosprospection.com';
 
 // État
 let currentSessions = [];
 let activeSessionId = null;
 let isLoggedIn = false;
-let hasApiKey = false;
+let isAppAuthenticated = false;
 
 /**
  * Initialiser le popup
@@ -45,7 +46,7 @@ let hasApiKey = false;
 async function init() {
   await checkCurrentStatus();
   await loadSessions();
-  await checkApiKeyStatus();
+  await checkAppAuthStatus();
   setupEventListeners();
 }
 
@@ -90,29 +91,28 @@ async function checkCurrentStatus() {
 }
 
 /**
- * Vérifier le statut de la clé API Claude
+ * Vérifier le statut de connexion à l'app SOS Prospection
  */
-async function checkApiKeyStatus() {
+async function checkAppAuthStatus() {
   try {
-    const response = await chrome.runtime.sendMessage({ action: 'getClaudeApiKey' });
+    const response = await chrome.runtime.sendMessage({ action: 'getAuthStatus' });
 
-    hasApiKey = response.hasKey;
+    isAppAuthenticated = response.isAuthenticated;
 
-    if (hasApiKey) {
-      apiStatusDot.classList.add('connected');
-      apiStatusDot.classList.remove('disconnected');
-      apiStatusText.textContent = 'Cle API configuree';
-      // Masquer l'input et montrer un placeholder
-      apiKeyInput.value = '••••••••••••••••••••';
+    if (isAppAuthenticated) {
+      appAuthDot.classList.add('connected');
+      appAuthDot.classList.remove('disconnected');
+      appAuthText.textContent = 'Connecte a l\'app';
+      openAppBtn.textContent = 'Ouvrir l\'app';
     } else {
-      apiStatusDot.classList.remove('connected');
-      apiStatusDot.classList.add('disconnected');
-      apiStatusText.textContent = 'Cle API non configuree';
-      apiKeyInput.value = '';
+      appAuthDot.classList.remove('connected');
+      appAuthDot.classList.add('disconnected');
+      appAuthText.textContent = 'Non connecte';
+      openAppBtn.textContent = 'Se connecter';
     }
   } catch (error) {
-    console.error('Erreur lors de la verification de la cle API:', error);
-    apiStatusText.textContent = 'Erreur de verification';
+    console.error('Erreur lors de la verification de l\'auth app:', error);
+    appAuthText.textContent = 'Erreur de verification';
   }
 }
 
@@ -210,14 +210,9 @@ function setupEventListeners() {
   settingsBtn.addEventListener('click', openSettings);
   closeSettingsBtn.addEventListener('click', closeSettings);
 
-  // API Key
-  toggleApiKeyBtn.addEventListener('click', toggleApiKeyVisibility);
-  saveApiKeyBtn.addEventListener('click', saveApiKey);
-  apiKeyInput.addEventListener('focus', () => {
-    // Clear placeholder when focusing
-    if (apiKeyInput.value === '••••••••••••••••••••') {
-      apiKeyInput.value = '';
-    }
+  // App Auth
+  openAppBtn.addEventListener('click', () => {
+    window.open(APP_URL, '_blank');
   });
 
   // Bouton d'ajout
@@ -244,12 +239,6 @@ function setupEventListeners() {
   accountNameInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
       saveCurrentAccount();
-    }
-  });
-
-  apiKeyInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      saveApiKey();
     }
   });
 
@@ -295,6 +284,8 @@ function switchPlatformTab(platform) {
  */
 function openSettings() {
   settingsPanel.classList.add('open');
+  // Refresh auth status when opening settings
+  checkAppAuthStatus();
 }
 
 /**
@@ -302,58 +293,6 @@ function openSettings() {
  */
 function closeSettings() {
   settingsPanel.classList.remove('open');
-}
-
-/**
- * Toggle la visibilité de la clé API
- */
-function toggleApiKeyVisibility() {
-  if (apiKeyInput.type === 'password') {
-    apiKeyInput.type = 'text';
-  } else {
-    apiKeyInput.type = 'password';
-  }
-}
-
-/**
- * Sauvegarder la clé API
- */
-async function saveApiKey() {
-  const apiKey = apiKeyInput.value.trim();
-
-  if (!apiKey || apiKey === '••••••••••••••••••••') {
-    showToast('Entrez une cle API valide', 'error');
-    return;
-  }
-
-  if (!apiKey.startsWith('sk-ant-')) {
-    showToast('Format de cle API invalide', 'error');
-    return;
-  }
-
-  saveApiKeyBtn.disabled = true;
-  saveApiKeyBtn.textContent = 'Sauvegarde...';
-
-  try {
-    const response = await chrome.runtime.sendMessage({
-      action: 'saveClaudeApiKey',
-      apiKey: apiKey
-    });
-
-    if (response.error) {
-      throw new Error(response.error);
-    }
-
-    showToast('Cle API sauvegardee !', 'success');
-    await checkApiKeyStatus();
-    closeSettings();
-  } catch (error) {
-    console.error('Erreur lors de la sauvegarde de la cle API:', error);
-    showToast(error.message || 'Erreur lors de la sauvegarde', 'error');
-  } finally {
-    saveApiKeyBtn.disabled = false;
-    saveApiKeyBtn.textContent = 'Sauvegarder';
-  }
 }
 
 /**

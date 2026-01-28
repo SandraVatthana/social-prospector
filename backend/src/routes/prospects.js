@@ -409,8 +409,131 @@ router.get('/', requireAuth, async (req, res) => {
 
 
 /**
+ * POST /api/prospects/extension/import
+ * Import universel de profils depuis l'extension Chrome (LinkedIn, Instagram, TikTok)
+ */
+router.post('/extension/import', requireAuth, async (req, res) => {
+  try {
+    const { platform, profile, posts } = req.body;
+    const userId = req.user.id;
+
+    console.log(`[Extension Import] Platform: ${platform}, User: ${userId}`);
+    console.log(`[Extension Import] Profile:`, profile?.username || profile?.fullName);
+
+    if (!profile || (!profile.username && !profile.fullName)) {
+      return res.status(400).json(formatError('Profil invalide', 'INVALID_PROFILE'));
+    }
+
+    // Normaliser le username/identifiant
+    const username = profile.username || profile.profileUrl || profile.fullName;
+    const platformNormalized = (platform || 'instagram').toLowerCase();
+
+    // Vérifier si le prospect existe déjà
+    const { data: existingProspect } = await supabaseAdmin
+      .from('prospects')
+      .select('id, username')
+      .eq('user_id', userId)
+      .eq('platform', platformNormalized)
+      .eq('username', username)
+      .single();
+
+    if (existingProspect) {
+      // Mettre à jour le prospect existant avec les nouvelles données
+      const updateData = {
+        full_name: profile.fullName || profile.full_name || existingProspect.full_name,
+        bio: profile.bio || profile.about || existingProspect.bio,
+        avatar_url: profile.avatar || profile.avatarUrl || existingProspect.avatar_url,
+        updated_at: new Date().toISOString()
+      };
+
+      // Stocker les données spécifiques à la plateforme dans profile_data (JSONB)
+      const profileData = {
+        ...profile,
+        platform: platformNormalized,
+        importedAt: new Date().toISOString()
+      };
+      updateData.profile_data = profileData;
+
+      // Stocker les posts récents dans un champ JSON si disponibles
+      if (posts && posts.length > 0) {
+        updateData.recent_posts = JSON.stringify(posts.slice(0, 5));
+      }
+
+      const { data: updated, error: updateError } = await supabaseAdmin
+        .from('prospects')
+        .update(updateData)
+        .eq('id', existingProspect.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('[Extension Import] Update error:', updateError);
+      }
+
+      return res.json(formatResponse({
+        prospectId: existingProspect.id,
+        action: 'updated',
+        message: 'Prospect mis à jour'
+      }));
+    }
+
+    // Créer un nouveau prospect
+    const prospectData = {
+      user_id: userId,
+      username: username,
+      platform: platformNormalized,
+      full_name: profile.fullName || profile.full_name || null,
+      bio: profile.bio || profile.about || null,
+      avatar_url: profile.avatar || profile.avatarUrl || null,
+      followers: profile.followers_count || profile.followers || 0,
+      following: profile.following_count || profile.following || 0,
+      posts_count: profile.posts_count || profile.posts || 0,
+      status: 'new',
+      source: 'extension',
+      created_at: new Date().toISOString()
+    };
+
+    // Stocker toutes les données spécifiques dans profile_data (JSONB)
+    // Inclut headline, experiences, profileUrl pour LinkedIn
+    prospectData.profile_data = {
+      ...profile,
+      platform: platformNormalized,
+      importedAt: new Date().toISOString()
+    };
+
+    // Stocker les posts récents
+    if (posts && posts.length > 0) {
+      prospectData.recent_posts = JSON.stringify(posts.slice(0, 5));
+    }
+
+    const { data: newProspect, error: insertError } = await supabaseAdmin
+      .from('prospects')
+      .insert(prospectData)
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('[Extension Import] Insert error:', insertError);
+      return res.status(500).json(formatError('Erreur lors de l\'import', 'IMPORT_ERROR'));
+    }
+
+    console.log(`[Extension Import] SUCCESS - Created prospect ${newProspect.id}`);
+
+    res.json(formatResponse({
+      prospectId: newProspect.id,
+      action: 'created',
+      message: 'Prospect importé avec succès'
+    }));
+
+  } catch (error) {
+    console.error('[Extension Import] Error:', error);
+    res.status(500).json(formatError('Erreur serveur', 'SERVER_ERROR'));
+  }
+});
+
+/**
  * POST /api/prospects/linkedin/import
- * Import de profils LinkedIn depuis l'extension Chrome
+ * Import de profils LinkedIn depuis l'extension Chrome (legacy)
  */
 router.post('/linkedin/import', async (req, res) => {
   try {

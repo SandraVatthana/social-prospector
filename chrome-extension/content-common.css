@@ -1,0 +1,522 @@
+/**
+ * SOS Prospection - Common Styles
+ * Shared CSS for all platform content scripts
+ */
+
+/* ============================================
+   CSS VARIABLES
+   ============================================ */
+
+:root {
+  --sos-primary: #6366f1;
+  --sos-primary-hover: #4f46e5;
+  --sos-secondary: #64748b;
+  --sos-secondary-hover: #475569;
+  --sos-success: #10b981;
+  --sos-error: #ef4444;
+  --sos-warning: #f59e0b;
+  --sos-background: #ffffff;
+  --sos-surface: #f8fafc;
+  --sos-border: #e2e8f0;
+  --sos-text: #1e293b;
+  --sos-text-muted: #64748b;
+  --sos-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --sos-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --sos-radius: 8px;
+  --sos-radius-lg: 12px;
+  --sos-transition: all 0.2s ease;
+}
+
+/* ============================================
+   FLOATING BUTTON CONTAINER
+   ============================================ */
+
+.sos-floating-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 999999;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+}
+
+.sos-floating-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+
+.sos-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: var(--sos-radius);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--sos-transition);
+  white-space: nowrap;
+  box-shadow: var(--sos-shadow);
+}
+
+.sos-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sos-btn-primary {
+  background: var(--sos-primary);
+  color: white;
+}
+
+.sos-btn-primary:hover:not(:disabled) {
+  background: var(--sos-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--sos-shadow-lg);
+}
+
+.sos-btn-secondary {
+  background: var(--sos-background);
+  color: var(--sos-text);
+  border: 1px solid var(--sos-border);
+}
+
+.sos-btn-secondary:hover:not(:disabled) {
+  background: var(--sos-surface);
+  border-color: var(--sos-secondary);
+}
+
+.sos-btn-cancel {
+  background: transparent;
+  color: var(--sos-text-muted);
+  box-shadow: none;
+}
+
+.sos-btn-cancel:hover {
+  background: var(--sos-surface);
+  color: var(--sos-text);
+}
+
+.sos-btn-icon {
+  font-size: 16px;
+}
+
+/* ============================================
+   MODAL
+   ============================================ */
+
+.sos-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 9999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+}
+
+.sos-modal.sos-modal-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.sos-modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.sos-modal-content {
+  position: relative;
+  background: var(--sos-background);
+  border-radius: var(--sos-radius-lg);
+  box-shadow: var(--sos-shadow-lg);
+  width: 90%;
+  max-width: 420px;
+  max-height: 90vh;
+  overflow: hidden;
+  transform: translateY(20px);
+  transition: transform 0.3s ease;
+}
+
+.sos-modal.sos-modal-visible .sos-modal-content {
+  transform: translateY(0);
+}
+
+.sos-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--sos-border);
+}
+
+.sos-modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--sos-text);
+}
+
+.sos-modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: var(--sos-text-muted);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: var(--sos-transition);
+}
+
+.sos-modal-close:hover {
+  color: var(--sos-text);
+}
+
+.sos-modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  max-height: 60vh;
+}
+
+.sos-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--sos-border);
+  background: var(--sos-surface);
+}
+
+/* ============================================
+   PROFILE PREVIEW
+   ============================================ */
+
+.sos-profile-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--sos-surface);
+  border-radius: var(--sos-radius);
+  margin-bottom: 16px;
+}
+
+.sos-profile-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--sos-primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.sos-profile-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.sos-profile-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--sos-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sos-profile-headline {
+  font-size: 13px;
+  color: var(--sos-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+/* ============================================
+   IMPORT DETAILS
+   ============================================ */
+
+.sos-import-details {
+  margin-bottom: 16px;
+}
+
+.sos-import-details h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sos-text);
+  margin: 0 0 8px 0;
+}
+
+.sos-import-details ul {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--sos-text-muted);
+  font-size: 13px;
+}
+
+.sos-import-details li {
+  margin-bottom: 4px;
+}
+
+/* ============================================
+   CHECKBOX
+   ============================================ */
+
+.sos-checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--sos-text);
+  padding: 12px;
+  background: var(--sos-surface);
+  border-radius: var(--sos-radius);
+  border: 1px solid var(--sos-border);
+  transition: var(--sos-transition);
+}
+
+.sos-checkbox-label:hover {
+  border-color: var(--sos-primary);
+}
+
+.sos-checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--sos-primary);
+}
+
+/* ============================================
+   DM MODAL SPECIFIC
+   ============================================ */
+
+.sos-dm-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px 20px;
+  color: var(--sos-text-muted);
+  font-size: 14px;
+}
+
+.sos-dm-result textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--sos-border);
+  border-radius: var(--sos-radius);
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 100px;
+  transition: var(--sos-transition);
+  box-sizing: border-box;
+}
+
+.sos-dm-result textarea:focus {
+  outline: none;
+  border-color: var(--sos-primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.sos-dm-meta {
+  font-size: 12px;
+  color: var(--sos-text-muted);
+  text-align: right;
+  margin-top: 8px;
+}
+
+.sos-dm-meta.sos-char-warning {
+  color: var(--sos-warning);
+}
+
+/* ============================================
+   TOAST NOTIFICATIONS
+   ============================================ */
+
+.sos-toast {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  z-index: 99999999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--sos-text);
+  color: white;
+  border-radius: var(--sos-radius);
+  box-shadow: var(--sos-shadow-lg);
+  font-size: 14px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.sos-toast.sos-toast-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.sos-toast-success {
+  background: var(--sos-success);
+}
+
+.sos-toast-error {
+  background: var(--sos-error);
+}
+
+.sos-toast-warning {
+  background: var(--sos-warning);
+}
+
+.sos-toast-icon {
+  font-size: 16px;
+}
+
+/* ============================================
+   SPINNER
+   ============================================ */
+
+.sos-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: sos-spin 0.8s linear infinite;
+}
+
+.sos-btn-secondary .sos-spinner {
+  border-color: rgba(0, 0, 0, 0.1);
+  border-top-color: var(--sos-primary);
+}
+
+@keyframes sos-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================
+   BULK IMPORT MODAL
+   ============================================ */
+
+.sos-bulk-list {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+  border: 1px solid var(--sos-border);
+  border-radius: var(--sos-radius);
+}
+
+.sos-bulk-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-bottom: 1px solid var(--sos-border);
+  cursor: pointer;
+  transition: var(--sos-transition);
+}
+
+.sos-bulk-item:last-child {
+  border-bottom: none;
+}
+
+.sos-bulk-item:hover {
+  background: var(--sos-surface);
+}
+
+.sos-bulk-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--sos-primary);
+}
+
+.sos-bulk-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--sos-text);
+  flex-shrink: 0;
+}
+
+.sos-bulk-headline {
+  font-size: 12px;
+  color: var(--sos-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.sos-bulk-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+/* ============================================
+   UTILITIES
+   ============================================ */
+
+.sos-hidden {
+  display: none !important;
+}
+
+.sos-error-icon {
+  color: var(--sos-error);
+}
+
+/* ============================================
+   PLATFORM SPECIFIC ADJUSTMENTS
+   ============================================ */
+
+/* LinkedIn - adjust for existing UI */
+[data-platform="linkedin"] .sos-floating-buttons {
+  flex-direction: row;
+}
+
+/* Instagram - darker theme support */
+@media (prefers-color-scheme: dark) {
+  .sos-modal-content,
+  .sos-toast {
+    /* Instagram dark mode */
+  }
+}
+
+/* TikTok - adjust position to avoid player controls */
+[data-platform="tiktok"].sos-floating-container {
+  bottom: 100px;
+}

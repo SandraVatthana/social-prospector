@@ -4,6 +4,60 @@ import { api } from '../lib/api';
 
 const AuthContext = createContext(null);
 
+// ID de l'extension Chrome SOS Prospection (à remplacer par l'ID réel après publication)
+// En développement, utiliser l'ID temporaire ou essayer plusieurs méthodes
+const EXTENSION_ID = null; // Sera défini après publication sur le Chrome Web Store
+
+/**
+ * Sync auth token with Chrome extension (if installed)
+ * Utilise postMessage pour communiquer avec le content script de l'extension
+ */
+async function syncTokenWithExtension(token) {
+  try {
+    // Méthode 1: Via chrome.runtime.sendMessage (si l'ID de l'extension est connu)
+    if (EXTENSION_ID && typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+      chrome.runtime.sendMessage(EXTENSION_ID, {
+        action: 'setAuthToken',
+        token: token
+      }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.log('[Auth] Extension not found or not responding');
+        } else if (response?.success) {
+          console.log('[Auth] Token synced with extension');
+        }
+      });
+    }
+
+    // Méthode 2: Via window.postMessage (pour le content script)
+    window.postMessage({
+      type: 'SOS_PROSPECTION_AUTH',
+      action: token ? 'setAuthToken' : 'clearAuthToken',
+      token: token
+    }, '*');
+
+  } catch (error) {
+    // Silently fail - extension may not be installed
+    console.log('[Auth] Could not sync with extension:', error.message);
+  }
+}
+
+/**
+ * Clear auth token from Chrome extension
+ */
+async function clearExtensionToken() {
+  try {
+    if (EXTENSION_ID && typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+      chrome.runtime.sendMessage(EXTENSION_ID, { action: 'clearAuthToken' });
+    }
+    window.postMessage({
+      type: 'SOS_PROSPECTION_AUTH',
+      action: 'clearAuthToken'
+    }, '*');
+  } catch (error) {
+    // Silently fail
+  }
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [session, setSession] = useState(null);
@@ -50,6 +104,8 @@ export function AuthProvider({ children }) {
       if (session) {
         setUser(session.user);
         api.setToken(session.access_token);
+        // Sync token with extension
+        syncTokenWithExtension(session.access_token);
         // Attendre que checkOnboarding soit terminé AVANT de mettre loading à false
         await checkOnboarding(session.user?.id);
       }
@@ -63,11 +119,15 @@ export function AuthProvider({ children }) {
       if (session) {
         setUser(session.user);
         api.setToken(session.access_token);
+        // Sync token with extension
+        syncTokenWithExtension(session.access_token);
         // Recharger les données d'onboarding en arrière-plan (pas de await pour éviter de bloquer)
         checkOnboarding(session.user?.id);
       } else {
         setUser(null);
         api.setToken(null);
+        // Clear extension token
+        clearExtensionToken();
         setOnboardingCompleted(null);
         setOnboardingData(null);
       }
