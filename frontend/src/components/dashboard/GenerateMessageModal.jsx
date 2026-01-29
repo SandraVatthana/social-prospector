@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Copy, Check, Loader2, Sparkles, RefreshCw, Send, Instagram, Play, Heart, MessageSquare, Zap, Eye, Edit3, Target, ChevronLeft, Mic, MessageCircle, X } from 'lucide-react';
+import { Copy, Check, Loader2, Sparkles, RefreshCw, Send, Instagram, Play, Heart, MessageSquare, Zap, Eye, Edit3, Target, ChevronLeft, Mic, MessageCircle, X, Clock, ListPlus } from 'lucide-react';
 
 import Modal from '../ui/Modal';
 import { API_BASE_URL } from '../../lib/api';
 import { ConversationGoalSelector } from '../conversations';
 import VocalTrainingModal from './VocalTrainingModal';
+import { useDMQueue } from '../../hooks/useDMQueue';
 
 // Clés localStorage
 const VOCAL_TIP_DISMISSED_KEY = 'social_prospector_vocal_tip_dismissed';
@@ -69,6 +70,10 @@ export default function GenerateMessageModal({ isOpen, onClose, prospect, posts 
   // Nouvelles variables pour les séquences de conversation
   const [step, setStep] = useState('goal'); // 'goal' | 'generate'
   const [conversationGoal, setConversationGoal] = useState(null);
+
+  // File d'attente DM
+  const { addToQueue, queueCount } = useDMQueue();
+  const [queueToast, setQueueToast] = useState(null); // { position, waitMinutes } | null
 
   // Réinitialiser à l'ouverture
   useEffect(() => {
@@ -286,7 +291,30 @@ export default function GenerateMessageModal({ isOpen, onClose, prospect, posts 
     setIsEditingVocal(false);
     setCopiedVocal(false);
     setActiveTab('written');
+    setQueueToast(null);
     onClose();
+  };
+
+  // Ajouter le message à la file d'attente
+  const handleAddToQueue = () => {
+    const finalMessage = editedMessage || generatedMessage;
+
+    const result = addToQueue({
+      prospectId: prospect.id,
+      prospectUsername: prospect.username,
+      prospectAvatar: prospect.avatar,
+      platform: prospect.platform || 'instagram',
+      content: finalMessage,
+    });
+
+    // Afficher le toast de confirmation
+    setQueueToast(result);
+
+    // Masquer le toast après 4 secondes
+    setTimeout(() => {
+      setQueueToast(null);
+      onClose();
+    }, 3000);
   };
 
   // Temps relatif
@@ -753,6 +781,27 @@ export default function GenerateMessageModal({ isOpen, onClose, prospect, posts 
 
             {/* Actions */}
             <div className="flex gap-3">
+              {/* Bouton Ajouter à la file */}
+              <button
+                onClick={handleAddToQueue}
+                disabled={!!queueToast}
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
+                title="Ajouter à la file d'attente pour envoyer plus tard"
+              >
+                {queueToast ? (
+                  <>
+                    <Check className="w-5 h-5" />
+                    Ajouté !
+                  </>
+                ) : (
+                  <>
+                    <ListPlus className="w-5 h-5" />
+                    <span className="hidden sm:inline">File d'attente</span>
+                  </>
+                )}
+              </button>
+
+              {/* Bouton Envoyer maintenant */}
               <button
                 onClick={handleSave}
                 disabled={messageSaved}
@@ -771,6 +820,26 @@ export default function GenerateMessageModal({ isOpen, onClose, prospect, posts 
                 )}
               </button>
             </div>
+
+            {/* Toast confirmation file d'attente */}
+            {queueToast && (
+              <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl animate-in slide-in-from-bottom duration-200">
+                <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-amber-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-amber-800">
+                    Ajouté à la file ! #{queueToast.position}
+                  </p>
+                  <p className="text-sm text-amber-600">
+                    {queueToast.waitMinutes > 0
+                      ? `Prêt dans ~${queueToast.waitMinutes} min`
+                      : 'Prêt à envoyer maintenant !'
+                    }
+                  </p>
+                </div>
+              </div>
+            )}
 
             <p className="text-xs text-warm-400 text-center">
               {posts.length > 0

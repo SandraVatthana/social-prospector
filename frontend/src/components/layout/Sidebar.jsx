@@ -16,6 +16,7 @@ import {
   Target,
 } from 'lucide-react';
 import { QuotaWidget } from '../dashboard';
+import { DMQueueWidget, QueueNotification } from '../queue';
 import { useClient } from '../../contexts/ClientContext';
 import { useSidebar } from '../../contexts/SidebarContext';
 import ClientSwitcher from '../agency/ClientSwitcher';
@@ -195,6 +196,14 @@ export default function Sidebar({ user, prospectsCount = 0, messagesCount = 0 })
       <div className="p-4 border-t border-warm-100" data-tour="quota">
         <QuotaWidget />
       </div>
+
+      {/* DM Queue Widget */}
+      <div className="px-4 pb-2">
+        <DMQueueWidget />
+      </div>
+
+      {/* Queue Notification Modal (global) */}
+      <QueueNotification />
 
       {/* User */}
       <div className="p-4 border-t border-warm-100">

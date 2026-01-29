@@ -243,6 +243,29 @@ export function useDMQuota() {
     return 'green';
   }, [quota]);
 
+  // Calculer le temps avant le prochain envoi autorisé (pour la file d'attente)
+  const calculateNextSendTime = useCallback((queuePosition = 0) => {
+    const now = Date.now();
+    const spacingMs = (60 * 60 * 1000) / HOURLY_LIMIT; // Temps entre chaque DM
+
+    // Si pas de dernier envoi, on peut envoyer maintenant
+    if (!quota.lastSentAt) {
+      return now + (queuePosition * spacingMs);
+    }
+
+    // Calculer le prochain slot disponible
+    const nextSlot = quota.lastSentAt + spacingMs;
+    const baseTime = Math.max(now, nextSlot);
+
+    // Ajouter le délai pour la position dans la queue
+    return baseTime + (queuePosition * spacingMs);
+  }, [quota.lastSentAt, HOURLY_LIMIT]);
+
+  // Obtenir l'espacement recommandé entre les DMs (en ms)
+  const getSpacingMs = useCallback(() => {
+    return (60 * 60 * 1000) / HOURLY_LIMIT;
+  }, [HOURLY_LIMIT]);
+
   return {
     quota,
     warning,
@@ -257,6 +280,10 @@ export function useDMQuota() {
       hourly: HOURLY_LIMIT,
       daily: DAILY_LIMIT,
     },
+    // Nouveaux exports pour la file d'attente
+    calculateNextSendTime,
+    getSpacingMs,
+    lastSentAt: quota.lastSentAt,
   };
 }
 
