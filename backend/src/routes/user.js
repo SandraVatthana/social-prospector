@@ -8,19 +8,41 @@ const router = Router();
 
 /**
  * GET /api/user/profile
- * Récupère le profil de l'utilisateur
+ * Récupère le profil de l'utilisateur avec son statut d'abonnement
  */
 router.get('/profile', requireAuth, async (req, res) => {
   try {
     const { data: user, error } = await supabaseAdmin
       .from('users')
-      .select('id, email, full_name, avatar_url, plan, created_at, onboarding_completed, monthly_goal_responses, monthly_goal_meetings')
+      .select('id, email, full_name, avatar_url, plan, subscription_status, subscription_ends_at, created_at, onboarding_completed, monthly_goal_responses, monthly_goal_meetings')
       .eq('id', req.user.id)
       .single();
 
     if (error) throw error;
 
-    res.json(formatResponse(user));
+    // Calculer le plan effectif (même logique que le middleware auth)
+    const now = new Date();
+    const subscriptionEndsAt = user.subscription_ends_at
+      ? new Date(user.subscription_ends_at)
+      : null;
+
+    const isSubscriptionActive = user.subscription_status === 'active';
+    const isInGracePeriod = subscriptionEndsAt && subscriptionEndsAt > now;
+    const isSubscriptionExpired = user.plan && user.plan !== 'free' && !isSubscriptionActive && !isInGracePeriod;
+
+    // Le plan effectif est 'free' si l'abonnement a expiré
+    const effectivePlan = (user.plan && user.plan !== 'free' && (isSubscriptionActive || isInGracePeriod))
+      ? user.plan
+      : 'free';
+
+    res.json(formatResponse({
+      ...user,
+      effective_plan: effectivePlan,
+      subscription_expired: isSubscriptionExpired,
+      days_until_expiry: isInGracePeriod
+        ? Math.ceil((subscriptionEndsAt - now) / (1000 * 60 * 60 * 24))
+        : null,
+    }));
   } catch (error) {
     console.error('Error fetching profile:', error);
     res.status(500).json(formatError('Erreur lors de la récupération du profil', 'PROFILE_ERROR'));
