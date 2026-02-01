@@ -21,6 +21,9 @@ import userRoutes from './src/routes/user.js';
 import categorizationRoutes from './src/routes/categorization.js';
 import exportRoutes from './src/routes/export.js';
 import icpRoutes from './src/routes/icp.js';
+import campaignsRoutes from './src/routes/campaigns.js';
+import followupsRoutes from './src/routes/followups.js';
+import scoringRoutes from './src/routes/scoring.js';
 
 const app = express();
 
@@ -61,6 +64,9 @@ app.use('/api/user', userRoutes);
 app.use('/api/categorization', categorizationRoutes);
 app.use('/api/export', exportRoutes);
 app.use('/api/icp', icpRoutes);
+app.use('/api/campaigns', campaignsRoutes);
+app.use('/api/followups', followupsRoutes);
+app.use('/api/scoring', scoringRoutes);
 
 // Image proxy pour contourner les restrictions CORS d'Instagram
 app.get('/api/image-proxy', async (req, res) => {

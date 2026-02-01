@@ -16,6 +16,9 @@ import Conversation from './pages/Conversation';
 import Clients from './pages/Clients';
 import CrmDashboard from './pages/CrmDashboard';
 import IcpDashboard from './pages/IcpDashboard';
+import Campaigns from './pages/Campaigns';
+import CampaignDetail from './pages/CampaignDetail';
+import Followups from './pages/Followups';
 import OnboardingProfond from './components/onboarding/OnboardingProfond';
 import GuidedTour, { useTour, STORAGE_KEY } from './components/tour/GuidedTour';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -42,6 +45,15 @@ export const useTourContext = () => useContext(TourContext);
 // Routes publiques qui ne nécessitent pas d'authentification
 const PUBLIC_ROUTES = ['/opt-out', '/privacy', '/terms', '/legal', '/landing', '/login'];
 
+// Utilisateur mock pour le mode démo
+const MOCK_USER = {
+  id: 'demo-user',
+  name: 'Utilisateur Démo',
+  email: 'demo@example.com',
+  plan: 'Solo',
+  days_until_renewal: 30,
+};
+
 function AppContent() {
   const { needsOnboarding, completeOnboarding, skipOnboardingDemo, user, loginDemo, loading, onboardingData } = useAuth();
   const navigate = useNavigate();
@@ -54,7 +66,7 @@ function AppContent() {
 
   // Pour la démo : afficher un bouton pour lancer l'onboarding
   const handleDemoLogin = () => {
-    loginDemo(mockUser);
+    loginDemo(MOCK_USER);
   };
 
   const handleOnboardingComplete = (data, voiceProfile, redirectTo) => {
@@ -173,6 +185,9 @@ function AppContent() {
               <Route path="/conversation/:prospectId" element={<Conversation />} />
               <Route path="/crm" element={<CrmDashboard />} />
               <Route path="/icp" element={<IcpDashboard />} />
+              <Route path="/campaigns" element={<Campaigns />} />
+              <Route path="/campaigns/:id" element={<CampaignDetail />} />
+              <Route path="/followups" element={<Followups />} />
               {/* Redirections et catch-all */}
               <Route path="/dashboard" element={<Navigate to="/" replace />} />
               <Route path="*" element={<Navigate to="/" replace />} />

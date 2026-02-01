@@ -12,10 +12,10 @@ const discernementConfig = {
   },
   nurture: {
     icon: Leaf,
-    label: 'À nourrir',
+    label: 'Nurturing',
     emoji: '🌱',
     classes: 'bg-amber-100 text-amber-700 border-amber-200',
-    tooltip: 'À nourrir - pose des questions, crée le lien',
+    tooltip: 'En nurturing - pose des questions, cree le lien',
   },
   skip: {
     icon: Ban,

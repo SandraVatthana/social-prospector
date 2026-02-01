@@ -37,7 +37,7 @@
           window.postMessage({
             type: 'SOS_PROSPECTION_AUTH_RESPONSE',
             success: true
-          }, '*');
+          }, window.location.origin);
         }
       });
     } else if (data.action === 'clearAuthToken') {
@@ -50,7 +50,7 @@
           type: 'SOS_PROSPECTION_AUTH_RESPONSE',
           success: true,
           action: 'cleared'
-        }, '*');
+        }, window.location.origin);
       });
     }
   });
@@ -60,6 +60,6 @@
     type: 'SOS_PROSPECTION_EXTENSION',
     installed: true,
     version: '3.1.0'
-  }, '*');
+  }, window.location.origin);
 
 })();

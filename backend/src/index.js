@@ -24,6 +24,9 @@ import userRoutes from './routes/user.js';
 import categorizationRoutes from './routes/categorization.js';
 import icpRoutes from './routes/icp.js';
 import exportRoutes from './routes/export.js';
+import campaignsRoutes from './routes/campaigns.js';
+import followupsRoutes from './routes/followups.js';
+import scoringRoutes from './routes/scoring.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -84,6 +87,9 @@ app.use('/api/user', userRoutes);
 app.use('/api/categorization', categorizationRoutes);
 app.use('/api/icp', icpRoutes);
 app.use('/api/export', exportRoutes);
+app.use('/api/campaigns', campaignsRoutes);
+app.use('/api/followups', followupsRoutes);
+app.use('/api/scoring', scoringRoutes);
 
 // Image proxy pour contourner les restrictions CORS d'Instagram
 app.get('/api/image-proxy', async (req, res) => {
@@ -95,14 +101,30 @@ app.get('/api/image-proxy', async (req, res) => {
     }
 
     // Valider que c'est une URL Instagram ou CDN autorisé
+    let parsedUrl;
+    try {
+      parsedUrl = new URL(url);
+    } catch {
+      return res.status(400).json({ error: 'URL invalide' });
+    }
+
+    // Vérifier le protocole (HTTPS uniquement)
+    if (parsedUrl.protocol !== 'https:') {
+      return res.status(403).json({ error: 'Protocole non autorisé' });
+    }
+
+    // Liste des domaines autorisés (vérification stricte du hostname)
     const allowedDomains = [
       'instagram.com',
       'cdninstagram.com',
       'fbcdn.net',
-      'scontent',
+      'scontent.cdninstagram.com',
     ];
 
-    const isAllowed = allowedDomains.some(domain => url.includes(domain));
+    const hostname = parsedUrl.hostname.toLowerCase();
+    const isAllowed = allowedDomains.some(domain =>
+      hostname === domain || hostname.endsWith('.' + domain)
+    );
     if (!isAllowed) {
       return res.status(403).json({ error: 'Domaine non autorisé' });
     }

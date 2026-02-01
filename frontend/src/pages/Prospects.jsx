@@ -33,6 +33,8 @@ import GenerateMessageModal from '../components/dashboard/GenerateMessageModal';
 import InfoTooltip from '../components/ui/InfoTooltip';
 import { useTourContext } from '../App';
 import { API_BASE_URL } from '../lib/api';
+import { ScoreBadge, ScoreDetailPanel } from '../components/scoring';
+import { SCORE_BADGES } from '../config/scoringConfig';
 
 // Icone TikTok custom
 const TikTokIcon = ({ className }) => (
@@ -133,6 +135,8 @@ export default function Prospects() {
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [prospectForMessage, setProspectForMessage] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null); // Menu trois points ouvert
+  const [scoreFilter, setScoreFilter] = useState('all'); // Filtre par score badge
+  const [showScoreDetail, setShowScoreDetail] = useState(null); // Prospect pour le panel de score
 
   // Charger les prospects depuis l'API au montage
   useEffect(() => {
@@ -167,6 +171,10 @@ export default function Prospects() {
           messagesSent: p.messages_sent || 0,
           notes: p.notes || '',
           tags: p.tags || [],
+          // Champs scoring
+          score_total: p.score_total || 0,
+          score_badge: p.score_badge || 'cold',
+          score_signals: p.score_signals || [],
         }));
         setProspects(mappedProspects);
       }
@@ -186,6 +194,7 @@ export default function Prospects() {
       }
       if (statusFilter !== 'all' && p.status !== statusFilter) return false;
       if (platformFilter !== 'all' && p.platform !== platformFilter) return false;
+      if (scoreFilter !== 'all' && p.score_badge !== scoreFilter) return false;
       return true;
     })
     .sort((a, b) => {
@@ -351,6 +360,18 @@ export default function Prospects() {
               <option value="all">Toutes les plateformes</option>
               <option value="instagram">Instagram</option>
               <option value="tiktok">TikTok</option>
+            </select>
+
+            {/* Filtre score */}
+            <select
+              value={scoreFilter}
+              onChange={(e) => setScoreFilter(e.target.value)}
+              className="px-3 py-2 border border-warm-200 rounded-lg text-sm focus:border-brand-500 outline-none"
+            >
+              <option value="all">Tous les scores</option>
+              <option value="hot">Chaud (60+)</option>
+              <option value="warm">Tiede (30-59)</option>
+              <option value="cold">Froid (&lt;30)</option>
             </select>
 
             {/* Tri */}
@@ -522,7 +543,13 @@ export default function Prospects() {
                             <span className={`px-2 py-0.5 rounded-lg text-xs font-medium ${STATUS_CONFIG[prospect.status].color}`}>
                               {STATUS_CONFIG[prospect.status].label}
                             </span>
-                            <span className="text-xs text-warm-400">{formatNumber(prospect.followers || 0)} abonnés</span>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setShowScoreDetail(prospect); }}
+                              className="hover:opacity-80 transition-opacity"
+                            >
+                              <ScoreBadge badge={prospect.score_badge} score={prospect.score_total} size="sm" />
+                            </button>
+                            <span className="text-xs text-warm-400">{formatNumber(prospect.followers || 0)} abonnes</span>
                           </div>
                         </div>
                       </div>
@@ -622,10 +649,16 @@ export default function Prospects() {
                       </div>
 
                       {/* Statut */}
-                      <div className="col-span-2 flex items-center">
+                      <div className="col-span-2 flex items-center gap-2">
                         <span className={`px-2 py-1 rounded-lg text-xs font-medium ${STATUS_CONFIG[prospect.status].color}`}>
                           {STATUS_CONFIG[prospect.status].label}
                         </span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setShowScoreDetail(prospect); }}
+                          className="hover:opacity-80 transition-opacity"
+                        >
+                          <ScoreBadge badge={prospect.score_badge} score={prospect.score_total} size="sm" />
+                        </button>
                       </div>
 
                       {/* Stats */}
@@ -710,6 +743,21 @@ export default function Prospects() {
           )}
         </div>
       </div>
+
+      {/* Modal detail score */}
+      {showScoreDetail && (
+        <ScoreDetailPanel
+          prospect={showScoreDetail}
+          onClose={() => setShowScoreDetail(null)}
+          onScoreUpdated={(prospectId, newScore, newBadge) => {
+            setProspects(prev => prev.map(p =>
+              p.id === prospectId
+                ? { ...p, score_total: newScore, score_badge: newBadge }
+                : p
+            ));
+          }}
+        />
+      )}
 
       {/* Modal generation message */}
       <GenerateMessageModal

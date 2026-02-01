@@ -43,6 +43,23 @@ class API {
     }
   }
 
+  // Generic HTTP methods
+  async get(endpoint) {
+    return this.request(endpoint);
+  }
+
+  async post(endpoint, body) {
+    return this.request(endpoint, { method: 'POST', body });
+  }
+
+  async put(endpoint, body) {
+    return this.request(endpoint, { method: 'PUT', body });
+  }
+
+  async delete(endpoint) {
+    return this.request(endpoint, { method: 'DELETE' });
+  }
+
   // User
   async getProfile() {
     return this.request('/user/profile');

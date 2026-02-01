@@ -33,7 +33,7 @@ async function syncTokenWithExtension(token) {
       type: 'SOS_PROSPECTION_AUTH',
       action: token ? 'setAuthToken' : 'clearAuthToken',
       token: token
-    }, '*');
+    }, window.location.origin);
 
   } catch (error) {
     // Silently fail - extension may not be installed
@@ -52,7 +52,7 @@ async function clearExtensionToken() {
     window.postMessage({
       type: 'SOS_PROSPECTION_AUTH',
       action: 'clearAuthToken'
-    }, '*');
+    }, window.location.origin);
   } catch (error) {
     // Silently fail
   }

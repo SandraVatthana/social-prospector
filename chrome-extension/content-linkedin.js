@@ -294,7 +294,10 @@
 
       if (messageInput) {
         messageInput.focus();
-        messageInput.innerHTML = '<p>' + message + '</p>';
+        var p = document.createElement('p');
+        p.textContent = message;
+        messageInput.innerHTML = '';
+        messageInput.appendChild(p);
 
         // Trigger input event for LinkedIn to recognize change
         var inputEvent = new Event('input', { bubbles: true });
@@ -327,7 +330,10 @@
 
         if (messageInput) {
           messageInput.focus();
-          messageInput.innerHTML = '<p>' + message + '</p>';
+          var p = document.createElement('p');
+          p.textContent = message;
+          messageInput.innerHTML = '';
+          messageInput.appendChild(p);
 
           var inputEvent = new Event('input', { bubbles: true });
           messageInput.dispatchEvent(inputEvent);

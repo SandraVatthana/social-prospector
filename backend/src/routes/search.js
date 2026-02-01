@@ -158,11 +158,11 @@ router.get('/history', requireAuth, async (req, res) => {
 /**
  * GET /api/search/source
  * Nouvelle recherche par source (compte, hashtag, lieu)
- * Note: requireAuth temporairement optionnel pour les tests
  */
-router.get('/source', async (req, res) => {
+router.get('/source', requireAuth, async (req, res) => {
   try {
     const { sourceType, query, subtype = 'followers', limit = 50, offset = 0, country = 'fr' } = req.query;
+    const userId = req.user.id;
 
     if (!sourceType || !query) {
       return res.status(400).json(formatError('sourceType et query requis', 'VALIDATION_ERROR'));
@@ -170,23 +170,20 @@ router.get('/source', async (req, res) => {
 
     const parsedOffset = parseInt(offset) || 0;
 
-    // Vérifier le quota seulement si authentifié
-    let canSearch = { allowed: true, used: 0, limit: 100 };
-    if (req.user?.id) {
-      canSearch = await checkSearchQuota(req.user.id);
-      if (!canSearch.allowed) {
-        return res.status(429).json(formatError(
-          `Limite de recherches atteinte (${canSearch.used}/${canSearch.limit})`,
-          'QUOTA_EXCEEDED'
-        ));
-      }
+    // Vérifier le quota
+    const canSearch = await checkSearchQuota(userId);
+    if (!canSearch.allowed) {
+      return res.status(429).json(formatError(
+        `Limite de recherches atteinte (${canSearch.used}/${canSearch.limit})`,
+        'QUOTA_EXCEEDED'
+      ));
     }
 
     console.log(`[Search/Source] Type: ${sourceType}, Query: "${query}", Subtype: ${subtype}, Offset: ${parsedOffset}, Country: ${country}`);
 
-    // Sauvegarder la recherche seulement si authentifié (et pas un "load more")
-    if (req.user?.id && parsedOffset === 0) {
-      await saveSearch(req.user.id, `${sourceType}:${query}`, 'instagram');
+    // Sauvegarder la recherche (pas pour les "load more")
+    if (parsedOffset === 0) {
+      await saveSearch(userId, `${sourceType}:${query}`, 'instagram');
     }
 
     let prospects = [];

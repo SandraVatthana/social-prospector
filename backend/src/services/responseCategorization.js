@@ -281,8 +281,8 @@ function suggestAction(categorization) {
       urgency: 'immediate'
     },
     warm_lead: {
-      action: 'nurture',
-      message: 'Envoyer du contenu de valeur, répondre aux questions',
+      action: 'nurturing',
+      message: 'Envoyer du contenu de valeur, repondre aux questions',
       urgency: 'medium'
     },
     question: {

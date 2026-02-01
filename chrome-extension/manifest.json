@@ -9,7 +9,6 @@
     "128": "icons/icon128.png"
   },
   "permissions": [
-    "cookies",
     "storage",
     "tabs",
     "activeTab",
@@ -17,12 +16,14 @@
     "clipboardWrite"
   ],
   "host_permissions": [
-    "*://*.instagram.com/*",
-    "*://*.linkedin.com/*",
-    "*://*.tiktok.com/*",
-    "https://sosprospection.com/*",
-    "http://localhost:5178/*"
+    "https://*.instagram.com/*",
+    "https://*.linkedin.com/*",
+    "https://*.tiktok.com/*",
+    "https://sosprospection.com/*"
   ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline'"
+  },
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
@@ -37,25 +38,25 @@
   },
   "content_scripts": [
     {
-      "matches": ["*://*.linkedin.com/*"],
+      "matches": ["https://*.linkedin.com/*"],
       "js": ["content-common.js", "content-linkedin.js"],
       "css": ["content-common.css"],
       "run_at": "document_idle"
     },
     {
-      "matches": ["*://*.instagram.com/*"],
+      "matches": ["https://*.instagram.com/*"],
       "js": ["content-common.js", "content-instagram.js"],
       "css": ["content-common.css"],
       "run_at": "document_idle"
     },
     {
-      "matches": ["*://*.tiktok.com/*"],
+      "matches": ["https://*.tiktok.com/*"],
       "js": ["content-common.js", "content-tiktok.js"],
       "css": ["content-common.css"],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://sosprospection.com/*", "http://localhost:5178/*", "http://localhost:5173/*"],
+      "matches": ["https://sosprospection.com/*"],
       "js": ["content-app.js"],
       "run_at": "document_idle"
     }
@@ -63,7 +64,7 @@
   "web_accessible_resources": [
     {
       "resources": ["icons/*"],
-      "matches": ["*://*.linkedin.com/*", "*://*.instagram.com/*", "*://*.tiktok.com/*"]
+      "matches": ["https://*.linkedin.com/*", "https://*.instagram.com/*", "https://*.tiktok.com/*"]
     }
   ]
 }

@@ -344,8 +344,8 @@ function DiscernementSection() {
     },
     {
       icon: '🌱',
-      title: 'Prospect à nourrir',
-      description: 'Poser des questions, créer le lien. Pas encore prêt, mais intéressé.',
+      title: 'Prospect en nurturing',
+      description: 'Poser des questions, creer le lien. Pas encore pret, mais interesse.',
       color: 'bg-amber-100 border-amber-300 text-amber-800',
     },
     {
@@ -405,6 +405,157 @@ function DiscernementSection() {
         >
           <p className="text-warm-600 italic">
             Fini le temps perdu sur des prospects qui ne convertiront jamais.
+          </p>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+// ==========================================
+// SECTION 2C: LEAD SCORING
+// ==========================================
+function LeadScoringSection() {
+  const { ref, isInView } = useScrollAnimation();
+
+  const signals = [
+    {
+      emoji: '💼',
+      title: 'Poste recent',
+      description: 'Vient de se lancer ou nouveau poste < 6 mois',
+      points: '+25 pts',
+    },
+    {
+      emoji: '😫',
+      title: 'Douleur exprimee',
+      description: 'A poste sur un probleme que tu peux resoudre',
+      points: '+25 pts',
+    },
+    {
+      emoji: '👀',
+      title: 'Engage tes concurrents',
+      description: 'Like ou commente chez des profils similaires',
+      points: '+20 pts',
+    },
+    {
+      emoji: '🌱',
+      title: 'Petite audience',
+      description: 'Moins de 1000 abonnes = plus accessible',
+      points: '+15 pts',
+    },
+    {
+      emoji: '📍',
+      title: 'Meme zone',
+      description: 'Meme ville ou region que toi',
+      points: '+15 pts',
+    },
+  ];
+
+  const badges = [
+    {
+      emoji: '🔥',
+      label: 'CHAUD',
+      score: '60+',
+      color: 'bg-red-100 border-red-300 text-red-700',
+      action: 'Contacte en priorite',
+    },
+    {
+      emoji: '🌡️',
+      label: 'TIEDE',
+      score: '30-59',
+      color: 'bg-orange-100 border-orange-300 text-orange-700',
+      action: 'A mettre en nurturing',
+    },
+    {
+      emoji: '❄️',
+      label: 'FROID',
+      score: '< 30',
+      color: 'bg-blue-100 border-blue-300 text-blue-700',
+      action: 'Pas prioritaire',
+    },
+  ];
+
+  return (
+    <section ref={ref} className="py-24 bg-white">
+      <div className="max-w-6xl mx-auto px-4">
+        <motion.div
+          initial="hidden"
+          animate={isInView ? 'visible' : 'hidden'}
+          variants={fadeInUp}
+          className="text-center mb-12"
+        >
+          <span className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 rounded-full text-sm font-medium mb-4">
+            <TrendingUp className="w-4 h-4" />
+            Lead Scoring IA
+          </span>
+          <h2 className="font-display text-4xl font-bold text-warm-900 mb-4">
+            Sais exactement QUI contacter en premier
+          </h2>
+          <p className="text-xl text-warm-600 max-w-2xl mx-auto">
+            L'IA detecte 5 signaux d'achat et attribue un score a chaque prospect.
+            <br />
+            <strong>Fini le temps perdu sur les mauvais profils.</strong>
+          </p>
+        </motion.div>
+
+        {/* Signals grid */}
+        <motion.div
+          initial="hidden"
+          animate={isInView ? 'visible' : 'hidden'}
+          variants={staggerContainer}
+          className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-12"
+        >
+          {signals.map((signal, index) => (
+            <motion.div
+              key={index}
+              variants={fadeInUp}
+              whileHover={{ scale: 1.05, y: -5 }}
+              className="bg-warm-50 rounded-2xl p-4 text-center"
+            >
+              <div className="text-3xl mb-2">{signal.emoji}</div>
+              <h4 className="font-bold text-warm-900 text-sm mb-1">{signal.title}</h4>
+              <p className="text-xs text-warm-500 mb-2">{signal.description}</p>
+              <span className="inline-block px-2 py-1 bg-brand-100 text-brand-700 text-xs font-bold rounded-full">
+                {signal.points}
+              </span>
+            </motion.div>
+          ))}
+        </motion.div>
+
+        {/* Score badges */}
+        <motion.div
+          initial="hidden"
+          animate={isInView ? 'visible' : 'hidden'}
+          variants={fadeInUp}
+          className="max-w-3xl mx-auto"
+        >
+          <h3 className="text-center font-bold text-warm-700 mb-6">
+            Resultat : un score de 0 a 100 et un badge clair
+          </h3>
+          <div className="grid md:grid-cols-3 gap-4">
+            {badges.map((badge, index) => (
+              <motion.div
+                key={index}
+                whileHover={{ scale: 1.02 }}
+                className={`rounded-xl p-5 border-2 ${badge.color} text-center`}
+              >
+                <div className="text-3xl mb-2">{badge.emoji}</div>
+                <div className="font-bold text-lg">{badge.label}</div>
+                <div className="text-sm opacity-80 mb-2">Score {badge.score}</div>
+                <div className="text-xs font-medium">{badge.action}</div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial="hidden"
+          animate={isInView ? 'visible' : 'hidden'}
+          variants={fadeInUp}
+          className="mt-10 text-center"
+        >
+          <p className="text-warm-600 italic">
+            Tu configures tes concurrents et ta localisation — l'IA fait le reste.
           </p>
         </motion.div>
       </div>
@@ -1302,6 +1453,7 @@ export default function Landing() {
       <HeroSection />
       <DisclaimerSection />
       <DiscernementSection />
+      <LeadScoringSection />
       <ProblemSection />
       <WhyDMSection />
       <MaVoixSection />

@@ -535,11 +535,12 @@ router.post('/extension/import', requireAuth, async (req, res) => {
  * POST /api/prospects/linkedin/import
  * Import de profils LinkedIn depuis l'extension Chrome (legacy)
  */
-router.post('/linkedin/import', async (req, res) => {
+router.post('/linkedin/import', requireAuth, async (req, res) => {
   try {
     const { profiles, importedAt } = req.body;
+    const userId = req.user.id;
 
-    console.log(`[LinkedIn Import] Received ${profiles?.length || 0} profiles at ${importedAt}`);
+    console.log(`[LinkedIn Import] User ${userId} - Received ${profiles?.length || 0} profiles at ${importedAt}`);
 
     if (!profiles || !Array.isArray(profiles) || profiles.length === 0) {
       return res.status(400).json(formatError('Aucun profil LinkedIn fourni', 'NO_PROFILES'));
@@ -548,10 +549,11 @@ router.post('/linkedin/import', async (req, res) => {
     // Extraire les URLs de profil pour deduplication
     const profileUrls = profiles.map(p => p.profileUrl).filter(Boolean);
 
-    // Verifier les doublons existants
+    // Verifier les doublons existants pour cet utilisateur
     const { data: existingProfiles } = await supabaseAdmin
       .from('prospects')
       .select('username')
+      .eq('user_id', userId)
       .eq('platform', 'linkedin')
       .in('username', profileUrls);
 
@@ -572,6 +574,7 @@ router.post('/linkedin/import', async (req, res) => {
 
     // Preparer les donnees pour insertion
     const prospectsToInsert = newProfiles.map(p => ({
+      user_id: userId,
       username: p.profileUrl,
       platform: 'linkedin',
       full_name: p.name || null,
@@ -695,6 +698,228 @@ router.delete('/:id', requireAuth, async (req, res) => {
 
   } catch (error) {
     console.error('[Prospects] Error:', error);
+    res.status(500).json(formatError('Erreur serveur', 'SERVER_ERROR'));
+  }
+});
+
+// ============================================
+// CAMPAGNES - Pipeline Status & CSV Import
+// ============================================
+
+/**
+ * Calcul automatique de next_action_date selon le statut
+ */
+function getNextActionDate(status) {
+  const daysMap = {
+    demande_envoyee: 3,
+    connecte: 0,
+    message_1: 3,
+    relance_1: 4,
+    relance_2: 7,
+  };
+  const days = daysMap[status];
+  if (days === undefined) return null;
+
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return date.toISOString().split('T')[0];
+}
+
+const VALID_PIPELINE_STATUSES = [
+  'demande_envoyee', 'connecte', 'message_1', 'relance_1', 'relance_2',
+  'repondu_chaud', 'repondu_froid', 'rdv_pris', 'converti', 'ignore'
+];
+
+/**
+ * PUT /api/prospects/:id/pipeline-status
+ * Met à jour le statut pipeline d'un prospect
+ */
+router.put('/:id/pipeline-status', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { pipeline_status, next_action_date } = req.body;
+    const userId = req.user.id;
+
+    // Valider le statut
+    if (!pipeline_status || !VALID_PIPELINE_STATUSES.includes(pipeline_status)) {
+      return res.status(400).json(formatError('Statut pipeline invalide', 'INVALID_STATUS'));
+    }
+
+    // Vérifier que le prospect appartient à l'utilisateur
+    const { data: existing } = await supabaseAdmin
+      .from('prospects')
+      .select('id')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single();
+
+    if (!existing) {
+      return res.status(404).json(formatError('Prospect non trouvé', 'NOT_FOUND'));
+    }
+
+    // Calculer la prochaine action si non fournie
+    const calculatedNextAction = next_action_date || getNextActionDate(pipeline_status);
+
+    // Mettre à jour le prospect
+    const { data, error } = await supabaseAdmin
+      .from('prospects')
+      .update({
+        pipeline_status,
+        next_action_date: calculatedNextAction,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[Prospects] Pipeline status update error:', error);
+      return res.status(500).json(formatError('Erreur lors de la mise à jour', 'UPDATE_ERROR'));
+    }
+
+    // Mettre à jour la date d'action dans campaign_prospects
+    await supabaseAdmin
+      .from('campaign_prospects')
+      .update({ last_action_at: new Date().toISOString() })
+      .eq('prospect_id', id);
+
+    res.json(formatResponse(data, 'Statut mis à jour'));
+
+  } catch (error) {
+    console.error('[Prospects] Error:', error);
+    res.status(500).json(formatError('Erreur serveur', 'SERVER_ERROR'));
+  }
+});
+
+/**
+ * POST /api/prospects/import-csv
+ * Import de prospects depuis un fichier CSV
+ */
+router.post('/import-csv', requireAuth, async (req, res) => {
+  try {
+    const { prospects, campaign_id } = req.body;
+    const userId = req.user.id;
+
+    if (!prospects || !Array.isArray(prospects) || prospects.length === 0) {
+      return res.status(400).json(formatError('Aucun prospect à importer', 'NO_PROSPECTS'));
+    }
+
+    // Limiter le nombre d'imports par requête
+    if (prospects.length > 500) {
+      return res.status(400).json(formatError('Maximum 500 prospects par import', 'TOO_MANY'));
+    }
+
+    // Vérifier que la campagne existe si fournie
+    if (campaign_id) {
+      const { data: campaign } = await supabaseAdmin
+        .from('campaigns')
+        .select('id')
+        .eq('id', campaign_id)
+        .eq('user_id', userId)
+        .single();
+
+      if (!campaign) {
+        return res.status(404).json(formatError('Campagne non trouvée', 'CAMPAIGN_NOT_FOUND'));
+      }
+    }
+
+    // Préparer les données pour l'insertion
+    const initialStatus = 'demande_envoyee';
+    const toInsert = prospects
+      .filter(p => p.username && p.username.trim())
+      .map(p => ({
+        user_id: userId,
+        username: p.username.trim(),
+        platform: p.platform || 'linkedin',
+        full_name: p.full_name?.trim() || null,
+        bio: p.bio?.trim() || null,
+        avatar_url: null,
+        followers: 0,
+        following: 0,
+        posts_count: 0,
+        status: 'new',
+        pipeline_status: initialStatus,
+        next_action_date: getNextActionDate(initialStatus),
+        source: 'csv_import',
+        created_at: new Date().toISOString(),
+      }));
+
+    if (toInsert.length === 0) {
+      return res.status(400).json(formatError('Aucun prospect valide (username manquant)', 'INVALID_DATA'));
+    }
+
+    // Récupérer les usernames déjà existants
+    const usernames = toInsert.map(p => p.username);
+    const { data: existingProspects } = await supabaseAdmin
+      .from('prospects')
+      .select('id, username, platform')
+      .eq('user_id', userId)
+      .in('username', usernames);
+
+    const existingMap = new Map(
+      (existingProspects || []).map(p => [`${p.platform}:${p.username}`, p.id])
+    );
+
+    // Séparer nouveaux et existants
+    const newProspects = [];
+    const existingIds = [];
+
+    toInsert.forEach(p => {
+      const key = `${p.platform}:${p.username}`;
+      if (existingMap.has(key)) {
+        existingIds.push(existingMap.get(key));
+      } else {
+        newProspects.push(p);
+      }
+    });
+
+    let importedCount = existingIds.length; // Les existants comptent comme "importés" pour l'assignation
+
+    // Insérer les nouveaux prospects
+    if (newProspects.length > 0) {
+      const { data: insertedData, error: insertError } = await supabaseAdmin
+        .from('prospects')
+        .insert(newProspects)
+        .select('id');
+
+      if (insertError) {
+        console.error('[Prospects] CSV import insert error:', insertError);
+        return res.status(500).json(formatError('Erreur lors de l\'import', 'IMPORT_ERROR'));
+      }
+
+      importedCount += insertedData?.length || 0;
+
+      // Ajouter les IDs des nouveaux prospects
+      if (insertedData) {
+        insertedData.forEach(p => existingIds.push(p.id));
+      }
+    }
+
+    // Si campaign_id fourni, assigner les prospects à la campagne
+    if (campaign_id && existingIds.length > 0) {
+      const assignments = existingIds.map(prospect_id => ({
+        campaign_id,
+        prospect_id,
+        stage: 'assigned',
+      }));
+
+      await supabaseAdmin
+        .from('campaign_prospects')
+        .upsert(assignments, { onConflict: 'campaign_id,prospect_id' });
+    }
+
+    console.log(`[Prospects] CSV import SUCCESS - ${newProspects.length} new, ${existingIds.length - newProspects.length} existing`);
+
+    res.json(formatResponse({
+      imported: newProspects.length,
+      existing: existingIds.length - newProspects.length,
+      total: existingIds.length,
+      campaign_id: campaign_id || null,
+    }, `${newProspects.length} nouveau(x) prospect(s) importé(s)`));
+
+  } catch (error) {
+    console.error('[Prospects] CSV import error:', error);
     res.status(500).json(formatError('Erreur serveur', 'SERVER_ERROR'));
   }
 });

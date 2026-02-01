@@ -14,6 +14,8 @@ import {
   X,
   Inbox,
   Target,
+  FolderKanban,
+  CalendarClock,
 } from 'lucide-react';
 import { QuotaWidget } from '../dashboard';
 import { DMQueueWidget, QueueNotification } from '../queue';
@@ -26,6 +28,8 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'MA VOIX', href: '/voice', icon: Mic, indicator: true, tourId: 'voice' },
   { name: 'Recherche', href: '/search', icon: Search, tourId: 'search' },
+  { name: 'Campagnes', href: '/campaigns', icon: FolderKanban, tourId: 'campaigns' },
+  { name: 'Relances', href: '/followups', icon: CalendarClock, tourId: 'followups' },
   { name: 'Prospects', href: '/prospects', icon: Users, badge: null, tourId: 'prospects' },
   { name: 'Messages', href: '/messages', icon: MessageSquare, badge: null, tourId: 'messages' },
 ];

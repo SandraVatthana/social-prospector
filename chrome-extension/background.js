@@ -495,15 +495,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
  * This allows the app to send the auth token to the extension
  */
 chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => {
-  // Verify the sender is from our app domain
+  // Verify the sender is from our app domain (strict origin check)
   const allowedOrigins = [
-    'https://sosprospection.com',
-    'http://localhost:5178',
-    'http://localhost:5173'
+    'https://sosprospection.com'
   ];
 
-  if (!sender.url || !allowedOrigins.some(origin => sender.url.startsWith(origin))) {
-    console.warn('[SOS] Rejected external message from:', sender.url);
+  let senderOrigin = null;
+  try {
+    senderOrigin = new URL(sender.url).origin;
+  } catch {
+    console.warn('[SOS] Invalid sender URL:', sender.url);
+    sendResponse({ error: 'Unauthorized origin' });
+    return;
+  }
+
+  if (!allowedOrigins.includes(senderOrigin)) {
+    console.warn('[SOS] Rejected external message from:', senderOrigin);
     sendResponse({ error: 'Unauthorized origin' });
     return;
   }
