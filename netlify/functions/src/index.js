@@ -72,11 +72,19 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function(origin, callback) {
-    // Allow requests with no origin (mobile apps, curl, etc.)
+    // Allow requests with no origin (mobile apps, curl, Postman, etc.)
     if (!origin) return callback(null, true);
+
+    // Allow Chrome extensions (origin starts with chrome-extension://)
+    if (origin.startsWith('chrome-extension://')) {
+      return callback(null, true);
+    }
+
+    // Allow listed origins
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      console.warn(`[CORS] Blocked origin: ${origin}`);
       callback(new Error('CORS not allowed'));
     }
   },
