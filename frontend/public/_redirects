@@ -1,1 +1,5 @@
+# API routes - MUST come first
+/api/* /.netlify/functions/api/:splat 200
+
+# SPA fallback - catches everything else
 /* /index.html 200

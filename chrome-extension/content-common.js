@@ -80,11 +80,14 @@
   // ============================================
 
   window.sosSendMessage = function(action, data) {
+    console.log('[SOS Content] sosSendMessage called:', action);
     return new Promise(function(resolve, reject) {
       chrome.runtime.sendMessage(
         Object.assign({ action: action }, data),
         function(response) {
+          console.log('[SOS Content] Got response:', response, 'lastError:', chrome.runtime.lastError);
           if (chrome.runtime.lastError) {
+            console.error('[SOS Content] Runtime error:', chrome.runtime.lastError.message);
             reject(new Error(chrome.runtime.lastError.message));
           } else if (response && response.error) {
             // Provide better error messages for common issues
@@ -522,7 +525,9 @@
     }
 
     function analyzeContent() {
+      console.log('[SOS Content] analyzeContent called');
       var allText = window._sosPanelState.pastedBlocks.map(function(b) { return b.text; }).join('\n\n---\n\n');
+      console.log('[SOS Content] Sending to analyze, length:', allText.length);
 
       showStep('results');
       document.getElementById('sos-analysis-loading').style.display = 'flex';
@@ -535,6 +540,8 @@
         username: username
       })
         .then(function(result) {
+          console.log('[SOS Content] Analysis result:', result);
+          console.log('[SOS Content] Signals received:', result.signals?.length || 0);
           window._sosPanelState.analyzedData = result.profile || {};
           window._sosPanelState.signals = result.signals || [];
           window._sosPanelState.angles = result.angles || [];
@@ -542,6 +549,7 @@
           displayResults(result);
         })
         .catch(function(err) {
+          console.error('[SOS Content] Analysis failed:', err);
           sosError('Analysis failed', err);
           // Fallback: basic parsing
           var basicData = basicParse(allText);

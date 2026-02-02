@@ -1,12 +1,9 @@
 /**
  * SOS Prospection - Multi-Platform Extension
  * Background Service Worker
- *
- * Handles:
- * - Instagram multi-account session management
- * - Communication with SOS Prospection app API
- * - Prospect import and DM generation via app
  */
+
+console.log('[SOS] ====== SERVICE WORKER STARTING ======');
 
 // ============================================
 // CONFIGURATION
@@ -19,15 +16,15 @@ const CONFIG = {
   DEBUG: false
 };
 
-// Logging helpers (only log when DEBUG is true)
+// Logging helpers - always log for debugging
 function sosLog(...args) {
-  if (CONFIG.DEBUG) sosLog('', ...args);
+  console.log('[SOS]', ...args);
 }
 function sosError(...args) {
-  if (CONFIG.DEBUG) sosError('', ...args);
+  console.error('[SOS ERROR]', ...args);
 }
 function sosWarn(...args) {
-  if (CONFIG.DEBUG) sosWarn('', ...args);
+  console.warn('[SOS WARN]', ...args);
 }
 
 const INSTAGRAM_DOMAIN = '.instagram.com';
@@ -249,27 +246,35 @@ async function generateDM(platform, prospect) {
  * Analyze pasted content using AI to extract profile data and signals
  */
 async function analyzeProspectContent(platform, content, username) {
-  sosLog(' Analyzing prospect content:', { platform, contentLength: content.length });
+  console.log('[SOS] analyzeProspectContent called:', { platform, contentLength: content?.length, username });
 
   try {
+    const baseUrl = await getApiUrl();
+    console.log('[SOS] API URL:', baseUrl);
+
     const result = await apiCall('/api/prospects/analyze-paste', 'POST', {
       platform,
       content,
       username
     });
 
+    console.log('[SOS] API response:', JSON.stringify(result, null, 2));
+
     if (result.data) {
-      return {
+      const response = {
         success: true,
         profile: result.data.profile || {},
         signals: result.data.signals || [],
         angles: result.data.angles || []
       };
+      console.log('[SOS] Returning signals:', response.signals.length, 'angles:', response.angles.length);
+      return response;
     }
 
+    console.error('[SOS] No data in response:', result);
     throw new Error('Réponse invalide de l\'API');
   } catch (error) {
-    sosWarn(' AI analysis failed, using basic parsing:', error.message);
+    console.error('[SOS] analyzeProspectContent error:', error.message, error);
     // Fallback to basic parsing
     return {
       success: true,
@@ -526,6 +531,8 @@ async function getLinkedInProfiles() {
 // ============================================
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('[SOS] Message received:', request.action, request);
+
   const handleAsync = async () => {
     try {
       switch (request.action) {
@@ -656,4 +663,5 @@ chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => 
 // STARTUP
 // ============================================
 
-sosLog('Extension loaded v3.1 - Multi-platform support');
+console.log('[SOS] ====== SERVICE WORKER READY ======');
+console.log('[SOS] Extension loaded v3.1 - Multi-platform support');
