@@ -182,7 +182,8 @@
     container.className = 'sos-floating-container';
     container.setAttribute('data-platform', platform);
 
-    var buttonsHtml = '<button id="sos-import-btn" class="sos-btn sos-btn-primary">' +
+    var buttonsHtml = '<div class="sos-drag-handle">⋮⋮ glisser</div>' +
+                      '<button id="sos-import-btn" class="sos-btn sos-btn-primary">' +
                       '<span class="sos-btn-icon">📥</span>' +
                       '<span class="sos-btn-text">Importer</span>' +
                       '</button>';
@@ -198,6 +199,9 @@
 
     document.body.appendChild(container);
 
+    // Make container draggable
+    makeDraggable(container);
+
     // Event listeners
     document.getElementById('sos-import-btn').addEventListener('click', onImport);
 
@@ -207,6 +211,49 @@
 
     return container;
   };
+
+  // Make element draggable
+  function makeDraggable(element) {
+    var isDragging = false;
+    var offsetX = 0;
+    var offsetY = 0;
+
+    element.addEventListener('mousedown', function(e) {
+      // Only drag from the handle or container itself, not buttons
+      if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+
+      isDragging = true;
+      element.classList.add('sos-dragging');
+      offsetX = e.clientX - element.getBoundingClientRect().left;
+      offsetY = e.clientY - element.getBoundingClientRect().top;
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', function(e) {
+      if (!isDragging) return;
+
+      var newX = e.clientX - offsetX;
+      var newY = e.clientY - offsetY;
+
+      // Keep within viewport
+      var maxX = window.innerWidth - element.offsetWidth;
+      var maxY = window.innerHeight - element.offsetHeight;
+      newX = Math.max(0, Math.min(newX, maxX));
+      newY = Math.max(0, Math.min(newY, maxY));
+
+      element.style.left = newX + 'px';
+      element.style.right = 'auto';
+      element.style.top = newY + 'px';
+      element.style.bottom = 'auto';
+    });
+
+    document.addEventListener('mouseup', function() {
+      if (isDragging) {
+        isDragging = false;
+        element.classList.remove('sos-dragging');
+      }
+    });
+  }
 
   // ============================================
   // SMART SIDE PANEL (Multi-paste + AI Analysis)
@@ -355,6 +402,15 @@
               '<label>Notes personnelles</label>' +
               '<textarea id="sos-result-notes" rows="2" placeholder="Ajouter vos notes..."></textarea>' +
             '</div>' +
+
+            '<!-- Raw Content Toggle -->' +
+            '<div class="sos-raw-toggle" id="sos-raw-toggle">' +
+              '<span class="sos-raw-toggle-icon">▶</span>' +
+              '<span>Voir le contenu analysé</span>' +
+            '</div>' +
+            '<div class="sos-raw-content" id="sos-raw-content">' +
+              '<pre id="sos-raw-text"></pre>' +
+            '</div>' +
           '</div>' +
         '</div>' +
       '</div>' +
@@ -365,6 +421,7 @@
         '</div>' +
         '<div id="sos-footer-results" style="display:none;">' +
           '<button class="sos-btn sos-btn-secondary" id="sos-cancel-add">Annuler</button>' +
+          '<button class="sos-btn sos-btn-secondary" id="sos-prepare-dm-btn">✉️ Préparer DM</button>' +
           '<button class="sos-btn sos-btn-primary" id="sos-confirm-add">Ajouter au CRM</button>' +
         '</div>' +
       '</div>';
@@ -517,6 +574,41 @@
       addToCRM();
     });
 
+    // Prepare DM button in panel
+    document.getElementById('sos-prepare-dm-btn').addEventListener('click', function() {
+      var data = window._sosPanelState.analyzedData || {};
+      var prospectData = {
+        platform: window._sosPanelState.platform,
+        username: username || data.username || '',
+        fullName: document.getElementById('sos-result-fullname').value || data.fullName || '',
+        headline: document.getElementById('sos-result-headline').value || data.headline || '',
+        company: document.getElementById('sos-result-company').value || data.company || '',
+        bio: data.bio || '',
+        signals: window._sosPanelState.signals || [],
+        angles: window._sosPanelState.angles || []
+      };
+
+      if (!prospectData.fullName) {
+        sosShowToast('Analysez d\'abord un profil', 'warning');
+        return;
+      }
+
+      sosShowPrepareDMModal(prospectData, function(prospect) {
+        return sosSendMessage('generateDM', {
+          platform: window._sosPanelState.platform,
+          prospect: prospect
+        });
+      });
+    });
+
+    // Raw content toggle
+    document.getElementById('sos-raw-toggle').addEventListener('click', function() {
+      var toggle = this;
+      var content = document.getElementById('sos-raw-content');
+      toggle.classList.toggle('sos-raw-open');
+      content.classList.toggle('sos-raw-visible');
+    });
+
     function showStep(step) {
       document.getElementById('sos-step-paste').classList.toggle('active', step === 'paste');
       document.getElementById('sos-step-results').classList.toggle('active', step === 'results');
@@ -593,6 +685,12 @@
       document.getElementById('sos-result-fullname').value = profile.fullName || '';
       document.getElementById('sos-result-headline').value = profile.headline || '';
       document.getElementById('sos-result-company').value = profile.company || '';
+
+      // Populate raw content
+      var rawText = window._sosPanelState.pastedBlocks.map(function(b, i) {
+        return '--- Bloc ' + (i + 1) + ' ---\n' + b.text.substring(0, 500) + (b.text.length > 500 ? '...' : '');
+      }).join('\n\n');
+      document.getElementById('sos-raw-text').textContent = rawText;
 
       // Display signals
       var signalsList = document.getElementById('sos-signals-list');

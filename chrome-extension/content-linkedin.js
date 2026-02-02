@@ -164,8 +164,6 @@
   }
 
   function handlePrepareDM() {
-    // Pour préparer un DM, on demande d'abord les infos manuellement
-    // puis on génère le message
     var username = getUsernameFromUrl();
 
     if (!username) {
@@ -173,20 +171,30 @@
       return;
     }
 
-    // On utilise le formulaire manuel pour collecter les infos
-    sosShowManualInputModal({
-      platform: PLATFORM,
-      username: username,
-      onConfirm: function(profileData) {
-        // Après validation, on montre le modal de préparation DM
-        return new Promise(function(resolve) {
-          sosShowPrepareDMModal(profileData, function(prospect) {
-            return generateDMViaApp(prospect);
-          });
-          resolve();
-        });
-      }
-    });
+    // Check if we have already analyzed data
+    var panelState = window._sosPanelState || {};
+    var analyzedData = panelState.analyzedData;
+
+    if (analyzedData && analyzedData.fullName) {
+      // Use already analyzed data
+      var prospectData = {
+        platform: PLATFORM,
+        username: username,
+        fullName: analyzedData.fullName || '',
+        headline: analyzedData.headline || '',
+        company: analyzedData.company || '',
+        bio: analyzedData.bio || '',
+        signals: panelState.signals || [],
+        angles: panelState.angles || []
+      };
+
+      sosShowPrepareDMModal(prospectData, function(prospect) {
+        return generateDMViaApp(prospect);
+      });
+    } else {
+      // No analyzed data - need to import first
+      sosShowToast('Cliquez d\'abord sur "Importer" et analysez le profil', 'warning');
+    }
   }
 
   // ============================================
