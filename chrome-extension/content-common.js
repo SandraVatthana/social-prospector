@@ -206,19 +206,21 @@
   };
 
   // ============================================
-  // SIDE PANEL (100% Legal - No Scraping)
+  // SMART SIDE PANEL (Multi-paste + AI Analysis)
   // ============================================
 
   // Store panel state globally
   window._sosPanelState = window._sosPanelState || {
     isOpen: false,
     platform: null,
-    onConfirm: null
+    onConfirm: null,
+    pastedBlocks: [],
+    analyzedData: null,
+    signals: null
   };
 
   /**
-   * Affiche un panneau latéral permanent pour saisir les données du prospect
-   * Le panneau reste visible pendant la navigation
+   * Affiche un panneau latéral intelligent avec multi-paste et analyse IA
    */
   window.sosShowManualInputModal = function(options) {
     var platform = options.platform || 'linkedin';
@@ -231,21 +233,22 @@
 
     var existing = document.getElementById('sos-side-panel');
 
-    // If panel exists, just update username and show it
+    // If panel exists, just show it
     if (existing) {
+      existing.classList.add('sos-panel-open');
+      window._sosPanelState.isOpen = true;
+      // Update username if provided and field is empty
       var usernameInput = document.getElementById('sos-manual-username');
       if (usernameInput && username && !usernameInput.value) {
         usernameInput.value = username;
       }
-      existing.classList.add('sos-panel-open');
-      window._sosPanelState.isOpen = true;
       return;
     }
 
     var platformLabels = {
-      linkedin: { name: 'LinkedIn', fields: ['fullName', 'headline', 'company', 'about'], color: '#0077b5' },
-      instagram: { name: 'Instagram', fields: ['fullName', 'bio', 'followers'], color: '#E1306C' },
-      tiktok: { name: 'TikTok', fields: ['fullName', 'bio', 'followers'], color: '#000000' }
+      linkedin: { name: 'LinkedIn', color: '#0077b5' },
+      instagram: { name: 'Instagram', color: '#E1306C' },
+      tiktok: { name: 'TikTok', color: '#000000' }
     };
 
     var config = platformLabels[platform] || platformLabels.linkedin;
@@ -257,72 +260,117 @@
     panel.innerHTML =
       '<div class="sos-panel-header" style="background: ' + config.color + '">' +
         '<div class="sos-panel-title">' +
-          '<span class="sos-panel-icon">✏️</span>' +
-          '<span>Ajouter un prospect</span>' +
+          '<span class="sos-panel-icon">🎯</span>' +
+          '<span>Analyser un prospect</span>' +
         '</div>' +
         '<div class="sos-panel-actions">' +
           '<button class="sos-panel-minimize" id="sos-minimize-panel" title="Réduire">−</button>' +
           '<button class="sos-panel-close" id="sos-close-panel" title="Fermer">×</button>' +
         '</div>' +
       '</div>' +
-      '<div class="sos-panel-body">' +
-        '<p class="sos-panel-hint">💡 Copiez-collez les infos depuis le profil à gauche</p>' +
 
-        '<div class="sos-form-group">' +
-          '<label>Identifiant *</label>' +
-          '<input type="text" id="sos-manual-username" placeholder="ex: jean-dupont" value="' + sosEscapeHtml(username) + '">' +
+      '<div class="sos-panel-body" id="sos-panel-body">' +
+        '<!-- Step 1: Paste Zone -->' +
+        '<div id="sos-step-paste" class="sos-step active">' +
+          '<div class="sos-step-header">' +
+            '<span class="sos-step-number">1</span>' +
+            '<span>Coller le contenu</span>' +
+          '</div>' +
+
+          '<div class="sos-paste-zone" id="sos-paste-zone">' +
+            '<div class="sos-paste-placeholder" id="sos-paste-placeholder">' +
+              '<span class="sos-paste-icon">📋</span>' +
+              '<span>Cliquez ici puis Ctrl+V</span>' +
+              '<span class="sos-paste-hint">Profil, posts, commentaires...</span>' +
+            '</div>' +
+            '<textarea id="sos-paste-input" placeholder="Ctrl+V pour coller..."></textarea>' +
+          '</div>' +
+
+          '<div class="sos-pasted-blocks" id="sos-pasted-blocks">' +
+            '<!-- Blocs collés apparaîtront ici -->' +
+          '</div>' +
+
+          '<div class="sos-paste-actions">' +
+            '<button class="sos-btn sos-btn-secondary sos-btn-small" id="sos-clear-blocks" style="display:none;">🗑️ Tout effacer</button>' +
+            '<button class="sos-btn sos-btn-primary" id="sos-analyze-btn" disabled>' +
+              '<span class="sos-btn-text">✨ Analyser</span>' +
+            '</button>' +
+          '</div>' +
         '</div>' +
 
-        '<div class="sos-form-group">' +
-          '<label>Nom complet *</label>' +
-          '<input type="text" id="sos-manual-fullname" placeholder="Sélectionnez et collez le nom">' +
+        '<!-- Step 2: Results -->' +
+        '<div id="sos-step-results" class="sos-step">' +
+          '<div class="sos-step-header">' +
+            '<span class="sos-step-number">2</span>' +
+            '<span>Résultats de l\'analyse</span>' +
+            '<button class="sos-btn-link" id="sos-back-to-paste">← Modifier</button>' +
+          '</div>' +
+
+          '<div id="sos-analysis-loading" class="sos-analysis-loading" style="display:none;">' +
+            '<span class="sos-spinner"></span>' +
+            '<span>Analyse en cours...</span>' +
+          '</div>' +
+
+          '<div id="sos-analysis-results" style="display:none;">' +
+            '<!-- Profile Data -->' +
+            '<div class="sos-result-section">' +
+              '<div class="sos-result-title">👤 Profil</div>' +
+              '<div class="sos-result-fields">' +
+                '<div class="sos-mini-field">' +
+                  '<label>Nom</label>' +
+                  '<input type="text" id="sos-result-fullname" readonly>' +
+                '</div>' +
+                '<div class="sos-mini-field">' +
+                  '<label>Titre</label>' +
+                  '<input type="text" id="sos-result-headline" readonly>' +
+                '</div>' +
+                '<div class="sos-mini-field">' +
+                  '<label>Entreprise</label>' +
+                  '<input type="text" id="sos-result-company" readonly>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+
+            '<!-- Signals -->' +
+            '<div class="sos-result-section" id="sos-signals-section">' +
+              '<div class="sos-result-title">🎯 Signaux détectés</div>' +
+              '<div id="sos-signals-list" class="sos-signals-list">' +
+                '<!-- Signaux ajoutés dynamiquement -->' +
+              '</div>' +
+            '</div>' +
+
+            '<!-- Approach Angles -->' +
+            '<div class="sos-result-section" id="sos-angles-section">' +
+              '<div class="sos-result-title">💡 Angles d\'approche</div>' +
+              '<div id="sos-angles-list" class="sos-angles-list">' +
+                '<!-- Angles ajoutés dynamiquement -->' +
+              '</div>' +
+            '</div>' +
+
+            '<!-- Notes -->' +
+            '<div class="sos-form-group">' +
+              '<label>Notes personnelles</label>' +
+              '<textarea id="sos-result-notes" rows="2" placeholder="Ajouter vos notes..."></textarea>' +
+            '</div>' +
+          '</div>' +
         '</div>' +
-
-        (config.fields.includes('headline') ?
-        '<div class="sos-form-group">' +
-          '<label>Titre / Poste</label>' +
-          '<input type="text" id="sos-manual-headline" placeholder="Sélectionnez et collez le titre">' +
-        '</div>' : '') +
-
-        (config.fields.includes('company') ?
-        '<div class="sos-form-group">' +
-          '<label>Entreprise</label>' +
-          '<input type="text" id="sos-manual-company" placeholder="Nom de l\'entreprise">' +
-        '</div>' : '') +
-
-        (config.fields.includes('bio') || config.fields.includes('about') ?
-        '<div class="sos-form-group">' +
-          '<label>' + (platform === 'linkedin' ? 'À propos' : 'Bio') + '</label>' +
-          '<textarea id="sos-manual-bio" rows="2" placeholder="Copiez la section À propos..."></textarea>' +
-        '</div>' : '') +
-
-        (config.fields.includes('followers') ?
-        '<div class="sos-form-group">' +
-          '<label>Followers</label>' +
-          '<input type="text" id="sos-manual-followers" placeholder="ex: 5000">' +
-        '</div>' : '') +
-
-        '<div class="sos-form-group">' +
-          '<label>Notes perso</label>' +
-          '<textarea id="sos-manual-notes" rows="2" placeholder="Pourquoi ce prospect ?"></textarea>' +
-        '</div>' +
-
-        '<div class="sos-form-group">' +
-          '<label>Dernier post (optionnel)</label>' +
-          '<textarea id="sos-manual-post" rows="2" placeholder="Pour personnaliser le message..."></textarea>' +
-        '</div>' +
-
-        '<label class="sos-panel-checkbox">' +
-          '<input type="checkbox" id="sos-manual-consent">' +
-          '<span>Données saisies manuellement</span>' +
-        '</label>' +
       '</div>' +
+
       '<div class="sos-panel-footer">' +
-        '<button class="sos-btn sos-btn-secondary" id="sos-clear-form">Effacer</button>' +
-        '<button class="sos-btn sos-btn-primary" id="sos-confirm-manual" disabled>Ajouter</button>' +
+        '<div id="sos-footer-paste">' +
+          '<span class="sos-block-count" id="sos-block-count">0 bloc collé</span>' +
+        '</div>' +
+        '<div id="sos-footer-results" style="display:none;">' +
+          '<button class="sos-btn sos-btn-secondary" id="sos-cancel-add">Annuler</button>' +
+          '<button class="sos-btn sos-btn-primary" id="sos-confirm-add">Ajouter au CRM</button>' +
+        '</div>' +
       '</div>';
 
     document.body.appendChild(panel);
+
+    // Initialize state
+    window._sosPanelState.pastedBlocks = [];
+    window._sosPanelState.analyzedData = null;
 
     // Show panel with animation
     setTimeout(function() {
@@ -330,96 +378,310 @@
       window._sosPanelState.isOpen = true;
     }, 10);
 
-    // Event listeners
-    var closePanel = function() {
+    // Get elements
+    var pasteInput = document.getElementById('sos-paste-input');
+    var pasteZone = document.getElementById('sos-paste-zone');
+    var pastePlaceholder = document.getElementById('sos-paste-placeholder');
+    var pastedBlocksContainer = document.getElementById('sos-pasted-blocks');
+    var blockCountEl = document.getElementById('sos-block-count');
+    var clearBlocksBtn = document.getElementById('sos-clear-blocks');
+    var analyzeBtn = document.getElementById('sos-analyze-btn');
+
+    // Close/minimize handlers
+    document.getElementById('sos-close-panel').addEventListener('click', function() {
       panel.classList.remove('sos-panel-open');
       window._sosPanelState.isOpen = false;
-    };
-
-    var minimizePanel = function() {
-      panel.classList.toggle('sos-panel-minimized');
-    };
-
-    document.getElementById('sos-close-panel').addEventListener('click', closePanel);
-    document.getElementById('sos-minimize-panel').addEventListener('click', minimizePanel);
-
-    // Clear form
-    document.getElementById('sos-clear-form').addEventListener('click', function() {
-      document.getElementById('sos-manual-username').value = '';
-      document.getElementById('sos-manual-fullname').value = '';
-      var headline = document.getElementById('sos-manual-headline');
-      var company = document.getElementById('sos-manual-company');
-      var bio = document.getElementById('sos-manual-bio');
-      var followers = document.getElementById('sos-manual-followers');
-      var notes = document.getElementById('sos-manual-notes');
-      var post = document.getElementById('sos-manual-post');
-      if (headline) headline.value = '';
-      if (company) company.value = '';
-      if (bio) bio.value = '';
-      if (followers) followers.value = '';
-      if (notes) notes.value = '';
-      if (post) post.value = '';
-      document.getElementById('sos-manual-consent').checked = false;
-      updateConfirmButton();
     });
 
-    // Enable/disable confirm button
-    var consentCheckbox = document.getElementById('sos-manual-consent');
-    var confirmBtn = document.getElementById('sos-confirm-manual');
-    var usernameInput = document.getElementById('sos-manual-username');
-    var fullnameInput = document.getElementById('sos-manual-fullname');
+    document.getElementById('sos-minimize-panel').addEventListener('click', function() {
+      panel.classList.toggle('sos-panel-minimized');
+    });
 
-    function updateConfirmButton() {
-      var hasRequired = usernameInput.value.trim() && fullnameInput.value.trim();
-      var hasConsent = consentCheckbox.checked;
-      confirmBtn.disabled = !(hasRequired && hasConsent);
+    // Paste zone click -> focus input
+    pasteZone.addEventListener('click', function() {
+      pasteInput.focus();
+    });
+
+    // Handle paste
+    pasteInput.addEventListener('paste', function(e) {
+      setTimeout(function() {
+        var text = pasteInput.value.trim();
+        if (text) {
+          addPastedBlock(text);
+          pasteInput.value = '';
+        }
+      }, 10);
+    });
+
+    // Also handle direct input (for typing/testing)
+    pasteInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        var text = pasteInput.value.trim();
+        if (text) {
+          addPastedBlock(text);
+          pasteInput.value = '';
+        }
+      }
+    });
+
+    function addPastedBlock(text) {
+      var blockId = Date.now();
+      window._sosPanelState.pastedBlocks.push({ id: blockId, text: text });
+
+      // Detect block type
+      var blockType = detectBlockType(text);
+
+      var blockEl = document.createElement('div');
+      blockEl.className = 'sos-pasted-block';
+      blockEl.dataset.blockId = blockId;
+      blockEl.innerHTML =
+        '<div class="sos-block-header">' +
+          '<span class="sos-block-type">' + blockType.icon + ' ' + blockType.label + '</span>' +
+          '<button class="sos-block-remove" data-block-id="' + blockId + '">×</button>' +
+        '</div>' +
+        '<div class="sos-block-preview">' + sosEscapeHtml(text.substring(0, 100)) + (text.length > 100 ? '...' : '') + '</div>';
+
+      pastedBlocksContainer.appendChild(blockEl);
+
+      // Update UI
+      updateBlockCount();
+      clearBlocksBtn.style.display = 'inline-flex';
+      analyzeBtn.disabled = false;
+
+      // Add remove handler
+      blockEl.querySelector('.sos-block-remove').addEventListener('click', function(e) {
+        e.stopPropagation();
+        var id = parseInt(this.dataset.blockId);
+        window._sosPanelState.pastedBlocks = window._sosPanelState.pastedBlocks.filter(function(b) { return b.id !== id; });
+        blockEl.remove();
+        updateBlockCount();
+        if (window._sosPanelState.pastedBlocks.length === 0) {
+          clearBlocksBtn.style.display = 'none';
+          analyzeBtn.disabled = true;
+        }
+      });
     }
 
-    consentCheckbox.addEventListener('change', updateConfirmButton);
-    usernameInput.addEventListener('input', updateConfirmButton);
-    fullnameInput.addEventListener('input', updateConfirmButton);
+    function detectBlockType(text) {
+      var lower = text.toLowerCase();
+      if (lower.includes('experience') || lower.includes('ans d\'expérience') || lower.includes('poste actuel')) {
+        return { icon: '💼', label: 'Profil' };
+      }
+      if (lower.includes('j\'ai') || lower.includes('je suis') || lower.includes('nous avons') || lower.includes('🔥') || lower.includes('💡')) {
+        return { icon: '📝', label: 'Post' };
+      }
+      if (lower.includes('commentaire') || lower.includes('@')) {
+        return { icon: '💬', label: 'Commentaire' };
+      }
+      if (lower.includes('formation') || lower.includes('diplôme') || lower.includes('école')) {
+        return { icon: '🎓', label: 'Formation' };
+      }
+      return { icon: '📄', label: 'Contenu' };
+    }
 
-    confirmBtn.addEventListener('click', function() {
-      var currentPlatform = window._sosPanelState.platform;
-      var currentOnConfirm = window._sosPanelState.onConfirm;
-      var followersEl = document.getElementById('sos-manual-followers');
+    function updateBlockCount() {
+      var count = window._sosPanelState.pastedBlocks.length;
+      blockCountEl.textContent = count + ' bloc' + (count > 1 ? 's' : '') + ' collé' + (count > 1 ? 's' : '');
+    }
 
-      var profileData = {
-        platform: currentPlatform,
-        username: usernameInput.value.trim(),
-        fullName: fullnameInput.value.trim(),
-        firstName: fullnameInput.value.trim().split(' ')[0] || '',
-        headline: document.getElementById('sos-manual-headline') ? document.getElementById('sos-manual-headline').value.trim() : '',
-        company: document.getElementById('sos-manual-company') ? document.getElementById('sos-manual-company').value.trim() : '',
-        bio: document.getElementById('sos-manual-bio') ? document.getElementById('sos-manual-bio').value.trim() : '',
-        about: document.getElementById('sos-manual-bio') ? document.getElementById('sos-manual-bio').value.trim() : '',
-        notes: document.getElementById('sos-manual-notes').value.trim(),
-        recentPost: document.getElementById('sos-manual-post').value.trim(),
-        followers_count: followersEl ? parseFollowersCount(followersEl.value) : null,
-        profileUrl: buildProfileUrl(currentPlatform, usernameInput.value.trim()),
-        source: 'manual_input',
-        manualEntry: true
-      };
+    // Clear all blocks
+    clearBlocksBtn.addEventListener('click', function() {
+      window._sosPanelState.pastedBlocks = [];
+      pastedBlocksContainer.innerHTML = '';
+      updateBlockCount();
+      clearBlocksBtn.style.display = 'none';
+      analyzeBtn.disabled = true;
+    });
 
+    // Analyze button
+    analyzeBtn.addEventListener('click', function() {
+      analyzeContent();
+    });
+
+    // Back to paste step
+    document.getElementById('sos-back-to-paste').addEventListener('click', function() {
+      showStep('paste');
+    });
+
+    // Cancel add
+    document.getElementById('sos-cancel-add').addEventListener('click', function() {
+      showStep('paste');
+    });
+
+    // Confirm add to CRM
+    document.getElementById('sos-confirm-add').addEventListener('click', function() {
+      addToCRM();
+    });
+
+    function showStep(step) {
+      document.getElementById('sos-step-paste').classList.toggle('active', step === 'paste');
+      document.getElementById('sos-step-results').classList.toggle('active', step === 'results');
+      document.getElementById('sos-footer-paste').style.display = step === 'paste' ? 'flex' : 'none';
+      document.getElementById('sos-footer-results').style.display = step === 'results' ? 'flex' : 'none';
+    }
+
+    function analyzeContent() {
+      var allText = window._sosPanelState.pastedBlocks.map(function(b) { return b.text; }).join('\n\n---\n\n');
+
+      showStep('results');
+      document.getElementById('sos-analysis-loading').style.display = 'flex';
+      document.getElementById('sos-analysis-results').style.display = 'none';
+
+      // Send to backend for AI analysis
+      sosSendMessage('analyzeProspect', {
+        platform: window._sosPanelState.platform,
+        content: allText,
+        username: username
+      })
+        .then(function(result) {
+          window._sosPanelState.analyzedData = result.profile || {};
+          window._sosPanelState.signals = result.signals || [];
+          window._sosPanelState.angles = result.angles || [];
+
+          displayResults(result);
+        })
+        .catch(function(err) {
+          sosError('Analysis failed', err);
+          // Fallback: basic parsing
+          var basicData = basicParse(allText);
+          window._sosPanelState.analyzedData = basicData;
+          displayResults({ profile: basicData, signals: [], angles: [] });
+        });
+    }
+
+    function basicParse(text) {
+      // Simple regex-based extraction as fallback
+      var lines = text.split('\n').filter(function(l) { return l.trim(); });
+      var data = { fullName: '', headline: '', company: '', bio: '' };
+
+      // First non-empty line is often the name
+      if (lines.length > 0) {
+        var firstLine = lines[0].trim();
+        if (firstLine.length < 50 && !firstLine.includes('http')) {
+          data.fullName = firstLine;
+        }
+      }
+
+      // Look for common patterns
+      for (var i = 0; i < Math.min(lines.length, 10); i++) {
+        var line = lines[i];
+        if (line.includes(' chez ') || line.includes(' at ') || line.includes(' @ ')) {
+          data.headline = line;
+        }
+        if (line.includes('À propos') || line.includes('About')) {
+          data.bio = lines.slice(i + 1, i + 4).join(' ');
+        }
+      }
+
+      return data;
+    }
+
+    function displayResults(result) {
+      document.getElementById('sos-analysis-loading').style.display = 'none';
+      document.getElementById('sos-analysis-results').style.display = 'block';
+
+      var profile = result.profile || {};
+      document.getElementById('sos-result-fullname').value = profile.fullName || '';
+      document.getElementById('sos-result-headline').value = profile.headline || '';
+      document.getElementById('sos-result-company').value = profile.company || '';
+
+      // Display signals
+      var signalsList = document.getElementById('sos-signals-list');
+      signalsList.innerHTML = '';
+      var signals = result.signals || [];
+      if (signals.length === 0) {
+        signalsList.innerHTML = '<div class="sos-no-signals">Aucun signal détecté</div>';
+      } else {
+        signals.forEach(function(signal) {
+          var isStrong = signal.type === 'fort';
+          var signalEl = document.createElement('div');
+          signalEl.className = 'sos-signal ' + (isStrong ? 'sos-signal-strong' : 'sos-signal-weak');
+          signalEl.innerHTML =
+            '<span class="sos-signal-icon">' + (isStrong ? '🔥' : '💡') + '</span>' +
+            '<div class="sos-signal-content">' +
+              '<span class="sos-signal-text">' + sosEscapeHtml(signal.text || '') + '</span>' +
+              (signal.reason ? '<span class="sos-signal-reason">' + sosEscapeHtml(signal.reason) + '</span>' : '') +
+            '</div>';
+          signalsList.appendChild(signalEl);
+        });
+      }
+
+      // Display angles
+      var anglesList = document.getElementById('sos-angles-list');
+      anglesList.innerHTML = '';
+      var angles = result.angles || [];
+      if (angles.length === 0) {
+        anglesList.innerHTML = '<div class="sos-no-angles">Collez plus de contenu pour des suggestions</div>';
+      } else {
+        angles.forEach(function(angle) {
+          var angleEl = document.createElement('div');
+          angleEl.className = 'sos-angle';
+          var hookText = typeof angle === 'string' ? angle : (angle.hook || angle.text || '');
+          var reasonText = typeof angle === 'object' ? (angle.reason || '') : '';
+          angleEl.innerHTML =
+            '<span class="sos-angle-hook">' + sosEscapeHtml(hookText) + '</span>' +
+            (reasonText ? '<span class="sos-angle-reason">' + sosEscapeHtml(reasonText) + '</span>' : '');
+          anglesList.appendChild(angleEl);
+        });
+      }
+    }
+
+    function addToCRM() {
+      var confirmBtn = document.getElementById('sos-confirm-add');
       confirmBtn.disabled = true;
       confirmBtn.innerHTML = '<span class="sos-spinner"></span>';
 
+      var data = window._sosPanelState.analyzedData || {};
+      var profileData = {
+        platform: window._sosPanelState.platform,
+        username: username || data.username || '',
+        fullName: document.getElementById('sos-result-fullname').value || data.fullName || '',
+        firstName: (document.getElementById('sos-result-fullname').value || '').split(' ')[0] || '',
+        headline: document.getElementById('sos-result-headline').value || data.headline || '',
+        company: document.getElementById('sos-result-company').value || data.company || '',
+        bio: data.bio || '',
+        about: data.bio || '',
+        notes: document.getElementById('sos-result-notes').value || '',
+        signals: window._sosPanelState.signals || [],
+        angles: window._sosPanelState.angles || [],
+        rawContent: window._sosPanelState.pastedBlocks.map(function(b) { return b.text; }).join('\n\n'),
+        profileUrl: buildProfileUrl(window._sosPanelState.platform, username),
+        source: 'smart_paste',
+        manualEntry: true
+      };
+
+      var currentOnConfirm = window._sosPanelState.onConfirm;
       if (currentOnConfirm) {
         currentOnConfirm(profileData)
           .then(function() {
             sosShowToast('Prospect ajouté !', 'success');
-            // Clear form for next prospect
-            document.getElementById('sos-clear-form').click();
-            confirmBtn.innerHTML = 'Ajouter';
+            // Reset for next prospect
+            resetPanel();
+            confirmBtn.innerHTML = 'Ajouter au CRM';
+            confirmBtn.disabled = false;
           })
           .catch(function(err) {
-            sosError('Manual import failed', err);
+            sosError('Add failed', err);
             sosShowToast('Erreur: ' + (err.message || 'Échec'), 'error');
+            confirmBtn.innerHTML = 'Ajouter au CRM';
             confirmBtn.disabled = false;
-            confirmBtn.innerHTML = 'Ajouter';
           });
       }
-    });
+    }
+
+    function resetPanel() {
+      window._sosPanelState.pastedBlocks = [];
+      window._sosPanelState.analyzedData = null;
+      window._sosPanelState.signals = null;
+      window._sosPanelState.angles = null;
+      pastedBlocksContainer.innerHTML = '';
+      updateBlockCount();
+      clearBlocksBtn.style.display = 'none';
+      analyzeBtn.disabled = true;
+      document.getElementById('sos-result-notes').value = '';
+      showStep('paste');
+    }
   };
 
   /**

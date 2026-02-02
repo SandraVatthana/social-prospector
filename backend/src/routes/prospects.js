@@ -924,4 +924,192 @@ router.post('/import-csv', requireAuth, async (req, res) => {
   }
 });
 
+/**
+ * POST /api/prospects/analyze-paste
+ * Analyse du texte collé (profil + posts) avec IA pour extraire données et signaux
+ * Utilisé par l'extension Chrome - Smart Paste
+ */
+router.post('/analyze-paste', async (req, res) => {
+  try {
+    const { platform, content, username } = req.body;
+
+    if (!content || content.trim().length < 10) {
+      return res.status(400).json(formatError('Contenu insuffisant à analyser', 'NO_CONTENT'));
+    }
+
+    console.log(`[Analyze Paste] Platform: ${platform}, Username: ${username}, Content length: ${content.length}`);
+
+    // Construire le prompt d'analyse
+    const systemPrompt = `Tu es un expert en analyse de profils professionnels sur les réseaux sociaux.
+Tu analyses le texte collé par l'utilisateur (qui peut contenir un profil ET des posts) pour extraire :
+1. Les informations structurées du profil
+2. Les "signaux faibles" - indices subtils sur les besoins/intérêts
+3. Les "signaux forts" - indices clairs d'opportunité business
+4. Des angles d'approche personnalisés pour la prospection
+
+IMPORTANT:
+- Sois précis et factuel, ne fais pas de suppositions sans base textuelle
+- Les signaux doivent être basés sur des éléments CONCRETS du texte
+- Les angles d'approche doivent être ACTIONABLES et SPÉCIFIQUES`;
+
+    const userPrompt = `Analyse ce contenu collé depuis ${platform || 'un réseau social'} pour le prospect @${username || 'inconnu'}:
+
+---
+${content.substring(0, 8000)}
+---
+
+Réponds en JSON avec ce format EXACT:
+{
+  "profile": {
+    "fullName": "Nom complet si trouvé",
+    "headline": "Titre/fonction si trouvé",
+    "company": "Entreprise si trouvée",
+    "bio": "Bio/À propos résumé (max 200 chars)",
+    "location": "Localisation si trouvée",
+    "followers": "Nombre de followers si trouvé",
+    "experience": "Résumé expérience si trouvé"
+  },
+  "signals": [
+    {
+      "type": "fort|faible",
+      "text": "Le signal identifié",
+      "source": "D'où vient ce signal (profil/post)",
+      "reason": "Pourquoi c'est un signal intéressant"
+    }
+  ],
+  "angles": [
+    {
+      "hook": "Accroche suggérée basée sur un élément spécifique",
+      "reason": "Pourquoi cette accroche fonctionnerait"
+    }
+  ]
+}
+
+Règles:
+- Si une info n'est pas trouvée, mets null (pas de string vide)
+- Identifie 2-5 signaux pertinents (privilégie la qualité)
+- Propose 2-3 angles d'approche maximum
+- Les signaux "forts" = besoin explicite, recherche d'aide, frustration exprimée, projet en cours
+- Les signaux "faibles" = intérêts, valeurs, style de communication, domaine d'expertise`;
+
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      temperature: 0.3,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
+    });
+
+    // Parser la réponse JSON
+    const responseText = message.content[0].text;
+    let analysis;
+
+    try {
+      const cleanedResponse = responseText
+        .replace(/```json\n?/g, '')
+        .replace(/```\n?/g, '')
+        .trim();
+      analysis = JSON.parse(cleanedResponse);
+    } catch (parseError) {
+      console.error('[Analyze Paste] Error parsing Claude response:', parseError);
+      console.error('[Analyze Paste] Raw response:', responseText);
+
+      // Fallback avec parsing basique
+      analysis = {
+        profile: basicExtractProfile(content),
+        signals: [],
+        angles: []
+      };
+    }
+
+    // Nettoyer les valeurs null/undefined dans profile
+    if (analysis.profile) {
+      Object.keys(analysis.profile).forEach(key => {
+        if (analysis.profile[key] === '' || analysis.profile[key] === 'null') {
+          analysis.profile[key] = null;
+        }
+      });
+    }
+
+    console.log(`[Analyze Paste] SUCCESS - Found ${analysis.signals?.length || 0} signals, ${analysis.angles?.length || 0} angles`);
+
+    res.json(formatResponse({
+      profile: analysis.profile || {},
+      signals: analysis.signals || [],
+      angles: analysis.angles || []
+    }));
+
+  } catch (error) {
+    console.error('[Analyze Paste] Error:', error);
+
+    // En cas d'erreur, retourner un fallback basique
+    const { content } = req.body;
+    res.json(formatResponse({
+      profile: basicExtractProfile(content || ''),
+      signals: [],
+      angles: [],
+      fallback: true
+    }));
+  }
+});
+
+/**
+ * Extraction basique de profil (fallback si API IA indisponible)
+ */
+function basicExtractProfile(content) {
+  const lines = content.split('\n').filter(l => l.trim());
+  const profile = {
+    fullName: null,
+    headline: null,
+    company: null,
+    bio: null,
+    location: null,
+    followers: null,
+    experience: null
+  };
+
+  // Première ligne souvent le nom
+  if (lines.length > 0) {
+    const firstLine = lines[0].trim();
+    if (firstLine.length < 60 && !firstLine.includes('http') && !firstLine.includes('@')) {
+      profile.fullName = firstLine;
+    }
+  }
+
+  // Patterns courants
+  for (let i = 0; i < Math.min(lines.length, 30); i++) {
+    const line = lines[i].trim();
+    const lower = line.toLowerCase();
+
+    // Headline/titre
+    if (!profile.headline && (lower.includes(' chez ') || lower.includes(' at ') || lower.includes(' | ') || lower.includes(' - '))) {
+      if (line.length < 150) {
+        profile.headline = line;
+        // Extraire company
+        const companyMatch = line.match(/(?:chez|at|@)\s+([^|·•\-]+)/i);
+        if (companyMatch) profile.company = companyMatch[1].trim();
+      }
+    }
+
+    // Followers
+    const followersMatch = line.match(/([\d,.\s]+[kmKM]?)\s*(?:followers?|abonnés?|contacts?)/i);
+    if (followersMatch && !profile.followers) {
+      profile.followers = followersMatch[1].trim();
+    }
+
+    // Location
+    const locationMatch = line.match(/(?:📍|Région de|Localisation|Location)[:\s]*(.+)/i);
+    if (locationMatch && !profile.location) {
+      profile.location = locationMatch[1].trim().substring(0, 100);
+    }
+
+    // Bio/About
+    if ((lower.includes('à propos') || lower === 'about' || lower === 'bio') && !profile.bio) {
+      profile.bio = lines.slice(i + 1, i + 5).join(' ').substring(0, 300);
+    }
+  }
+
+  return profile;
+}
+
 export default router;
