@@ -206,114 +206,164 @@
   };
 
   // ============================================
-  // MANUAL INPUT MODAL (100% Legal - No Scraping)
+  // SIDE PANEL (100% Legal - No Scraping)
   // ============================================
 
+  // Store panel state globally
+  window._sosPanelState = window._sosPanelState || {
+    isOpen: false,
+    platform: null,
+    onConfirm: null
+  };
+
   /**
-   * Affiche un formulaire de saisie manuelle pour les données du prospect
-   * L'utilisateur copie-colle les informations qu'il voit sur la page
-   * @param {object} options - platform, username (optionnel), onConfirm callback
+   * Affiche un panneau latéral permanent pour saisir les données du prospect
+   * Le panneau reste visible pendant la navigation
    */
   window.sosShowManualInputModal = function(options) {
     var platform = options.platform || 'linkedin';
     var username = options.username || '';
     var onConfirm = options.onConfirm;
 
-    var existing = document.getElementById('sos-manual-modal');
-    if (existing) existing.remove();
+    // Store callback for later use
+    window._sosPanelState.onConfirm = onConfirm;
+    window._sosPanelState.platform = platform;
+
+    var existing = document.getElementById('sos-side-panel');
+
+    // If panel exists, just update username and show it
+    if (existing) {
+      var usernameInput = document.getElementById('sos-manual-username');
+      if (usernameInput && username && !usernameInput.value) {
+        usernameInput.value = username;
+      }
+      existing.classList.add('sos-panel-open');
+      window._sosPanelState.isOpen = true;
+      return;
+    }
 
     var platformLabels = {
-      linkedin: { name: 'LinkedIn', fields: ['fullName', 'headline', 'company', 'about'] },
-      instagram: { name: 'Instagram', fields: ['fullName', 'bio', 'followers'] },
-      tiktok: { name: 'TikTok', fields: ['fullName', 'bio', 'followers'] }
+      linkedin: { name: 'LinkedIn', fields: ['fullName', 'headline', 'company', 'about'], color: '#0077b5' },
+      instagram: { name: 'Instagram', fields: ['fullName', 'bio', 'followers'], color: '#E1306C' },
+      tiktok: { name: 'TikTok', fields: ['fullName', 'bio', 'followers'], color: '#000000' }
     };
 
     var config = platformLabels[platform] || platformLabels.linkedin;
 
-    var modal = document.createElement('div');
-    modal.id = 'sos-manual-modal';
-    modal.className = 'sos-modal';
+    var panel = document.createElement('div');
+    panel.id = 'sos-side-panel';
+    panel.className = 'sos-side-panel';
 
-    modal.innerHTML = '<div class="sos-modal-overlay"></div>' +
-      '<div class="sos-modal-content sos-manual-form">' +
-      '<div class="sos-modal-header">' +
-      '<h3>✏️ Ajouter un prospect ' + config.name + '</h3>' +
-      '<button class="sos-modal-close" id="sos-close-manual">×</button>' +
+    panel.innerHTML =
+      '<div class="sos-panel-header" style="background: ' + config.color + '">' +
+        '<div class="sos-panel-title">' +
+          '<span class="sos-panel-icon">✏️</span>' +
+          '<span>Ajouter un prospect</span>' +
+        '</div>' +
+        '<div class="sos-panel-actions">' +
+          '<button class="sos-panel-minimize" id="sos-minimize-panel" title="Réduire">−</button>' +
+          '<button class="sos-panel-close" id="sos-close-panel" title="Fermer">×</button>' +
+        '</div>' +
       '</div>' +
-      '<div class="sos-modal-body">' +
-      '<p class="sos-manual-intro">Copiez-collez les informations visibles sur le profil :</p>' +
+      '<div class="sos-panel-body">' +
+        '<p class="sos-panel-hint">💡 Copiez-collez les infos depuis le profil à gauche</p>' +
 
-      '<div class="sos-form-group">' +
-      '<label for="sos-manual-username">Identifiant / Username *</label>' +
-      '<input type="text" id="sos-manual-username" placeholder="ex: jean-dupont" value="' + sosEscapeHtml(username) + '">' +
+        '<div class="sos-form-group">' +
+          '<label>Identifiant *</label>' +
+          '<input type="text" id="sos-manual-username" placeholder="ex: jean-dupont" value="' + sosEscapeHtml(username) + '">' +
+        '</div>' +
+
+        '<div class="sos-form-group">' +
+          '<label>Nom complet *</label>' +
+          '<input type="text" id="sos-manual-fullname" placeholder="Sélectionnez et collez le nom">' +
+        '</div>' +
+
+        (config.fields.includes('headline') ?
+        '<div class="sos-form-group">' +
+          '<label>Titre / Poste</label>' +
+          '<input type="text" id="sos-manual-headline" placeholder="Sélectionnez et collez le titre">' +
+        '</div>' : '') +
+
+        (config.fields.includes('company') ?
+        '<div class="sos-form-group">' +
+          '<label>Entreprise</label>' +
+          '<input type="text" id="sos-manual-company" placeholder="Nom de l\'entreprise">' +
+        '</div>' : '') +
+
+        (config.fields.includes('bio') || config.fields.includes('about') ?
+        '<div class="sos-form-group">' +
+          '<label>' + (platform === 'linkedin' ? 'À propos' : 'Bio') + '</label>' +
+          '<textarea id="sos-manual-bio" rows="2" placeholder="Copiez la section À propos..."></textarea>' +
+        '</div>' : '') +
+
+        (config.fields.includes('followers') ?
+        '<div class="sos-form-group">' +
+          '<label>Followers</label>' +
+          '<input type="text" id="sos-manual-followers" placeholder="ex: 5000">' +
+        '</div>' : '') +
+
+        '<div class="sos-form-group">' +
+          '<label>Notes perso</label>' +
+          '<textarea id="sos-manual-notes" rows="2" placeholder="Pourquoi ce prospect ?"></textarea>' +
+        '</div>' +
+
+        '<div class="sos-form-group">' +
+          '<label>Dernier post (optionnel)</label>' +
+          '<textarea id="sos-manual-post" rows="2" placeholder="Pour personnaliser le message..."></textarea>' +
+        '</div>' +
+
+        '<label class="sos-panel-checkbox">' +
+          '<input type="checkbox" id="sos-manual-consent">' +
+          '<span>Données saisies manuellement</span>' +
+        '</label>' +
       '</div>' +
-
-      '<div class="sos-form-group">' +
-      '<label for="sos-manual-fullname">Nom complet *</label>' +
-      '<input type="text" id="sos-manual-fullname" placeholder="ex: Jean Dupont">' +
-      '</div>' +
-
-      (config.fields.includes('headline') ?
-      '<div class="sos-form-group">' +
-      '<label for="sos-manual-headline">Titre / Poste</label>' +
-      '<input type="text" id="sos-manual-headline" placeholder="ex: CEO chez Entreprise XYZ">' +
-      '</div>' : '') +
-
-      (config.fields.includes('company') ?
-      '<div class="sos-form-group">' +
-      '<label for="sos-manual-company">Entreprise</label>' +
-      '<input type="text" id="sos-manual-company" placeholder="ex: Entreprise XYZ">' +
-      '</div>' : '') +
-
-      (config.fields.includes('bio') || config.fields.includes('about') ?
-      '<div class="sos-form-group">' +
-      '<label for="sos-manual-bio">' + (platform === 'linkedin' ? 'À propos (résumé)' : 'Bio') + '</label>' +
-      '<textarea id="sos-manual-bio" rows="3" placeholder="Copiez le texte de présentation..."></textarea>' +
-      '</div>' : '') +
-
-      (config.fields.includes('followers') ?
-      '<div class="sos-form-group">' +
-      '<label for="sos-manual-followers">Nombre de followers (optionnel)</label>' +
-      '<input type="text" id="sos-manual-followers" placeholder="ex: 5000">' +
-      '</div>' : '') +
-
-      '<div class="sos-form-group">' +
-      '<label for="sos-manual-notes">Notes personnelles (optionnel)</label>' +
-      '<textarea id="sos-manual-notes" rows="2" placeholder="Contexte, intérêts communs, raison du contact..."></textarea>' +
-      '</div>' +
-
-      '<div class="sos-form-group">' +
-      '<label for="sos-manual-post">Dernier post / Contenu récent (optionnel)</label>' +
-      '<textarea id="sos-manual-post" rows="2" placeholder="Copiez un extrait de son dernier post pour personnaliser le message..."></textarea>' +
-      '</div>' +
-
-      '<label class="sos-checkbox-label">' +
-      '<input type="checkbox" id="sos-manual-consent">' +
-      '<span>Je confirme que ces données sont saisies manuellement</span>' +
-      '</label>' +
-      '</div>' +
-      '<div class="sos-modal-footer">' +
-      '<button class="sos-btn sos-btn-cancel" id="sos-cancel-manual">Annuler</button>' +
-      '<button class="sos-btn sos-btn-primary" id="sos-confirm-manual" disabled>Ajouter le prospect</button>' +
-      '</div>' +
+      '<div class="sos-panel-footer">' +
+        '<button class="sos-btn sos-btn-secondary" id="sos-clear-form">Effacer</button>' +
+        '<button class="sos-btn sos-btn-primary" id="sos-confirm-manual" disabled>Ajouter</button>' +
       '</div>';
 
-    document.body.appendChild(modal);
+    document.body.appendChild(panel);
 
+    // Show panel with animation
     setTimeout(function() {
-      modal.classList.add('sos-modal-visible');
+      panel.classList.add('sos-panel-open');
+      window._sosPanelState.isOpen = true;
     }, 10);
 
-    var closeModal = function() {
-      modal.classList.remove('sos-modal-visible');
-      setTimeout(function() { modal.remove(); }, 300);
+    // Event listeners
+    var closePanel = function() {
+      panel.classList.remove('sos-panel-open');
+      window._sosPanelState.isOpen = false;
     };
 
-    document.getElementById('sos-close-manual').addEventListener('click', closeModal);
-    document.getElementById('sos-cancel-manual').addEventListener('click', closeModal);
-    document.querySelector('#sos-manual-modal .sos-modal-overlay').addEventListener('click', closeModal);
+    var minimizePanel = function() {
+      panel.classList.toggle('sos-panel-minimized');
+    };
 
-    // Enable/disable confirm button based on consent and required fields
+    document.getElementById('sos-close-panel').addEventListener('click', closePanel);
+    document.getElementById('sos-minimize-panel').addEventListener('click', minimizePanel);
+
+    // Clear form
+    document.getElementById('sos-clear-form').addEventListener('click', function() {
+      document.getElementById('sos-manual-username').value = '';
+      document.getElementById('sos-manual-fullname').value = '';
+      var headline = document.getElementById('sos-manual-headline');
+      var company = document.getElementById('sos-manual-company');
+      var bio = document.getElementById('sos-manual-bio');
+      var followers = document.getElementById('sos-manual-followers');
+      var notes = document.getElementById('sos-manual-notes');
+      var post = document.getElementById('sos-manual-post');
+      if (headline) headline.value = '';
+      if (company) company.value = '';
+      if (bio) bio.value = '';
+      if (followers) followers.value = '';
+      if (notes) notes.value = '';
+      if (post) post.value = '';
+      document.getElementById('sos-manual-consent').checked = false;
+      updateConfirmButton();
+    });
+
+    // Enable/disable confirm button
     var consentCheckbox = document.getElementById('sos-manual-consent');
     var confirmBtn = document.getElementById('sos-confirm-manual');
     var usernameInput = document.getElementById('sos-manual-username');
@@ -330,9 +380,12 @@
     fullnameInput.addEventListener('input', updateConfirmButton);
 
     confirmBtn.addEventListener('click', function() {
+      var currentPlatform = window._sosPanelState.platform;
+      var currentOnConfirm = window._sosPanelState.onConfirm;
       var followersEl = document.getElementById('sos-manual-followers');
+
       var profileData = {
-        platform: platform,
+        platform: currentPlatform,
         username: usernameInput.value.trim(),
         fullName: fullnameInput.value.trim(),
         firstName: fullnameInput.value.trim().split(' ')[0] || '',
@@ -343,29 +396,41 @@
         notes: document.getElementById('sos-manual-notes').value.trim(),
         recentPost: document.getElementById('sos-manual-post').value.trim(),
         followers_count: followersEl ? parseFollowersCount(followersEl.value) : null,
-        profileUrl: buildProfileUrl(platform, usernameInput.value.trim()),
+        profileUrl: buildProfileUrl(currentPlatform, usernameInput.value.trim()),
         source: 'manual_input',
         manualEntry: true
       };
 
       confirmBtn.disabled = true;
-      confirmBtn.innerHTML = '<span class="sos-spinner"></span> Ajout...';
+      confirmBtn.innerHTML = '<span class="sos-spinner"></span>';
 
-      if (onConfirm) {
-        onConfirm(profileData)
+      if (currentOnConfirm) {
+        currentOnConfirm(profileData)
           .then(function() {
-            sosShowToast('Prospect ajouté avec succès !', 'success');
-            closeModal();
-            window.open(window.SOS_CONFIG.APP_URL + '/prospects?source=' + platform, '_blank');
+            sosShowToast('Prospect ajouté !', 'success');
+            // Clear form for next prospect
+            document.getElementById('sos-clear-form').click();
+            confirmBtn.innerHTML = 'Ajouter';
           })
           .catch(function(err) {
             sosError('Manual import failed', err);
-            sosShowToast('Erreur: ' + (err.message || 'Échec de l\'import'), 'error');
+            sosShowToast('Erreur: ' + (err.message || 'Échec'), 'error');
             confirmBtn.disabled = false;
-            confirmBtn.innerHTML = 'Ajouter le prospect';
+            confirmBtn.innerHTML = 'Ajouter';
           });
       }
     });
+  };
+
+  /**
+   * Toggle le panneau latéral
+   */
+  window.sosToggleSidePanel = function() {
+    var panel = document.getElementById('sos-side-panel');
+    if (panel) {
+      panel.classList.toggle('sos-panel-open');
+      window._sosPanelState.isOpen = panel.classList.contains('sos-panel-open');
+    }
   };
 
   function parseFollowersCount(str) {
