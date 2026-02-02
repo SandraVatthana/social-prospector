@@ -1121,3 +1121,213 @@
   resize: vertical;
   min-height: 60px;
 }
+
+/* ============================================
+   SYNC STATUS BANNER
+   ============================================ */
+
+.sos-sync-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin: 0;
+  font-size: 12px;
+  border-bottom: 1px solid var(--sos-border);
+}
+
+.sos-sync-warning {
+  background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+  border-bottom-color: #ffca28;
+}
+
+.sos-sync-connected {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-bottom-color: #66bb6a;
+}
+
+.sos-sync-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.sos-sync-text {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.sos-sync-text strong {
+  display: block;
+  font-size: 12px;
+  color: #333;
+}
+
+.sos-sync-text span {
+  font-size: 11px;
+  color: #666;
+}
+
+.sos-sync-btn {
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: var(--sos-transition);
+  flex-shrink: 0;
+}
+
+.sos-sync-warning .sos-sync-btn {
+  background: linear-gradient(135deg, #ff9800, #f57c00);
+  color: white;
+}
+
+.sos-sync-warning .sos-sync-btn:hover {
+  box-shadow: 0 2px 6px rgba(255,152,0,0.4);
+}
+
+.sos-sync-connected .sos-sync-btn {
+  background: var(--sos-primary);
+  color: white;
+}
+
+.sos-sync-connected .sos-sync-btn:hover {
+  background: var(--sos-primary-hover);
+}
+
+/* ============================================
+   RECENT IMPORTS SECTION
+   ============================================ */
+
+.sos-recent-section {
+  border-top: 1px solid var(--sos-border);
+  background: var(--sos-surface);
+}
+
+.sos-recent-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--sos-text-muted);
+  transition: var(--sos-transition);
+}
+
+.sos-recent-header:hover {
+  background: var(--sos-border);
+}
+
+.sos-recent-toggle-icon {
+  font-size: 10px;
+  transition: transform 0.2s;
+}
+
+.sos-recent-section.sos-recent-open .sos-recent-toggle-icon {
+  transform: rotate(90deg);
+}
+
+.sos-recent-count {
+  margin-left: auto;
+  background: var(--sos-primary);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.sos-recent-list {
+  display: none;
+  padding: 0 12px 12px 12px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.sos-recent-section.sos-recent-open .sos-recent-list {
+  display: block;
+}
+
+.sos-recent-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  background: var(--sos-background);
+  border-radius: var(--sos-radius);
+  text-decoration: none;
+  color: inherit;
+  transition: var(--sos-transition);
+  border: 1px solid var(--sos-border);
+}
+
+.sos-recent-item:hover {
+  border-color: var(--sos-primary);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.sos-recent-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--sos-primary), #818cf8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.sos-recent-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.sos-recent-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--sos-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sos-recent-meta {
+  font-size: 11px;
+  color: var(--sos-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sos-recent-badge {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.sos-recent-badge.sos-synced {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.sos-recent-badge.sos-local {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.sos-recent-empty {
+  padding: 16px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--sos-text-muted);
+}

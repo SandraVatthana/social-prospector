@@ -319,6 +319,16 @@
         '</div>' +
       '</div>' +
 
+      '<!-- Sync Status Banner -->' +
+      '<div class="sos-sync-banner sos-sync-warning" id="sos-sync-banner">' +
+        '<div class="sos-sync-icon">⚠️</div>' +
+        '<div class="sos-sync-text">' +
+          '<strong>Non connecté</strong>' +
+          '<span>Tes imports ne sont pas sauvegardés dans l\'app</span>' +
+        '</div>' +
+        '<button class="sos-sync-btn" id="sos-connect-app-btn">Connecter</button>' +
+      '</div>' +
+
       '<div class="sos-panel-body" id="sos-panel-body">' +
         '<!-- Step 1: Paste Zone -->' +
         '<div id="sos-step-paste" class="sos-step active">' +
@@ -413,6 +423,18 @@
             '</div>' +
           '</div>' +
         '</div>' +
+
+        '<!-- Recent Imports Section -->' +
+        '<div class="sos-recent-section" id="sos-recent-section">' +
+          '<div class="sos-recent-header" id="sos-recent-toggle">' +
+            '<span class="sos-recent-toggle-icon">▶</span>' +
+            '<span>Derniers imports</span>' +
+            '<span class="sos-recent-count" id="sos-recent-count">0</span>' +
+          '</div>' +
+          '<div class="sos-recent-list" id="sos-recent-list">' +
+            '<!-- Populated dynamically -->' +
+          '</div>' +
+        '</div>' +
       '</div>' +
 
       '<div class="sos-panel-footer">' +
@@ -437,6 +459,23 @@
       panel.classList.add('sos-panel-open');
       window._sosPanelState.isOpen = true;
     }, 10);
+
+    // Check auth status and update sync banner
+    checkAndUpdateSyncStatus();
+
+    // Load recent imports
+    loadRecentImportsInPanel(platform);
+
+    // Connect app button
+    document.getElementById('sos-connect-app-btn').addEventListener('click', function() {
+      window.open(window.SOS_CONFIG.APP_URL, '_blank');
+    });
+
+    // Recent imports toggle
+    document.getElementById('sos-recent-toggle').addEventListener('click', function() {
+      var section = document.getElementById('sos-recent-section');
+      section.classList.toggle('sos-recent-open');
+    });
 
     // Get elements
     var pasteInput = document.getElementById('sos-paste-input');
@@ -1094,6 +1133,131 @@
       chrome.storage.local.set(data, resolve);
     });
   };
+
+  // ============================================
+  // SYNC STATUS & RECENT IMPORTS
+  // ============================================
+
+  /**
+   * Check authentication status and update the sync banner
+   */
+  function checkAndUpdateSyncStatus() {
+    sosSendMessage('getAuthStatus', {})
+      .then(function(result) {
+        var banner = document.getElementById('sos-sync-banner');
+        if (!banner) return;
+
+        if (result && result.isAuthenticated) {
+          banner.className = 'sos-sync-banner sos-sync-connected';
+          banner.innerHTML =
+            '<div class="sos-sync-icon">✅</div>' +
+            '<div class="sos-sync-text">' +
+              '<strong>Connecté</strong>' +
+              '<span>Tes imports sont sauvegardés dans l\'app</span>' +
+            '</div>' +
+            '<button class="sos-sync-btn sos-sync-btn-open" id="sos-open-app-btn">Ouvrir l\'app</button>';
+
+          document.getElementById('sos-open-app-btn').addEventListener('click', function() {
+            window.open(window.SOS_CONFIG.APP_URL + '/prospects', '_blank');
+          });
+        } else {
+          banner.className = 'sos-sync-banner sos-sync-warning';
+          banner.innerHTML =
+            '<div class="sos-sync-icon">⚠️</div>' +
+            '<div class="sos-sync-text">' +
+              '<strong>Non connecté</strong>' +
+              '<span>Tes imports ne sont pas sauvegardés</span>' +
+            '</div>' +
+            '<button class="sos-sync-btn" id="sos-connect-app-btn">Connecter</button>';
+
+          document.getElementById('sos-connect-app-btn').addEventListener('click', function() {
+            window.open(window.SOS_CONFIG.APP_URL, '_blank');
+          });
+        }
+      })
+      .catch(function(err) {
+        sosError('Failed to check auth status', err);
+      });
+  }
+
+  /**
+   * Load and display recent imports in the panel
+   */
+  function loadRecentImportsInPanel(currentPlatform) {
+    sosGetStorage('importedProspects').then(function(prospects) {
+      prospects = prospects || [];
+
+      // Filter by current platform and sort by date
+      var filtered = prospects
+        .filter(function(p) { return p.platform === currentPlatform; })
+        .sort(function(a, b) { return new Date(b.importedAt) - new Date(a.importedAt); })
+        .slice(0, 5);
+
+      var countEl = document.getElementById('sos-recent-count');
+      var listEl = document.getElementById('sos-recent-list');
+
+      if (!countEl || !listEl) return;
+
+      countEl.textContent = filtered.length;
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = '<div class="sos-recent-empty">Aucun import récent</div>';
+        return;
+      }
+
+      listEl.innerHTML = filtered.map(function(p) {
+        var initials = getInitialsFromName(p.fullName || p.username || '??');
+        var timeAgo = formatTimeAgo(p.importedAt);
+        var syncClass = p.synced ? 'sos-synced' : 'sos-local';
+        var syncLabel = p.synced ? 'Sync' : 'Local';
+        var profileUrl = buildProfileUrl(currentPlatform, p.username);
+
+        return '<a href="' + profileUrl + '" target="_blank" class="sos-recent-item">' +
+          '<div class="sos-recent-avatar">' + initials + '</div>' +
+          '<div class="sos-recent-info">' +
+            '<div class="sos-recent-name">' + sosEscapeHtml(p.fullName || p.username || 'Inconnu') + '</div>' +
+            '<div class="sos-recent-meta">' + sosEscapeHtml((p.headline || '').substring(0, 30)) + ' • ' + timeAgo + '</div>' +
+          '</div>' +
+          '<span class="sos-recent-badge ' + syncClass + '">' + syncLabel + '</span>' +
+        '</a>';
+      }).join('');
+    });
+  }
+
+  /**
+   * Get initials from a name
+   */
+  function getInitialsFromName(name) {
+    if (!name) return '??';
+    var parts = name.trim().split(' ').filter(function(p) { return p; });
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    if (parts.length === 1 && parts[0].length >= 2) {
+      return parts[0].substring(0, 2).toUpperCase();
+    }
+    return '??';
+  }
+
+  /**
+   * Format a date as relative time
+   */
+  function formatTimeAgo(dateStr) {
+    if (!dateStr) return '';
+    var date = new Date(dateStr);
+    var now = new Date();
+    var diffMs = now - date;
+    var diffMins = Math.floor(diffMs / 60000);
+    var diffHours = Math.floor(diffMs / 3600000);
+    var diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'maintenant';
+    if (diffMins < 60) return diffMins + 'min';
+    if (diffHours < 24) return diffHours + 'h';
+    if (diffDays === 1) return 'hier';
+    if (diffDays < 7) return diffDays + 'j';
+    return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  }
 
   // Log initialization
   sosLog('Common utilities loaded');
