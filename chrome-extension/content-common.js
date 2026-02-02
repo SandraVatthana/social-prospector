@@ -1205,22 +1205,38 @@
         return;
       }
 
-      listEl.innerHTML = filtered.map(function(p) {
+      listEl.innerHTML = filtered.map(function(p, index) {
         var initials = getInitialsFromName(p.fullName || p.username || '??');
         var timeAgo = formatTimeAgo(p.importedAt);
         var syncClass = p.synced ? 'sos-synced' : 'sos-local';
         var syncLabel = p.synced ? 'Sync' : 'Local';
         var profileUrl = buildProfileUrl(currentPlatform, p.username);
+        var hasAnalysis = p.signals && p.signals.length > 0;
 
-        return '<a href="' + profileUrl + '" target="_blank" class="sos-recent-item">' +
+        return '<div class="sos-recent-item" data-index="' + index + '">' +
           '<div class="sos-recent-avatar">' + initials + '</div>' +
           '<div class="sos-recent-info">' +
             '<div class="sos-recent-name">' + sosEscapeHtml(p.fullName || p.username || 'Inconnu') + '</div>' +
-            '<div class="sos-recent-meta">' + sosEscapeHtml((p.headline || '').substring(0, 30)) + ' • ' + timeAgo + '</div>' +
+            '<div class="sos-recent-meta">' +
+              (hasAnalysis ? '🎯 ' + p.signals.length + ' signaux • ' : '') +
+              sosEscapeHtml((p.headline || '').substring(0, 25)) + ' • ' + timeAgo +
+            '</div>' +
           '</div>' +
+          '<a href="' + profileUrl + '" target="_blank" class="sos-recent-link" title="Ouvrir le profil" onclick="event.stopPropagation();">🔗</a>' +
           '<span class="sos-recent-badge ' + syncClass + '">' + syncLabel + '</span>' +
-        '</a>';
+        '</div>';
       }).join('');
+
+      // Add click handlers to show analysis
+      listEl.querySelectorAll('.sos-recent-item').forEach(function(item) {
+        item.addEventListener('click', function() {
+          var index = parseInt(item.dataset.index);
+          var prospect = filtered[index];
+          if (prospect) {
+            showProspectAnalysis(prospect);
+          }
+        });
+      });
     });
   }
 
@@ -1237,6 +1253,101 @@
       return parts[0].substring(0, 2).toUpperCase();
     }
     return '??';
+  }
+
+  /**
+   * Show a prospect's analysis in the panel
+   */
+  function showProspectAnalysis(prospect) {
+    // Store in panel state
+    window._sosPanelState.analyzedData = prospect;
+    window._sosPanelState.signals = prospect.signals || [];
+    window._sosPanelState.angles = prospect.angles || [];
+
+    // Switch to results view
+    var stepPaste = document.getElementById('sos-step-paste');
+    var stepResults = document.getElementById('sos-step-results');
+    var footerPaste = document.getElementById('sos-footer-paste');
+    var footerResults = document.getElementById('sos-footer-results');
+
+    if (stepPaste) stepPaste.classList.remove('active');
+    if (stepResults) stepResults.classList.add('active');
+    if (footerPaste) footerPaste.style.display = 'none';
+    if (footerResults) footerResults.style.display = 'flex';
+
+    // Hide loading, show results
+    var loading = document.getElementById('sos-analysis-loading');
+    var results = document.getElementById('sos-analysis-results');
+    if (loading) loading.style.display = 'none';
+    if (results) results.style.display = 'block';
+
+    // Populate profile fields
+    var fullnameEl = document.getElementById('sos-result-fullname');
+    var headlineEl = document.getElementById('sos-result-headline');
+    var companyEl = document.getElementById('sos-result-company');
+
+    if (fullnameEl) fullnameEl.value = prospect.fullName || '';
+    if (headlineEl) headlineEl.value = prospect.headline || '';
+    if (companyEl) companyEl.value = prospect.company || '';
+
+    // Populate signals
+    var signalsList = document.getElementById('sos-signals-list');
+    if (signalsList) {
+      var signals = prospect.signals || [];
+      if (signals.length === 0) {
+        signalsList.innerHTML = '<div class="sos-no-signals">Aucun signal détecté</div>';
+      } else {
+        signalsList.innerHTML = signals.map(function(signal) {
+          var isStrong = signal.type === 'fort';
+          return '<div class="sos-signal ' + (isStrong ? 'sos-signal-strong' : 'sos-signal-weak') + '">' +
+            '<span class="sos-signal-icon">' + (isStrong ? '🔥' : '💡') + '</span>' +
+            '<div class="sos-signal-content">' +
+              '<span class="sos-signal-text">' + sosEscapeHtml(signal.text || '') + '</span>' +
+              (signal.reason ? '<span class="sos-signal-reason">' + sosEscapeHtml(signal.reason) + '</span>' : '') +
+            '</div>' +
+          '</div>';
+        }).join('');
+      }
+    }
+
+    // Populate angles
+    var anglesList = document.getElementById('sos-angles-list');
+    if (anglesList) {
+      var angles = prospect.angles || [];
+      if (angles.length === 0) {
+        anglesList.innerHTML = '<div class="sos-no-angles">Aucun angle suggéré</div>';
+      } else {
+        anglesList.innerHTML = angles.map(function(angle) {
+          var hookText = typeof angle === 'string' ? angle : (angle.hook || angle.text || '');
+          var reasonText = typeof angle === 'object' ? (angle.reason || '') : '';
+          return '<div class="sos-angle">' +
+            '<span class="sos-angle-hook">' + sosEscapeHtml(hookText) + '</span>' +
+            (reasonText ? '<span class="sos-angle-reason">' + sosEscapeHtml(reasonText) + '</span>' : '') +
+          '</div>';
+        }).join('');
+      }
+    }
+
+    // Populate raw content if available
+    var rawText = document.getElementById('sos-raw-text');
+    if (rawText && prospect.rawContent) {
+      rawText.textContent = prospect.rawContent.substring(0, 1000) + (prospect.rawContent.length > 1000 ? '...' : '');
+    }
+
+    // Populate notes
+    var notesEl = document.getElementById('sos-result-notes');
+    if (notesEl) {
+      notesEl.value = prospect.notes || '';
+    }
+
+    // Collapse recent imports section
+    var recentSection = document.getElementById('sos-recent-section');
+    if (recentSection) {
+      recentSection.classList.remove('sos-recent-open');
+    }
+
+    // Show toast
+    sosShowToast('Analyse de ' + (prospect.fullName || prospect.username) + ' chargée', 'info');
   }
 
   /**

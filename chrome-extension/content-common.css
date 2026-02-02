@@ -1264,6 +1264,7 @@
   color: inherit;
   transition: var(--sos-transition);
   border: 1px solid var(--sos-border);
+  cursor: pointer;
 }
 
 .sos-recent-item:hover {
@@ -1305,6 +1306,25 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.sos-recent-link {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 12px;
+  opacity: 0.5;
+  transition: var(--sos-transition);
+  flex-shrink: 0;
+}
+
+.sos-recent-link:hover {
+  opacity: 1;
+  background: var(--sos-surface);
 }
 
 .sos-recent-badge {
