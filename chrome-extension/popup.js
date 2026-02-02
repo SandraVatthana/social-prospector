@@ -35,8 +35,17 @@ const openAppBtn = document.getElementById('openAppBtn');
 // Éléments DOM - Privacy
 const privacyLink = document.getElementById('privacyLink');
 
+// Éléments DOM - Recent Imports
+const instagramImportsList = document.getElementById('instagramImportsList');
+const linkedinImportsList = document.getElementById('linkedinImportsList');
+const tiktokImportsList = document.getElementById('tiktokImportsList');
+const instagramEmptyImports = document.getElementById('instagramEmptyImports');
+const linkedinEmptyImports = document.getElementById('linkedinEmptyImports');
+const tiktokEmptyImports = document.getElementById('tiktokEmptyImports');
+
 // Configuration
 const APP_URL = 'https://sosprospection.com';
+const MAX_RECENT_IMPORTS = 5;
 
 // État
 let currentSessions = [];
@@ -51,6 +60,7 @@ async function init() {
   await checkCurrentStatus();
   await loadSessions();
   await checkAppAuthStatus();
+  await loadRecentImports();
   setupEventListeners();
 }
 
@@ -118,6 +128,138 @@ async function checkAppAuthStatus() {
     sosError('Erreur lors de la verification de l\'auth app:', error);
     appAuthText.textContent = 'Erreur de verification';
   }
+}
+
+/**
+ * Charger les prospects importés récemment
+ */
+async function loadRecentImports() {
+  try {
+    const { importedProspects = [] } = await chrome.storage.local.get('importedProspects');
+
+    // Trier par date d'import (plus récent en premier)
+    const sortedProspects = importedProspects
+      .sort((a, b) => new Date(b.importedAt) - new Date(a.importedAt));
+
+    // Filtrer par plateforme et limiter
+    const instagramImports = sortedProspects
+      .filter(p => p.platform === 'instagram')
+      .slice(0, MAX_RECENT_IMPORTS);
+
+    const linkedinImports = sortedProspects
+      .filter(p => p.platform === 'linkedin')
+      .slice(0, MAX_RECENT_IMPORTS);
+
+    const tiktokImports = sortedProspects
+      .filter(p => p.platform === 'tiktok')
+      .slice(0, MAX_RECENT_IMPORTS);
+
+    // Afficher
+    renderRecentImports(instagramImports, instagramImportsList, instagramEmptyImports, 'instagram');
+    renderRecentImports(linkedinImports, linkedinImportsList, linkedinEmptyImports, 'linkedin');
+    renderRecentImports(tiktokImports, tiktokImportsList, tiktokEmptyImports, 'tiktok');
+
+  } catch (error) {
+    sosError('Erreur lors du chargement des imports:', error);
+  }
+}
+
+/**
+ * Afficher les imports récents dans une liste
+ */
+function renderRecentImports(imports, listElement, emptyElement, platform) {
+  if (!listElement || !emptyElement) return;
+
+  if (imports.length === 0) {
+    listElement.innerHTML = '';
+    emptyElement.style.display = 'block';
+    return;
+  }
+
+  emptyElement.style.display = 'none';
+
+  listElement.innerHTML = imports.map(prospect => {
+    const initials = getInitials(prospect.fullName || prospect.username);
+    const importDate = formatRelativeTime(prospect.importedAt);
+    const syncStatus = prospect.synced !== false ? 'synced' : 'local';
+    const syncLabel = syncStatus === 'synced' ? 'Sync' : 'Local';
+
+    // Déterminer l'URL du profil
+    let profileUrl = '';
+    if (platform === 'linkedin') {
+      profileUrl = prospect.profileUrl || `https://linkedin.com/in/${prospect.username}`;
+    } else if (platform === 'instagram') {
+      profileUrl = `https://instagram.com/${prospect.username}`;
+    } else if (platform === 'tiktok') {
+      profileUrl = `https://tiktok.com/@${prospect.username}`;
+    }
+
+    return `
+      <div class="recent-import-item" data-url="${escapeHtml(profileUrl)}">
+        <div class="recent-import-avatar ${platform}">${initials}</div>
+        <div class="recent-import-info">
+          <div class="recent-import-name">${escapeHtml(prospect.fullName || prospect.username || 'Inconnu')}</div>
+          <div class="recent-import-meta">${escapeHtml(prospect.headline || prospect.bio?.substring(0, 40) || '')} • ${importDate}</div>
+        </div>
+        <span class="recent-import-badge ${syncStatus}">${syncLabel}</span>
+      </div>
+    `;
+  }).join('');
+
+  // Ajouter lien vers l'app si authentifié
+  if (isAppAuthenticated) {
+    listElement.innerHTML += `
+      <a href="${APP_URL}/prospects" target="_blank" class="view-all-link">
+        Voir tous mes prospects dans l'app
+      </a>
+    `;
+  }
+
+  // Event listeners pour ouvrir les profils
+  listElement.querySelectorAll('.recent-import-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const url = item.dataset.url;
+      if (url) {
+        window.open(url, '_blank');
+      }
+    });
+  });
+}
+
+/**
+ * Obtenir les initiales d'un nom
+ */
+function getInitials(name) {
+  if (!name) return '??';
+  const parts = name.trim().split(' ').filter(Boolean);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  if (parts.length === 1 && parts[0].length >= 2) {
+    return parts[0].substring(0, 2).toUpperCase();
+  }
+  return '??';
+}
+
+/**
+ * Formater une date en temps relatif
+ */
+function formatRelativeTime(dateStr) {
+  if (!dateStr) return '';
+
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'maintenant';
+  if (diffMins < 60) return `il y a ${diffMins}min`;
+  if (diffHours < 24) return `il y a ${diffHours}h`;
+  if (diffDays === 1) return 'hier';
+  if (diffDays < 7) return `il y a ${diffDays}j`;
+  return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 }
 
 /**
@@ -258,6 +400,21 @@ function setupEventListeners() {
       }
     }, 100);
   });
+
+  // Refresh recent imports buttons
+  const refreshInstagram = document.getElementById('refreshInstagramImports');
+  const refreshLinkedIn = document.getElementById('refreshLinkedInImports');
+  const refreshTikTok = document.getElementById('refreshTikTokImports');
+
+  if (refreshInstagram) {
+    refreshInstagram.addEventListener('click', () => loadRecentImports());
+  }
+  if (refreshLinkedIn) {
+    refreshLinkedIn.addEventListener('click', () => loadRecentImports());
+  }
+  if (refreshTikTok) {
+    refreshTikTok.addEventListener('click', () => loadRecentImports());
+  }
 }
 
 /**

@@ -133,7 +133,8 @@ async function importProspect(platform, profile, posts = []) {
     platform,
     ...profile,
     posts,
-    importedAt: new Date().toISOString()
+    importedAt: new Date().toISOString(),
+    synced: false // Will be updated if sync succeeds
   };
 
   // Check for duplicates
@@ -142,12 +143,16 @@ async function importProspect(platform, profile, posts = []) {
   );
 
   if (existingIndex >= 0) {
+    // Keep the existing synced status if updating
+    prospectData.synced = importedProspects[existingIndex].synced || false;
     importedProspects[existingIndex] = prospectData;
   } else {
     importedProspects.push(prospectData);
   }
 
-  await chrome.storage.local.set({ importedProspects });
+  // Limit to last 100 imports to avoid storage bloat
+  const limitedProspects = importedProspects.slice(-100);
+  await chrome.storage.local.set({ importedProspects: limitedProspects });
 
   // Then try to sync with backend
   try {
@@ -156,6 +161,14 @@ async function importProspect(platform, profile, posts = []) {
       profile,
       posts
     });
+
+    // Update synced status
+    prospectData.synced = true;
+    const updatedIndex = limitedProspects.findIndex(p => p.id === prospectData.id);
+    if (updatedIndex >= 0) {
+      limitedProspects[updatedIndex].synced = true;
+      await chrome.storage.local.set({ importedProspects: limitedProspects });
+    }
 
     return {
       success: true,

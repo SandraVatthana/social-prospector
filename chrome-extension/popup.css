@@ -6,8 +6,10 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  width: 320px;
+  width: 340px;
   min-height: 400px;
+  max-height: 600px;
+  overflow-y: auto;
   background: linear-gradient(180deg, #fafafa 0%, #f5f5f5 100%);
   color: #262626;
 }
@@ -790,4 +792,146 @@ body {
 
 .privacy-link {
   cursor: pointer;
+}
+
+/* Recent Imports Section */
+.recent-imports-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e9ecef;
+}
+
+.recent-imports-section .section-header {
+  margin-bottom: 10px;
+}
+
+.recent-imports-section h2 {
+  font-size: 13px;
+  font-weight: 600;
+  color: #495057;
+}
+
+.btn-refresh {
+  width: 28px;
+  height: 28px;
+  background: #f0f0f0;
+  color: #666;
+}
+
+.btn-refresh:hover {
+  background: #e5e5e5;
+  box-shadow: none;
+  transform: none;
+}
+
+.recent-imports-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.recent-import-item {
+  background: white;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid #f0f0f0;
+}
+
+.recent-import-item:hover {
+  border-color: #ddd;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.recent-import-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.recent-import-avatar.linkedin {
+  background: linear-gradient(135deg, #0077b5, #005582);
+}
+
+.recent-import-avatar.instagram {
+  background: linear-gradient(45deg, #405DE6, #833AB4, #E1306C);
+}
+
+.recent-import-avatar.tiktok {
+  background: linear-gradient(135deg, #ff0050, #00f2ea);
+}
+
+.recent-import-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.recent-import-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: #262626;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recent-import-meta {
+  font-size: 11px;
+  color: #8e8e8e;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recent-import-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.recent-import-badge.synced {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.recent-import-badge.local {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.recent-empty {
+  padding: 16px;
+  font-size: 12px;
+}
+
+/* View all link */
+.view-all-link {
+  display: block;
+  text-align: center;
+  margin-top: 10px;
+  font-size: 12px;
+  color: #0077b5;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.view-all-link:hover {
+  text-decoration: underline;
 }
