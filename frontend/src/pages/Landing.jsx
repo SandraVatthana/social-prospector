@@ -23,6 +23,10 @@ import {
   Clock,
   Heart,
   Mail,
+  AlertTriangle,
+  Eye,
+  Brain,
+  ShieldCheck,
 } from 'lucide-react';
 
 // Animation variants
@@ -330,7 +334,145 @@ function DisclaimerSection() {
 }
 
 // ==========================================
-// SECTION 2B: DISCERNEMENT AVANT TOUT
+// SECTION 2B: COMPARAISON APPROCHES
+// ==========================================
+function ComparisonSection() {
+  const { ref, isInView } = useScrollAnimation();
+
+  const comparison = [
+    {
+      feature: 'Méthode de collecte',
+      scraping: 'Scraping automatique du DOM',
+      smartPaste: 'Copier-coller manuel + IA',
+      icon: Eye,
+    },
+    {
+      feature: 'Risque pour le compte',
+      scraping: 'Élevé (détection, bannissement)',
+      smartPaste: 'Aucun risque',
+      icon: AlertTriangle,
+    },
+    {
+      feature: 'Conformité CGU',
+      scraping: 'Violation des conditions',
+      smartPaste: '100% conforme',
+      icon: ShieldCheck,
+    },
+    {
+      feature: 'Qualité de l\'analyse',
+      scraping: 'Données brutes uniquement',
+      smartPaste: 'Signaux + angles d\'approche IA',
+      icon: Brain,
+    },
+    {
+      feature: 'Personnalisation',
+      scraping: 'Templates génériques',
+      smartPaste: 'Analyse contextuelle profonde',
+      icon: Sparkles,
+    },
+  ];
+
+  return (
+    <section ref={ref} className="py-24 bg-gradient-to-br from-warm-50 to-white">
+      <div className="max-w-5xl mx-auto px-4">
+        <motion.div
+          initial="hidden"
+          animate={isInView ? 'visible' : 'hidden'}
+          variants={fadeInUp}
+          className="text-center mb-12"
+        >
+          <span className="inline-flex items-center gap-2 px-4 py-2 bg-brand-50 text-brand-700 rounded-full text-sm font-medium mb-4">
+            <ShieldCheck className="w-4 h-4" />
+            Approche unique
+          </span>
+          <h2 className="font-display text-3xl md:text-4xl font-bold text-warm-900 mb-4">
+            Pourquoi notre approche est différente
+          </h2>
+          <p className="text-lg text-warm-600 max-w-2xl mx-auto">
+            Contrairement aux outils qui scrapent (et risquent le ban),
+            on te fait <strong>vraiment lire</strong> les profils.
+          </p>
+        </motion.div>
+
+        {/* Comparison table */}
+        <motion.div
+          initial="hidden"
+          animate={isInView ? 'visible' : 'hidden'}
+          variants={fadeInUp}
+          className="bg-white rounded-2xl shadow-xl overflow-hidden border border-warm-100"
+        >
+          {/* Header */}
+          <div className="grid grid-cols-3 bg-warm-50 border-b border-warm-200">
+            <div className="p-4 text-sm font-semibold text-warm-500 uppercase tracking-wide"></div>
+            <div className="p-4 text-center border-l border-warm-200">
+              <div className="flex items-center justify-center gap-2 text-warm-500">
+                <AlertTriangle className="w-4 h-4" />
+                <span className="font-semibold text-sm uppercase tracking-wide">Outils classiques</span>
+              </div>
+            </div>
+            <div className="p-4 text-center border-l border-warm-200 bg-brand-50">
+              <div className="flex items-center justify-center gap-2 text-brand-700">
+                <Shield className="w-4 h-4" />
+                <span className="font-semibold text-sm uppercase tracking-wide">SOS Prospection</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Rows */}
+          {comparison.map((row, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, x: -20 }}
+              animate={isInView ? { opacity: 1, x: 0 } : {}}
+              transition={{ delay: 0.1 * index }}
+              className={`grid grid-cols-3 ${index < comparison.length - 1 ? 'border-b border-warm-100' : ''}`}
+            >
+              <div className="p-4 flex items-center gap-3">
+                <div className="w-8 h-8 bg-warm-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <row.icon className="w-4 h-4 text-warm-600" />
+                </div>
+                <span className="font-medium text-warm-800 text-sm">{row.feature}</span>
+              </div>
+              <div className="p-4 flex items-center justify-center border-l border-warm-100 bg-red-50/50">
+                <div className="flex items-center gap-2 text-red-600 text-sm text-center">
+                  <X className="w-4 h-4 flex-shrink-0" />
+                  <span>{row.scraping}</span>
+                </div>
+              </div>
+              <div className="p-4 flex items-center justify-center border-l border-warm-100 bg-green-50/50">
+                <div className="flex items-center gap-2 text-green-700 text-sm text-center">
+                  <Check className="w-4 h-4 flex-shrink-0" />
+                  <span className="font-medium">{row.smartPaste}</span>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
+
+        {/* Bottom callout */}
+        <motion.div
+          initial="hidden"
+          animate={isInView ? 'visible' : 'hidden'}
+          variants={fadeInUp}
+          className="mt-8 bg-gradient-to-r from-brand-500 to-accent-500 rounded-2xl p-6 md:p-8 text-white text-center"
+        >
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <TrendingUp className="w-5 h-5" />
+            <span className="font-bold">Résultat</span>
+          </div>
+          <p className="text-lg md:text-xl">
+            Des messages <strong>10x plus personnalisés</strong>,
+            un taux de réponse <strong>multiplié par 3</strong>,
+            et <strong>zéro risque</strong> de bannissement.
+          </p>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+// ==========================================
+// SECTION 2C: DISCERNEMENT AVANT TOUT
 // ==========================================
 function DiscernementSection() {
   const { ref, isInView } = useScrollAnimation();
@@ -1452,6 +1594,7 @@ export default function Landing() {
     <div className="min-h-screen">
       <HeroSection />
       <DisclaimerSection />
+      <ComparisonSection />
       <DiscernementSection />
       <LeadScoringSection />
       <ProblemSection />
