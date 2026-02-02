@@ -487,7 +487,7 @@ function DiscernementSection() {
     {
       icon: '🌱',
       title: 'Prospect en nurturing',
-      description: 'Poser des questions, creer le lien. Pas encore pret, mais interesse.',
+      description: 'Poser des questions, créer le lien. Pas encore prêt, mais intéressé.',
       color: 'bg-amber-100 border-amber-300 text-amber-800',
     },
     {
@@ -563,14 +563,14 @@ function LeadScoringSection() {
   const signals = [
     {
       emoji: '💼',
-      title: 'Poste recent',
+      title: 'Poste récent',
       description: 'Vient de se lancer ou nouveau poste < 6 mois',
       points: '+25 pts',
     },
     {
       emoji: '😫',
-      title: 'Douleur exprimee',
-      description: 'A poste sur un probleme que tu peux resoudre',
+      title: 'Douleur exprimée',
+      description: 'A posté sur un problème que tu peux résoudre',
       points: '+25 pts',
     },
     {
@@ -582,13 +582,13 @@ function LeadScoringSection() {
     {
       emoji: '🌱',
       title: 'Petite audience',
-      description: 'Moins de 1000 abonnes = plus accessible',
+      description: 'Moins de 1000 abonnés = plus accessible',
       points: '+15 pts',
     },
     {
       emoji: '📍',
-      title: 'Meme zone',
-      description: 'Meme ville ou region que toi',
+      title: 'Même zone',
+      description: 'Même ville ou région que toi',
       points: '+15 pts',
     },
   ];
@@ -599,14 +599,14 @@ function LeadScoringSection() {
       label: 'CHAUD',
       score: '60+',
       color: 'bg-red-100 border-red-300 text-red-700',
-      action: 'Contacte en priorite',
+      action: 'Contacte en priorité',
     },
     {
       emoji: '🌡️',
-      label: 'TIEDE',
+      label: 'TIÈDE',
       score: '30-59',
       color: 'bg-orange-100 border-orange-300 text-orange-700',
-      action: 'A mettre en nurturing',
+      action: 'À mettre en nurturing',
     },
     {
       emoji: '❄️',
@@ -634,7 +634,7 @@ function LeadScoringSection() {
             Sais exactement QUI contacter en premier
           </h2>
           <p className="text-xl text-warm-600 max-w-2xl mx-auto">
-            L'IA detecte 5 signaux d'achat et attribue un score a chaque prospect.
+            L'IA détecte 5 signaux d'achat et attribue un score à chaque prospect.
             <br />
             <strong>Fini le temps perdu sur les mauvais profils.</strong>
           </p>
@@ -672,7 +672,7 @@ function LeadScoringSection() {
           className="max-w-3xl mx-auto"
         >
           <h3 className="text-center font-bold text-warm-700 mb-6">
-            Resultat : un score de 0 a 100 et un badge clair
+            Résultat : un score de 0 à 100 et un badge clair
           </h3>
           <div className="grid md:grid-cols-3 gap-4">
             {badges.map((badge, index) => (
