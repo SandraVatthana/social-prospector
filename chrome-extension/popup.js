@@ -43,6 +43,10 @@ const instagramEmptyImports = document.getElementById('instagramEmptyImports');
 const linkedinEmptyImports = document.getElementById('linkedinEmptyImports');
 const tiktokEmptyImports = document.getElementById('tiktokEmptyImports');
 
+// Éléments DOM - Sync Warning
+const syncWarningBanner = document.getElementById('syncWarningBanner');
+const connectAppBtn = document.getElementById('connectAppBtn');
+
 // Configuration
 const APP_URL = 'https://sosprospection.com';
 const MAX_RECENT_IMPORTS = 5;
@@ -118,11 +122,19 @@ async function checkAppAuthStatus() {
       appAuthDot.classList.remove('disconnected');
       appAuthText.textContent = 'Connecte a l\'app';
       openAppBtn.textContent = 'Ouvrir l\'app';
+      // Hide sync warning
+      if (syncWarningBanner) {
+        syncWarningBanner.style.display = 'none';
+      }
     } else {
       appAuthDot.classList.remove('connected');
       appAuthDot.classList.add('disconnected');
       appAuthText.textContent = 'Non connecte';
       openAppBtn.textContent = 'Se connecter';
+      // Show sync warning
+      if (syncWarningBanner) {
+        syncWarningBanner.style.display = 'flex';
+      }
     }
   } catch (error) {
     sosError('Erreur lors de la verification de l\'auth app:', error);
@@ -360,6 +372,13 @@ function setupEventListeners() {
   openAppBtn.addEventListener('click', () => {
     window.open(APP_URL, '_blank');
   });
+
+  // Connect App Button (from warning banner)
+  if (connectAppBtn) {
+    connectAppBtn.addEventListener('click', () => {
+      window.open(APP_URL, '_blank');
+    });
+  }
 
   // Bouton d'ajout
   addAccountBtn.addEventListener('click', () => {

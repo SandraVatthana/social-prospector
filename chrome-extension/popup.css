@@ -794,6 +794,62 @@ body {
   cursor: pointer;
 }
 
+/* Sync Warning Banner */
+.sync-warning {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+  border: 1px solid #ffca28;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+}
+
+.sync-warning-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.sync-warning-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.sync-warning-text strong {
+  display: block;
+  font-size: 12px;
+  color: #f57c00;
+  margin-bottom: 2px;
+}
+
+.sync-warning-text p {
+  font-size: 11px;
+  color: #795548;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.btn-small {
+  padding: 6px 10px;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.btn-warning {
+  background: linear-gradient(135deg, #ff9800, #f57c00);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-warning:hover {
+  box-shadow: 0 2px 8px rgba(255,152,0,0.4);
+}
+
 /* Recent Imports Section */
 .recent-imports-section {
   margin-top: 16px;
