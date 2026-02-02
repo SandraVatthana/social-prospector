@@ -828,19 +828,27 @@ function WhyDMSection() {
 }
 
 // ==========================================
-// SECTION 5: MA VOIX (KILLER FEATURE)
+// SECTION 5: MESSAGES PERSONNALISÉS
 // ==========================================
 function MaVoixSection() {
   const { ref, isInView } = useScrollAnimation();
-  const [showAfter, setShowAfter] = useState(false);
 
-  const beforeMessage = `Bonjour, j'ai vu votre profil et je pense que nous pourrions collaborer. N'hésitez pas à me contacter.`;
-  const afterMessage = `Salut Marie ! Ton post sur l'organisation m'a trop parlé — j'ai le même problème avec mes to-do lists infinies 😅 Tu veux que je te montre un truc qui m'a aidé ?`;
-
-  const steps = [
-    { num: '1', text: 'Colle 2-10 textes que TU as écrits (posts, emails, messages...)' },
-    { num: '2', text: 'L\'IA analyse ton style : ton, emojis, expressions, énergie' },
-    { num: '3', text: 'Tous tes messages sonnent comme toi — Score de fidélité : 87%' },
+  const features = [
+    {
+      icon: '🎯',
+      title: 'Basé sur le profil',
+      description: 'L\'IA analyse la bio, le parcours et les posts de ton prospect',
+    },
+    {
+      icon: '💡',
+      title: 'Signaux détectés',
+      description: 'Identification des besoins, frustrations et opportunités',
+    },
+    {
+      icon: '✨',
+      title: 'Message unique',
+      description: 'Chaque message est généré spécifiquement pour ce prospect',
+    },
   ];
 
   return (
@@ -850,101 +858,50 @@ function MaVoixSection() {
           initial="hidden"
           animate={isInView ? 'visible' : 'hidden'}
           variants={fadeInUp}
-          className="text-center mb-16"
+          className="text-center mb-12"
         >
           <span className="inline-flex items-center gap-2 px-4 py-2 bg-brand-50 text-brand-700 rounded-full text-sm font-medium mb-4">
-            <Mic className="w-4 h-4" />
-            Ton style, pas un template
+            <Sparkles className="w-4 h-4" />
+            Personnalisation IA
           </span>
-          <h2 className="font-display text-4xl md:text-5xl font-bold text-warm-900 mb-4">
-            MA VOIX — Des messages qui sonnent comme toi
+          <h2 className="font-display text-4xl md:text-5xl font-bold text-warm-900 mb-6">
+            Des messages qui créent de vraies conversations
           </h2>
         </motion.div>
 
-        {/* Before/After comparison */}
+        {/* Main value proposition */}
         <motion.div
           initial="hidden"
           animate={isInView ? 'visible' : 'hidden'}
           variants={fadeInUp}
           className="max-w-3xl mx-auto mb-16"
         >
-          <div className="bg-warm-50 rounded-2xl p-8">
-            <div className="flex justify-center gap-4 mb-8">
-              <button
-                onClick={() => setShowAfter(false)}
-                className={`px-6 py-2 rounded-xl font-medium transition-all ${
-                  !showAfter ? 'bg-warm-200 text-warm-800' : 'text-warm-500 hover:bg-warm-100'
-                }`}
-              >
-                Avant
-              </button>
-              <button
-                onClick={() => setShowAfter(true)}
-                className={`px-6 py-2 rounded-xl font-medium transition-all ${
-                  showAfter ? 'bg-brand-500 text-white' : 'text-warm-500 hover:bg-warm-100'
-                }`}
-              >
-                Après (MA VOIX)
-              </button>
-            </div>
-
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={showAfter ? 'after' : 'before'}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className={`bg-white rounded-xl p-6 border-2 ${
-                  showAfter ? 'border-brand-200' : 'border-warm-200'
-                }`}
-              >
-                <div className="flex items-start gap-3 mb-4">
-                  <div className={`w-10 h-10 rounded-full ${showAfter ? 'bg-brand-100' : 'bg-warm-100'} flex items-center justify-center`}>
-                    <MessageSquare className={`w-5 h-5 ${showAfter ? 'text-brand-600' : 'text-warm-500'}`} />
-                  </div>
-                  <div>
-                    <p className="font-medium text-warm-900">
-                      {showAfter ? 'Message avec MA VOIX' : 'Message générique'}
-                    </p>
-                    <p className="text-sm text-warm-500">
-                      {showAfter ? 'Personnalisé + ton style' : 'Template copié-collé'}
-                    </p>
-                  </div>
-                </div>
-                <p className="text-warm-700 text-lg leading-relaxed">
-                  {showAfter ? afterMessage : beforeMessage}
-                </p>
-                <div className={`mt-4 pt-4 border-t ${showAfter ? 'border-brand-100' : 'border-warm-100'} flex items-center justify-between`}>
-                  <span className={`text-sm ${showAfter ? 'text-brand-600' : 'text-warm-500'}`}>
-                    {showAfter ? 'Taux de réponse' : 'Taux de réponse'}
-                  </span>
-                  <span className={`font-bold text-xl ${showAfter ? 'text-green-600' : 'text-warm-400'}`}>
-                    {showAfter ? '28%' : '3%'}
-                  </span>
-                </div>
-              </motion.div>
-            </AnimatePresence>
+          <div className="bg-gradient-to-br from-brand-50 to-accent-50 rounded-2xl p-8 md:p-12 text-center border-2 border-brand-100">
+            <p className="text-xl md:text-2xl text-warm-700 leading-relaxed mb-6">
+              L'outil génère des messages personnalisés selon le profil de ton prospect.
+            </p>
+            <p className="text-lg text-warm-600">
+              <strong className="text-brand-600">Pas de template copié-collé</strong> — chaque conversation s'adapte en temps réel.
+            </p>
           </div>
         </motion.div>
 
-        {/* How it works steps */}
+        {/* Features grid */}
         <motion.div
           initial="hidden"
           animate={isInView ? 'visible' : 'hidden'}
           variants={staggerContainer}
           className="grid md:grid-cols-3 gap-6"
         >
-          {steps.map((step, index) => (
+          {features.map((feature, index) => (
             <motion.div
               key={index}
               variants={fadeInUp}
-              className="bg-gradient-to-br from-brand-50 to-accent-50 rounded-2xl p-6 relative"
+              className="bg-white rounded-2xl p-6 border border-warm-200 hover:border-brand-200 hover:shadow-lg transition-all"
             >
-              <div className="w-10 h-10 bg-brand-500 text-white rounded-xl flex items-center justify-center font-bold mb-4">
-                {step.num}
-              </div>
-              <p className="text-warm-700">{step.text}</p>
+              <div className="text-4xl mb-4">{feature.icon}</div>
+              <h3 className="font-bold text-warm-900 mb-2">{feature.title}</h3>
+              <p className="text-warm-600">{feature.description}</p>
             </motion.div>
           ))}
         </motion.div>
