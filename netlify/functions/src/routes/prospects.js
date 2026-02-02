@@ -535,11 +535,12 @@ router.post('/extension/import', requireAuth, async (req, res) => {
  * POST /api/prospects/linkedin/import
  * Import de profils LinkedIn depuis l'extension Chrome (legacy)
  */
-router.post('/linkedin/import', async (req, res) => {
+router.post('/linkedin/import', requireAuth, async (req, res) => {
   try {
     const { profiles, importedAt } = req.body;
+    const userId = req.user.id;
 
-    console.log(`[LinkedIn Import] Received ${profiles?.length || 0} profiles at ${importedAt}`);
+    console.log(`[LinkedIn Import] User ${userId} - Received ${profiles?.length || 0} profiles at ${importedAt}`);
 
     if (!profiles || !Array.isArray(profiles) || profiles.length === 0) {
       return res.status(400).json(formatError('Aucun profil LinkedIn fourni', 'NO_PROFILES'));
@@ -548,10 +549,11 @@ router.post('/linkedin/import', async (req, res) => {
     // Extraire les URLs de profil pour deduplication
     const profileUrls = profiles.map(p => p.profileUrl).filter(Boolean);
 
-    // Verifier les doublons existants
+    // Verifier les doublons existants pour cet utilisateur
     const { data: existingProfiles } = await supabaseAdmin
       .from('prospects')
       .select('username')
+      .eq('user_id', userId)
       .eq('platform', 'linkedin')
       .in('username', profileUrls);
 
@@ -572,6 +574,7 @@ router.post('/linkedin/import', async (req, res) => {
 
     // Preparer les donnees pour insertion
     const prospectsToInsert = newProfiles.map(p => ({
+      user_id: userId,
       username: p.profileUrl,
       platform: 'linkedin',
       full_name: p.name || null,
@@ -920,5 +923,364 @@ router.post('/import-csv', requireAuth, async (req, res) => {
     res.status(500).json(formatError('Erreur serveur', 'SERVER_ERROR'));
   }
 });
+
+/**
+ * POST /api/prospects/analyze-paste
+ * Analyse du texte collé (profil + posts) avec IA pour extraire données et signaux
+ * Utilisé par l'extension Chrome - Smart Paste
+ */
+router.post('/analyze-paste', async (req, res) => {
+  try {
+    const { platform, content, username } = req.body;
+
+    if (!content || content.trim().length < 10) {
+      return res.status(400).json(formatError('Contenu insuffisant à analyser', 'NO_CONTENT'));
+    }
+
+    console.log(`[Analyze Paste] Platform: ${platform}, Username: ${username}, Content length: ${content.length}`);
+
+    // Construire le prompt d'analyse
+    const systemPrompt = `Tu es un expert en analyse de profils pour la prospection commerciale.
+Tu analyses le texte collé pour extraire des informations utiles à un commercial qui veut contacter cette personne.
+
+RÈGLE ABSOLUE: Tu DOIS retourner UNIQUEMENT du JSON valide, sans aucun texte avant ou après.
+Pas de markdown, pas d'explication, juste le JSON.`;
+
+    const userPrompt = `Analyse ce contenu collé depuis ${platform || 'un réseau social'}:
+
+"""
+${content.substring(0, 6000)}
+"""
+
+Retourne UNIQUEMENT ce JSON (sans \`\`\`json ni autre formatage):
+{
+  "profile": {
+    "fullName": "Nom complet ou null",
+    "headline": "Titre/fonction ou null",
+    "company": "Entreprise ou null",
+    "bio": "Résumé bio max 200 chars ou null",
+    "location": "Lieu ou null",
+    "followers": "Nombre followers ou null"
+  },
+  "signals": [
+    {
+      "type": "fort",
+      "text": "Description du signal",
+      "source": "profil ou post",
+      "reason": "Pourquoi c'est intéressant"
+    }
+  ],
+  "angles": [
+    {
+      "hook": "Accroche suggérée",
+      "reason": "Pourquoi ça marcherait"
+    }
+  ]
+}
+
+IMPORTANT - Tu DOIS trouver des signaux même subtils:
+- Signal FORT: recherche d'aide, frustration, nouveau projet, changement de poste, lancement, recrutement, problème mentionné
+- Signal FAIBLE: centres d'intérêt, valeurs affichées, ton utilisé, sujets récurrents, hashtags, engagement sur certains sujets
+
+Trouve AU MINIMUM 2 signaux et 2 angles d'approche. Sois créatif.
+Si le contenu est pauvre, déduis des signaux du secteur d'activité ou du poste.`;
+
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      temperature: 0.5,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }],
+    });
+
+    // Parser la réponse JSON
+    const responseText = message.content[0].text;
+    console.log(`[Analyze Paste] Claude raw response (first 500 chars):`, responseText.substring(0, 500));
+
+    let analysis;
+
+    try {
+      // Nettoyer la réponse - plusieurs tentatives
+      let cleanedResponse = responseText.trim();
+
+      // Supprimer les blocs de code markdown
+      cleanedResponse = cleanedResponse
+        .replace(/^```json\s*/i, '')
+        .replace(/^```\s*/i, '')
+        .replace(/\s*```$/i, '')
+        .trim();
+
+      // Trouver le JSON dans la réponse (entre { et })
+      const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        cleanedResponse = jsonMatch[0];
+      }
+
+      analysis = JSON.parse(cleanedResponse);
+      console.log(`[Analyze Paste] Parsed successfully - signals: ${analysis.signals?.length}, angles: ${analysis.angles?.length}`);
+    } catch (parseError) {
+      console.error('[Analyze Paste] JSON parse error:', parseError.message);
+      console.error('[Analyze Paste] Raw response:', responseText);
+
+      // Tentative d'extraction manuelle
+      analysis = extractAnalysisManually(responseText, content);
+    }
+
+    // S'assurer qu'on a toujours des signaux (fallback intelligent)
+    if (!analysis.signals || analysis.signals.length === 0) {
+      analysis.signals = generateFallbackSignals(content, platform);
+    }
+
+    if (!analysis.angles || analysis.angles.length === 0) {
+      analysis.angles = generateFallbackAngles(content, platform, analysis.profile);
+    }
+
+    // Nettoyer les valeurs null/undefined dans profile
+    if (analysis.profile) {
+      Object.keys(analysis.profile).forEach(key => {
+        if (analysis.profile[key] === '' || analysis.profile[key] === 'null' || analysis.profile[key] === 'undefined') {
+          analysis.profile[key] = null;
+        }
+      });
+    }
+
+    console.log(`[Analyze Paste] SUCCESS - Found ${analysis.signals?.length || 0} signals, ${analysis.angles?.length || 0} angles`);
+
+    res.json(formatResponse({
+      profile: analysis.profile || {},
+      signals: analysis.signals || [],
+      angles: analysis.angles || []
+    }));
+
+  } catch (error) {
+    console.error('[Analyze Paste] Error:', error);
+
+    // En cas d'erreur, retourner un fallback avec des signaux générés
+    const { content, platform } = req.body;
+    const profile = basicExtractProfile(content || '');
+
+    res.json(formatResponse({
+      profile: profile,
+      signals: generateFallbackSignals(content || '', platform),
+      angles: generateFallbackAngles(content || '', platform, profile),
+      fallback: true
+    }));
+  }
+});
+
+/**
+ * Extraction manuelle si le JSON est mal formé
+ */
+function extractAnalysisManually(responseText, originalContent) {
+  const analysis = {
+    profile: basicExtractProfile(originalContent),
+    signals: [],
+    angles: []
+  };
+
+  // Essayer d'extraire les signaux du texte
+  const signalMatches = responseText.match(/"text"\s*:\s*"([^"]+)"/g);
+  if (signalMatches) {
+    signalMatches.forEach((match, i) => {
+      const text = match.match(/"text"\s*:\s*"([^"]+)"/)?.[1];
+      if (text && i < 5) {
+        analysis.signals.push({
+          type: i < 2 ? 'fort' : 'faible',
+          text: text,
+          source: 'analyse',
+          reason: 'Identifié dans le contenu'
+        });
+      }
+    });
+  }
+
+  // Essayer d'extraire les angles
+  const hookMatches = responseText.match(/"hook"\s*:\s*"([^"]+)"/g);
+  if (hookMatches) {
+    hookMatches.forEach((match, i) => {
+      const hook = match.match(/"hook"\s*:\s*"([^"]+)"/)?.[1];
+      if (hook && i < 3) {
+        analysis.angles.push({
+          hook: hook,
+          reason: 'Angle suggéré'
+        });
+      }
+    });
+  }
+
+  return analysis;
+}
+
+/**
+ * Génère des signaux de fallback basés sur le contenu
+ */
+function generateFallbackSignals(content, platform) {
+  const signals = [];
+  const lower = content.toLowerCase();
+
+  // Signaux forts - mots-clés explicites
+  const strongKeywords = [
+    { pattern: /recherche|cherche|besoin de|looking for/i, signal: 'Recherche active mentionnée', reason: 'Expression d\'un besoin' },
+    { pattern: /problème|difficulté|galère|struggle|challenge/i, signal: 'Difficulté évoquée', reason: 'Point de douleur potentiel' },
+    { pattern: /lancement|lance|nouveau projet|new project/i, signal: 'Nouveau projet en cours', reason: 'Moment propice pour proposer de l\'aide' },
+    { pattern: /recrute|hiring|on recrute|we\'re hiring/i, signal: 'Recrutement en cours', reason: 'Entreprise en croissance' },
+    { pattern: /freelance|indépendant|entrepreneur|fondateur|founder|ceo/i, signal: 'Entrepreneur/Indépendant', reason: 'Décideur direct' },
+    { pattern: /formation|coaching|accompagnement/i, signal: 'Intérêt pour le développement', reason: 'Ouvert à l\'apprentissage' },
+  ];
+
+  for (const kw of strongKeywords) {
+    if (kw.pattern.test(content)) {
+      signals.push({
+        type: 'fort',
+        text: kw.signal,
+        source: 'contenu',
+        reason: kw.reason
+      });
+      if (signals.length >= 2) break;
+    }
+  }
+
+  // Signaux faibles - déduction du contexte
+  const weakSignals = [
+    { pattern: /marketing|growth|acquisition/i, signal: 'Intérêt pour le marketing/growth', reason: 'Potentiellement ouvert aux outils marketing' },
+    { pattern: /vente|commercial|sales|business dev/i, signal: 'Profil commercial', reason: 'Comprend la valeur de la prospection' },
+    { pattern: /productivité|organisation|efficacité/i, signal: 'Focus sur l\'efficacité', reason: 'Sensible aux gains de temps' },
+    { pattern: /linkedin|instagram|tiktok|réseaux sociaux|social media/i, signal: 'Actif sur les réseaux', reason: 'Canal de communication pertinent' },
+    { pattern: /\d+k|\d+ abonnés|\d+ followers/i, signal: 'Audience établie', reason: 'Créateur de contenu actif' },
+  ];
+
+  for (const kw of weakSignals) {
+    if (kw.pattern.test(content) && signals.length < 4) {
+      signals.push({
+        type: 'faible',
+        text: kw.signal,
+        source: 'contenu',
+        reason: kw.reason
+      });
+    }
+  }
+
+  // Si toujours pas de signaux, générer des signaux génériques basés sur la plateforme
+  if (signals.length === 0) {
+    signals.push({
+      type: 'faible',
+      text: `Présence active sur ${platform || 'les réseaux'}`,
+      source: 'plateforme',
+      reason: 'Accessible via DM'
+    });
+    signals.push({
+      type: 'faible',
+      text: 'Profil public visible',
+      source: 'plateforme',
+      reason: 'Ouvert aux échanges'
+    });
+  }
+
+  return signals;
+}
+
+/**
+ * Génère des angles d'approche de fallback
+ */
+function generateFallbackAngles(content, platform, profile) {
+  const angles = [];
+  const lower = content.toLowerCase();
+
+  // Angle basé sur le poste/titre
+  if (profile?.headline) {
+    angles.push({
+      hook: `J'ai vu que tu es ${profile.headline.split(' chez ')[0] || profile.headline.substring(0, 50)}...`,
+      reason: 'Personnalisation basée sur le titre'
+    });
+  }
+
+  // Angle basé sur le contenu
+  if (lower.includes('coach') || lower.includes('formateur') || lower.includes('consultant')) {
+    angles.push({
+      hook: 'Comment tu gères ta prospection actuellement ?',
+      reason: 'Question ouverte sur leur processus'
+    });
+  }
+
+  if (lower.includes('entrepreneur') || lower.includes('fondateur') || lower.includes('ceo')) {
+    angles.push({
+      hook: 'Tu arrives à trouver le temps de prospecter avec tout ce que tu gères ?',
+      reason: 'Empathie sur la charge de travail'
+    });
+  }
+
+  // Angles génériques si rien trouvé
+  if (angles.length === 0) {
+    angles.push({
+      hook: 'Ton profil m\'a interpellé...',
+      reason: 'Accroche curiosité'
+    });
+    angles.push({
+      hook: `Je t'ai trouvé via ${platform || 'LinkedIn'} et je voulais te poser une question rapide`,
+      reason: 'Approche directe et honnête'
+    });
+  }
+
+  return angles.slice(0, 3);
+}
+
+/**
+ * Extraction basique de profil (fallback si API IA indisponible)
+ */
+function basicExtractProfile(content) {
+  const lines = content.split('\n').filter(l => l.trim());
+  const profile = {
+    fullName: null,
+    headline: null,
+    company: null,
+    bio: null,
+    location: null,
+    followers: null,
+    experience: null
+  };
+
+  // Première ligne souvent le nom
+  if (lines.length > 0) {
+    const firstLine = lines[0].trim();
+    if (firstLine.length < 60 && !firstLine.includes('http') && !firstLine.includes('@')) {
+      profile.fullName = firstLine;
+    }
+  }
+
+  // Patterns courants
+  for (let i = 0; i < Math.min(lines.length, 30); i++) {
+    const line = lines[i].trim();
+    const lower = line.toLowerCase();
+
+    // Headline/titre
+    if (!profile.headline && (lower.includes(' chez ') || lower.includes(' at ') || lower.includes(' | ') || lower.includes(' - '))) {
+      if (line.length < 150) {
+        profile.headline = line;
+        // Extraire company
+        const companyMatch = line.match(/(?:chez|at|@)\s+([^|·•\-]+)/i);
+        if (companyMatch) profile.company = companyMatch[1].trim();
+      }
+    }
+
+    // Followers
+    const followersMatch = line.match(/([\d,.\s]+[kmKM]?)\s*(?:followers?|abonnés?|contacts?)/i);
+    if (followersMatch && !profile.followers) {
+      profile.followers = followersMatch[1].trim();
+    }
+
+    // Location
+    const locationMatch = line.match(/(?:📍|Région de|Localisation|Location)[:\s]*(.+)/i);
+    if (locationMatch && !profile.location) {
+      profile.location = locationMatch[1].trim().substring(0, 100);
+    }
+
+    // Bio/About
+    if ((lower.includes('à propos') || lower === 'about' || lower === 'bio') && !profile.bio) {
+      profile.bio = lines.slice(i + 1, i + 5).join(' ').substring(0, 300);
+    }
+  }
+
+  return profile;
+}
 
 export default router;

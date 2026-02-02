@@ -242,6 +242,94 @@ async function generateDM(platform, prospect) {
 }
 
 // ============================================
+// SMART PASTE ANALYSIS
+// ============================================
+
+/**
+ * Analyze pasted content using AI to extract profile data and signals
+ */
+async function analyzeProspectContent(platform, content, username) {
+  sosLog(' Analyzing prospect content:', { platform, contentLength: content.length });
+
+  try {
+    const result = await apiCall('/api/prospects/analyze-paste', 'POST', {
+      platform,
+      content,
+      username
+    });
+
+    if (result.data) {
+      return {
+        success: true,
+        profile: result.data.profile || {},
+        signals: result.data.signals || [],
+        angles: result.data.angles || []
+      };
+    }
+
+    throw new Error('Réponse invalide de l\'API');
+  } catch (error) {
+    sosWarn(' AI analysis failed, using basic parsing:', error.message);
+    // Fallback to basic parsing
+    return {
+      success: true,
+      profile: basicParseContent(content),
+      signals: [],
+      angles: [],
+      fallback: true
+    };
+  }
+}
+
+/**
+ * Basic content parsing as fallback when API is unavailable
+ */
+function basicParseContent(content) {
+  const lines = content.split('\n').filter(l => l.trim());
+  const profile = {
+    fullName: '',
+    headline: '',
+    company: '',
+    bio: ''
+  };
+
+  // First line is often the name
+  if (lines.length > 0) {
+    const firstLine = lines[0].trim();
+    if (firstLine.length < 60 && !firstLine.includes('http') && !firstLine.includes('@')) {
+      profile.fullName = firstLine;
+    }
+  }
+
+  // Look for patterns
+  for (let i = 0; i < Math.min(lines.length, 20); i++) {
+    const line = lines[i].trim();
+    const lower = line.toLowerCase();
+
+    // Headline patterns
+    if (!profile.headline && (lower.includes(' chez ') || lower.includes(' at ') || lower.includes(' | '))) {
+      profile.headline = line;
+      // Extract company
+      const match = line.match(/(?:chez|at|@)\s+(.+?)(?:\s*[|·•]|$)/i);
+      if (match) profile.company = match[1].trim();
+    }
+
+    // Bio/About section
+    if (lower.includes('à propos') || lower === 'about') {
+      profile.bio = lines.slice(i + 1, i + 5).join(' ').substring(0, 500);
+    }
+
+    // Followers
+    const followersMatch = line.match(/([\d,\.]+[kmKM]?)\s*(?:followers|abonnés)/i);
+    if (followersMatch) {
+      profile.followers = followersMatch[1];
+    }
+  }
+
+  return profile;
+}
+
+// ============================================
 // INSTAGRAM SESSION MANAGEMENT
 // ============================================
 
@@ -451,6 +539,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         // DM generation
         case 'generateDM':
           return await generateDM(request.platform, request.prospect);
+
+        // Smart paste analysis
+        case 'analyzeProspect':
+          return await analyzeProspectContent(request.platform, request.content, request.username);
 
         // Instagram sessions
         case 'getSessions':

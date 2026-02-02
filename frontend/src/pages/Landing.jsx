@@ -14,7 +14,6 @@ import {
   ChevronUp,
   Check,
   X,
-  Star,
   Mic,
   ArrowRight,
   Sparkles,
@@ -1095,86 +1094,6 @@ function BestPracticesSection() {
   );
 }
 
-// ==========================================
-// SECTION 7: SOCIAL PROOF
-// ==========================================
-function SocialProofSection() {
-  const { ref, isInView } = useScrollAnimation();
-
-  const testimonials = [
-    {
-      quote: 'J\'envoyais 50 DMs par semaine sans réponse. Maintenant j\'en envoie 20 et j\'ai 5 appels bookés. L\'IA capte vraiment ma façon de parler.',
-      author: 'Marie S.',
-      role: 'Coach business',
-      stat: '+340%',
-      statLabel: 'de taux de réponse',
-    },
-    {
-      quote: 'Gérer la prospection de 8 clients, c\'était l\'enfer. Maintenant chaque message est personnalisé avec LEUR voix, pas la mienne.',
-      author: 'Nathalie B.',
-      role: 'Community manager',
-      stat: '8',
-      statLabel: 'clients gérés facilement',
-    },
-    {
-      quote: 'Les prospects me répondent "ton message m\'a interpellé". C\'est exactement ce que je voulais : être remarquée sans être intrusive.',
-      author: 'Nadia M.',
-      role: 'Consultante SEO',
-      stat: '28%',
-      statLabel: 'de taux de réponse',
-    },
-  ];
-
-  return (
-    <section ref={ref} className="py-24 bg-white">
-      <div className="max-w-6xl mx-auto px-4">
-        <motion.div
-          initial="hidden"
-          animate={isInView ? 'visible' : 'hidden'}
-          variants={fadeInUp}
-          className="text-center mb-16"
-        >
-          <h2 className="font-display text-4xl font-bold text-warm-900 mb-4">
-            Ils ont transformé leur prospection
-          </h2>
-        </motion.div>
-
-        <motion.div
-          initial="hidden"
-          animate={isInView ? 'visible' : 'hidden'}
-          variants={staggerContainer}
-          className="grid md:grid-cols-3 gap-8"
-        >
-          {testimonials.map((testimonial, index) => (
-            <motion.div
-              key={index}
-              variants={scaleIn}
-              whileHover={{ y: -5 }}
-              className="bg-warm-50 rounded-2xl p-8"
-            >
-              <div className="flex gap-1 mb-4">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-5 h-5 text-amber-400 fill-amber-400" />
-                ))}
-              </div>
-              <p className="text-warm-700 mb-6 italic">"{testimonial.quote}"</p>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-bold text-warm-900">{testimonial.author}</p>
-                  <p className="text-sm text-warm-500">{testimonial.role}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-brand-600">{testimonial.stat}</p>
-                  <p className="text-xs text-warm-500">{testimonial.statLabel}</p>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
-      </div>
-    </section>
-  );
-}
 
 // ==========================================
 // SECTION 8: PRICING
@@ -1559,7 +1478,6 @@ export default function Landing() {
       <MaVoixSection />
       <HowItWorksSection />
       <BestPracticesSection />
-      <SocialProofSection />
       {/* <PricingSection /> -- Masqué pour la bêta */}
       <FAQSection />
       <FinalCTASection />

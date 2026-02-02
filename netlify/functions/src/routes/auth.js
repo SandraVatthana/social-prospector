@@ -5,6 +5,26 @@ import { formatResponse, formatError, isValidEmail } from '../utils/helpers.js';
 const router = Router();
 
 /**
+ * Valide la force du mot de passe
+ * @returns {string|null} Message d'erreur ou null si valide
+ */
+function validatePassword(password) {
+  if (!password || password.length < 8) {
+    return 'Le mot de passe doit contenir au moins 8 caractères';
+  }
+  if (!/[A-Z]/.test(password)) {
+    return 'Le mot de passe doit contenir au moins une majuscule';
+  }
+  if (!/[a-z]/.test(password)) {
+    return 'Le mot de passe doit contenir au moins une minuscule';
+  }
+  if (!/[0-9]/.test(password)) {
+    return 'Le mot de passe doit contenir au moins un chiffre';
+  }
+  return null;
+}
+
+/**
  * POST /api/auth/signup
  * Inscription d'un nouvel utilisateur
  */
@@ -21,8 +41,9 @@ router.post('/signup', async (req, res) => {
       return res.status(400).json(formatError('Email invalide', 'INVALID_EMAIL'));
     }
 
-    if (password.length < 6) {
-      return res.status(400).json(formatError('Mot de passe trop court (min 6 caractères)', 'WEAK_PASSWORD'));
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      return res.status(400).json(formatError(passwordError, 'WEAK_PASSWORD'));
     }
 
     // Créer l'utilisateur avec Supabase Auth
@@ -224,8 +245,9 @@ router.post('/reset-password', async (req, res) => {
       return res.status(400).json(formatError('Token et nouveau mot de passe requis', 'VALIDATION_ERROR'));
     }
 
-    if (password.length < 6) {
-      return res.status(400).json(formatError('Mot de passe trop court', 'WEAK_PASSWORD'));
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      return res.status(400).json(formatError(passwordError, 'WEAK_PASSWORD'));
     }
 
     const { error } = await supabaseAdmin.auth.updateUser({

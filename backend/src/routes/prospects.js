@@ -940,92 +940,105 @@ router.post('/analyze-paste', async (req, res) => {
     console.log(`[Analyze Paste] Platform: ${platform}, Username: ${username}, Content length: ${content.length}`);
 
     // Construire le prompt d'analyse
-    const systemPrompt = `Tu es un expert en analyse de profils professionnels sur les réseaux sociaux.
-Tu analyses le texte collé par l'utilisateur (qui peut contenir un profil ET des posts) pour extraire :
-1. Les informations structurées du profil
-2. Les "signaux faibles" - indices subtils sur les besoins/intérêts
-3. Les "signaux forts" - indices clairs d'opportunité business
-4. Des angles d'approche personnalisés pour la prospection
+    const systemPrompt = `Tu es un expert en analyse de profils pour la prospection commerciale.
+Tu analyses le texte collé pour extraire des informations utiles à un commercial qui veut contacter cette personne.
 
-IMPORTANT:
-- Sois précis et factuel, ne fais pas de suppositions sans base textuelle
-- Les signaux doivent être basés sur des éléments CONCRETS du texte
-- Les angles d'approche doivent être ACTIONABLES et SPÉCIFIQUES`;
+RÈGLE ABSOLUE: Tu DOIS retourner UNIQUEMENT du JSON valide, sans aucun texte avant ou après.
+Pas de markdown, pas d'explication, juste le JSON.`;
 
-    const userPrompt = `Analyse ce contenu collé depuis ${platform || 'un réseau social'} pour le prospect @${username || 'inconnu'}:
+    const userPrompt = `Analyse ce contenu collé depuis ${platform || 'un réseau social'}:
 
----
-${content.substring(0, 8000)}
----
+"""
+${content.substring(0, 6000)}
+"""
 
-Réponds en JSON avec ce format EXACT:
+Retourne UNIQUEMENT ce JSON (sans \`\`\`json ni autre formatage):
 {
   "profile": {
-    "fullName": "Nom complet si trouvé",
-    "headline": "Titre/fonction si trouvé",
-    "company": "Entreprise si trouvée",
-    "bio": "Bio/À propos résumé (max 200 chars)",
-    "location": "Localisation si trouvée",
-    "followers": "Nombre de followers si trouvé",
-    "experience": "Résumé expérience si trouvé"
+    "fullName": "Nom complet ou null",
+    "headline": "Titre/fonction ou null",
+    "company": "Entreprise ou null",
+    "bio": "Résumé bio max 200 chars ou null",
+    "location": "Lieu ou null",
+    "followers": "Nombre followers ou null"
   },
   "signals": [
     {
-      "type": "fort|faible",
-      "text": "Le signal identifié",
-      "source": "D'où vient ce signal (profil/post)",
-      "reason": "Pourquoi c'est un signal intéressant"
+      "type": "fort",
+      "text": "Description du signal",
+      "source": "profil ou post",
+      "reason": "Pourquoi c'est intéressant"
     }
   ],
   "angles": [
     {
-      "hook": "Accroche suggérée basée sur un élément spécifique",
-      "reason": "Pourquoi cette accroche fonctionnerait"
+      "hook": "Accroche suggérée",
+      "reason": "Pourquoi ça marcherait"
     }
   ]
 }
 
-Règles:
-- Si une info n'est pas trouvée, mets null (pas de string vide)
-- Identifie 2-5 signaux pertinents (privilégie la qualité)
-- Propose 2-3 angles d'approche maximum
-- Les signaux "forts" = besoin explicite, recherche d'aide, frustration exprimée, projet en cours
-- Les signaux "faibles" = intérêts, valeurs, style de communication, domaine d'expertise`;
+IMPORTANT - Tu DOIS trouver des signaux même subtils:
+- Signal FORT: recherche d'aide, frustration, nouveau projet, changement de poste, lancement, recrutement, problème mentionné
+- Signal FAIBLE: centres d'intérêt, valeurs affichées, ton utilisé, sujets récurrents, hashtags, engagement sur certains sujets
+
+Trouve AU MINIMUM 2 signaux et 2 angles d'approche. Sois créatif.
+Si le contenu est pauvre, déduis des signaux du secteur d'activité ou du poste.`;
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 2000,
-      temperature: 0.3,
+      temperature: 0.5,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     });
 
     // Parser la réponse JSON
     const responseText = message.content[0].text;
+    console.log(`[Analyze Paste] Claude raw response (first 500 chars):`, responseText.substring(0, 500));
+
     let analysis;
 
     try {
-      const cleanedResponse = responseText
-        .replace(/```json\n?/g, '')
-        .replace(/```\n?/g, '')
+      // Nettoyer la réponse - plusieurs tentatives
+      let cleanedResponse = responseText.trim();
+
+      // Supprimer les blocs de code markdown
+      cleanedResponse = cleanedResponse
+        .replace(/^```json\s*/i, '')
+        .replace(/^```\s*/i, '')
+        .replace(/\s*```$/i, '')
         .trim();
+
+      // Trouver le JSON dans la réponse (entre { et })
+      const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        cleanedResponse = jsonMatch[0];
+      }
+
       analysis = JSON.parse(cleanedResponse);
+      console.log(`[Analyze Paste] Parsed successfully - signals: ${analysis.signals?.length}, angles: ${analysis.angles?.length}`);
     } catch (parseError) {
-      console.error('[Analyze Paste] Error parsing Claude response:', parseError);
+      console.error('[Analyze Paste] JSON parse error:', parseError.message);
       console.error('[Analyze Paste] Raw response:', responseText);
 
-      // Fallback avec parsing basique
-      analysis = {
-        profile: basicExtractProfile(content),
-        signals: [],
-        angles: []
-      };
+      // Tentative d'extraction manuelle
+      analysis = extractAnalysisManually(responseText, content);
+    }
+
+    // S'assurer qu'on a toujours des signaux (fallback intelligent)
+    if (!analysis.signals || analysis.signals.length === 0) {
+      analysis.signals = generateFallbackSignals(content, platform);
+    }
+
+    if (!analysis.angles || analysis.angles.length === 0) {
+      analysis.angles = generateFallbackAngles(content, platform, analysis.profile);
     }
 
     // Nettoyer les valeurs null/undefined dans profile
     if (analysis.profile) {
       Object.keys(analysis.profile).forEach(key => {
-        if (analysis.profile[key] === '' || analysis.profile[key] === 'null') {
+        if (analysis.profile[key] === '' || analysis.profile[key] === 'null' || analysis.profile[key] === 'undefined') {
           analysis.profile[key] = null;
         }
       });
@@ -1042,16 +1055,174 @@ Règles:
   } catch (error) {
     console.error('[Analyze Paste] Error:', error);
 
-    // En cas d'erreur, retourner un fallback basique
-    const { content } = req.body;
+    // En cas d'erreur, retourner un fallback avec des signaux générés
+    const { content, platform } = req.body;
+    const profile = basicExtractProfile(content || '');
+
     res.json(formatResponse({
-      profile: basicExtractProfile(content || ''),
-      signals: [],
-      angles: [],
+      profile: profile,
+      signals: generateFallbackSignals(content || '', platform),
+      angles: generateFallbackAngles(content || '', platform, profile),
       fallback: true
     }));
   }
 });
+
+/**
+ * Extraction manuelle si le JSON est mal formé
+ */
+function extractAnalysisManually(responseText, originalContent) {
+  const analysis = {
+    profile: basicExtractProfile(originalContent),
+    signals: [],
+    angles: []
+  };
+
+  // Essayer d'extraire les signaux du texte
+  const signalMatches = responseText.match(/"text"\s*:\s*"([^"]+)"/g);
+  if (signalMatches) {
+    signalMatches.forEach((match, i) => {
+      const text = match.match(/"text"\s*:\s*"([^"]+)"/)?.[1];
+      if (text && i < 5) {
+        analysis.signals.push({
+          type: i < 2 ? 'fort' : 'faible',
+          text: text,
+          source: 'analyse',
+          reason: 'Identifié dans le contenu'
+        });
+      }
+    });
+  }
+
+  // Essayer d'extraire les angles
+  const hookMatches = responseText.match(/"hook"\s*:\s*"([^"]+)"/g);
+  if (hookMatches) {
+    hookMatches.forEach((match, i) => {
+      const hook = match.match(/"hook"\s*:\s*"([^"]+)"/)?.[1];
+      if (hook && i < 3) {
+        analysis.angles.push({
+          hook: hook,
+          reason: 'Angle suggéré'
+        });
+      }
+    });
+  }
+
+  return analysis;
+}
+
+/**
+ * Génère des signaux de fallback basés sur le contenu
+ */
+function generateFallbackSignals(content, platform) {
+  const signals = [];
+  const lower = content.toLowerCase();
+
+  // Signaux forts - mots-clés explicites
+  const strongKeywords = [
+    { pattern: /recherche|cherche|besoin de|looking for/i, signal: 'Recherche active mentionnée', reason: 'Expression d\'un besoin' },
+    { pattern: /problème|difficulté|galère|struggle|challenge/i, signal: 'Difficulté évoquée', reason: 'Point de douleur potentiel' },
+    { pattern: /lancement|lance|nouveau projet|new project/i, signal: 'Nouveau projet en cours', reason: 'Moment propice pour proposer de l\'aide' },
+    { pattern: /recrute|hiring|on recrute|we\'re hiring/i, signal: 'Recrutement en cours', reason: 'Entreprise en croissance' },
+    { pattern: /freelance|indépendant|entrepreneur|fondateur|founder|ceo/i, signal: 'Entrepreneur/Indépendant', reason: 'Décideur direct' },
+    { pattern: /formation|coaching|accompagnement/i, signal: 'Intérêt pour le développement', reason: 'Ouvert à l\'apprentissage' },
+  ];
+
+  for (const kw of strongKeywords) {
+    if (kw.pattern.test(content)) {
+      signals.push({
+        type: 'fort',
+        text: kw.signal,
+        source: 'contenu',
+        reason: kw.reason
+      });
+      if (signals.length >= 2) break;
+    }
+  }
+
+  // Signaux faibles - déduction du contexte
+  const weakSignals = [
+    { pattern: /marketing|growth|acquisition/i, signal: 'Intérêt pour le marketing/growth', reason: 'Potentiellement ouvert aux outils marketing' },
+    { pattern: /vente|commercial|sales|business dev/i, signal: 'Profil commercial', reason: 'Comprend la valeur de la prospection' },
+    { pattern: /productivité|organisation|efficacité/i, signal: 'Focus sur l\'efficacité', reason: 'Sensible aux gains de temps' },
+    { pattern: /linkedin|instagram|tiktok|réseaux sociaux|social media/i, signal: 'Actif sur les réseaux', reason: 'Canal de communication pertinent' },
+    { pattern: /\d+k|\d+ abonnés|\d+ followers/i, signal: 'Audience établie', reason: 'Créateur de contenu actif' },
+  ];
+
+  for (const kw of weakSignals) {
+    if (kw.pattern.test(content) && signals.length < 4) {
+      signals.push({
+        type: 'faible',
+        text: kw.signal,
+        source: 'contenu',
+        reason: kw.reason
+      });
+    }
+  }
+
+  // Si toujours pas de signaux, générer des signaux génériques basés sur la plateforme
+  if (signals.length === 0) {
+    signals.push({
+      type: 'faible',
+      text: `Présence active sur ${platform || 'les réseaux'}`,
+      source: 'plateforme',
+      reason: 'Accessible via DM'
+    });
+    signals.push({
+      type: 'faible',
+      text: 'Profil public visible',
+      source: 'plateforme',
+      reason: 'Ouvert aux échanges'
+    });
+  }
+
+  return signals;
+}
+
+/**
+ * Génère des angles d'approche de fallback
+ */
+function generateFallbackAngles(content, platform, profile) {
+  const angles = [];
+  const lower = content.toLowerCase();
+
+  // Angle basé sur le poste/titre
+  if (profile?.headline) {
+    angles.push({
+      hook: `J'ai vu que tu es ${profile.headline.split(' chez ')[0] || profile.headline.substring(0, 50)}...`,
+      reason: 'Personnalisation basée sur le titre'
+    });
+  }
+
+  // Angle basé sur le contenu
+  if (lower.includes('coach') || lower.includes('formateur') || lower.includes('consultant')) {
+    angles.push({
+      hook: 'Comment tu gères ta prospection actuellement ?',
+      reason: 'Question ouverte sur leur processus'
+    });
+  }
+
+  if (lower.includes('entrepreneur') || lower.includes('fondateur') || lower.includes('ceo')) {
+    angles.push({
+      hook: 'Tu arrives à trouver le temps de prospecter avec tout ce que tu gères ?',
+      reason: 'Empathie sur la charge de travail'
+    });
+  }
+
+  // Angles génériques si rien trouvé
+  if (angles.length === 0) {
+    angles.push({
+      hook: 'Ton profil m\'a interpellé...',
+      reason: 'Accroche curiosité'
+    });
+    angles.push({
+      hook: `Je t'ai trouvé via ${platform || 'LinkedIn'} et je voulais te poser une question rapide`,
+      reason: 'Approche directe et honnête'
+    });
+  }
+
+  return angles.slice(0, 3);
+}
 
 /**
  * Extraction basique de profil (fallback si API IA indisponible)

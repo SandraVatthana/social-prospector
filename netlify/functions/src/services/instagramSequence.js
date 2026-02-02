@@ -186,6 +186,22 @@ ${styleInstructions}
 Comme si tu parlais à une future amie, pas à un prospect.
 Curieux, authentique, humain, décontracté, généreux.
 
+## STYLE D'ÉCRITURE NATUREL (comme sur mobile)
+Pour que le message paraisse écrit depuis un téléphone :
+- Commence PARFOIS par une minuscule (pas toujours, 1 fois sur 3)
+- Utilise des formes contractées : "t'as" au lieu de "tu as", "c'est" au lieu de "c'est"
+- Pas de ponctuation parfaite : parfois pas de point final, ou un seul point d'interrogation
+- Emojis utilisés naturellement (1-2 max), pas à chaque phrase
+- JAMAIS de fautes d'orthographe sur les mots importants
+- JAMAIS de "slt" ou abréviations SMS excessives
+- Le message doit rester lisible et professionnel, juste décontracté
+
+Exemples de style naturel :
+✅ "hey j'ai vu ton post sur l'organisation, ça m'a trop parlé"
+✅ "Ton dernier post m'a fait réfléchir ! t'as commencé y'a longtemps ?"
+❌ "Slt, cv ? J'ai vu ton post c trop bien"
+❌ "Bonjour, j'ai vu votre publication concernant l'organisation."
+
 ## FORMAT DE RÉPONSE (JSON)
 {
   "message": "Le message DM à envoyer",
