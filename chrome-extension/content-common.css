@@ -520,3 +520,77 @@
 [data-platform="tiktok"].sos-floating-container {
   bottom: 100px;
 }
+
+/* ============================================
+   MANUAL INPUT FORM
+   ============================================ */
+
+.sos-manual-form {
+  max-width: 480px;
+}
+
+.sos-manual-intro {
+  font-size: 13px;
+  color: var(--sos-text-muted);
+  margin: 0 0 16px 0;
+  padding: 12px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+  border-radius: var(--sos-radius);
+  border-left: 3px solid var(--sos-primary);
+}
+
+.sos-form-group {
+  margin-bottom: 14px;
+}
+
+.sos-form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--sos-text);
+  margin-bottom: 6px;
+}
+
+.sos-form-group input[type="text"],
+.sos-form-group textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--sos-border);
+  border-radius: var(--sos-radius);
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--sos-text);
+  background: var(--sos-background);
+  transition: var(--sos-transition);
+  box-sizing: border-box;
+}
+
+.sos-form-group input[type="text"]:focus,
+.sos-form-group textarea:focus {
+  outline: none;
+  border-color: var(--sos-primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.sos-form-group input[type="text"]::placeholder,
+.sos-form-group textarea::placeholder {
+  color: var(--sos-text-muted);
+  opacity: 0.7;
+}
+
+.sos-form-group textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+/* Highlight required fields */
+.sos-form-group label:has(+ input:required)::after,
+.sos-form-group label:has(+ textarea:required)::after {
+  content: " *";
+  color: var(--sos-error);
+}
+
+/* Manual form modal body needs more height for scrolling */
+#sos-manual-modal .sos-modal-body {
+  max-height: 65vh;
+}

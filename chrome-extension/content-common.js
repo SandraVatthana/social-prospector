@@ -206,7 +206,188 @@
   };
 
   // ============================================
-  // IMPORT MODAL
+  // MANUAL INPUT MODAL (100% Legal - No Scraping)
+  // ============================================
+
+  /**
+   * Affiche un formulaire de saisie manuelle pour les données du prospect
+   * L'utilisateur copie-colle les informations qu'il voit sur la page
+   * @param {object} options - platform, username (optionnel), onConfirm callback
+   */
+  window.sosShowManualInputModal = function(options) {
+    var platform = options.platform || 'linkedin';
+    var username = options.username || '';
+    var onConfirm = options.onConfirm;
+
+    var existing = document.getElementById('sos-manual-modal');
+    if (existing) existing.remove();
+
+    var platformLabels = {
+      linkedin: { name: 'LinkedIn', fields: ['fullName', 'headline', 'company', 'about'] },
+      instagram: { name: 'Instagram', fields: ['fullName', 'bio', 'followers'] },
+      tiktok: { name: 'TikTok', fields: ['fullName', 'bio', 'followers'] }
+    };
+
+    var config = platformLabels[platform] || platformLabels.linkedin;
+
+    var modal = document.createElement('div');
+    modal.id = 'sos-manual-modal';
+    modal.className = 'sos-modal';
+
+    modal.innerHTML = '<div class="sos-modal-overlay"></div>' +
+      '<div class="sos-modal-content sos-manual-form">' +
+      '<div class="sos-modal-header">' +
+      '<h3>✏️ Ajouter un prospect ' + config.name + '</h3>' +
+      '<button class="sos-modal-close" id="sos-close-manual">×</button>' +
+      '</div>' +
+      '<div class="sos-modal-body">' +
+      '<p class="sos-manual-intro">Copiez-collez les informations visibles sur le profil :</p>' +
+
+      '<div class="sos-form-group">' +
+      '<label for="sos-manual-username">Identifiant / Username *</label>' +
+      '<input type="text" id="sos-manual-username" placeholder="ex: jean-dupont" value="' + sosEscapeHtml(username) + '">' +
+      '</div>' +
+
+      '<div class="sos-form-group">' +
+      '<label for="sos-manual-fullname">Nom complet *</label>' +
+      '<input type="text" id="sos-manual-fullname" placeholder="ex: Jean Dupont">' +
+      '</div>' +
+
+      (config.fields.includes('headline') ?
+      '<div class="sos-form-group">' +
+      '<label for="sos-manual-headline">Titre / Poste</label>' +
+      '<input type="text" id="sos-manual-headline" placeholder="ex: CEO chez Entreprise XYZ">' +
+      '</div>' : '') +
+
+      (config.fields.includes('company') ?
+      '<div class="sos-form-group">' +
+      '<label for="sos-manual-company">Entreprise</label>' +
+      '<input type="text" id="sos-manual-company" placeholder="ex: Entreprise XYZ">' +
+      '</div>' : '') +
+
+      (config.fields.includes('bio') || config.fields.includes('about') ?
+      '<div class="sos-form-group">' +
+      '<label for="sos-manual-bio">' + (platform === 'linkedin' ? 'À propos (résumé)' : 'Bio') + '</label>' +
+      '<textarea id="sos-manual-bio" rows="3" placeholder="Copiez le texte de présentation..."></textarea>' +
+      '</div>' : '') +
+
+      (config.fields.includes('followers') ?
+      '<div class="sos-form-group">' +
+      '<label for="sos-manual-followers">Nombre de followers (optionnel)</label>' +
+      '<input type="text" id="sos-manual-followers" placeholder="ex: 5000">' +
+      '</div>' : '') +
+
+      '<div class="sos-form-group">' +
+      '<label for="sos-manual-notes">Notes personnelles (optionnel)</label>' +
+      '<textarea id="sos-manual-notes" rows="2" placeholder="Contexte, intérêts communs, raison du contact..."></textarea>' +
+      '</div>' +
+
+      '<div class="sos-form-group">' +
+      '<label for="sos-manual-post">Dernier post / Contenu récent (optionnel)</label>' +
+      '<textarea id="sos-manual-post" rows="2" placeholder="Copiez un extrait de son dernier post pour personnaliser le message..."></textarea>' +
+      '</div>' +
+
+      '<label class="sos-checkbox-label">' +
+      '<input type="checkbox" id="sos-manual-consent">' +
+      '<span>Je confirme que ces données sont saisies manuellement</span>' +
+      '</label>' +
+      '</div>' +
+      '<div class="sos-modal-footer">' +
+      '<button class="sos-btn sos-btn-cancel" id="sos-cancel-manual">Annuler</button>' +
+      '<button class="sos-btn sos-btn-primary" id="sos-confirm-manual" disabled>Ajouter le prospect</button>' +
+      '</div>' +
+      '</div>';
+
+    document.body.appendChild(modal);
+
+    setTimeout(function() {
+      modal.classList.add('sos-modal-visible');
+    }, 10);
+
+    var closeModal = function() {
+      modal.classList.remove('sos-modal-visible');
+      setTimeout(function() { modal.remove(); }, 300);
+    };
+
+    document.getElementById('sos-close-manual').addEventListener('click', closeModal);
+    document.getElementById('sos-cancel-manual').addEventListener('click', closeModal);
+    document.querySelector('#sos-manual-modal .sos-modal-overlay').addEventListener('click', closeModal);
+
+    // Enable/disable confirm button based on consent and required fields
+    var consentCheckbox = document.getElementById('sos-manual-consent');
+    var confirmBtn = document.getElementById('sos-confirm-manual');
+    var usernameInput = document.getElementById('sos-manual-username');
+    var fullnameInput = document.getElementById('sos-manual-fullname');
+
+    function updateConfirmButton() {
+      var hasRequired = usernameInput.value.trim() && fullnameInput.value.trim();
+      var hasConsent = consentCheckbox.checked;
+      confirmBtn.disabled = !(hasRequired && hasConsent);
+    }
+
+    consentCheckbox.addEventListener('change', updateConfirmButton);
+    usernameInput.addEventListener('input', updateConfirmButton);
+    fullnameInput.addEventListener('input', updateConfirmButton);
+
+    confirmBtn.addEventListener('click', function() {
+      var followersEl = document.getElementById('sos-manual-followers');
+      var profileData = {
+        platform: platform,
+        username: usernameInput.value.trim(),
+        fullName: fullnameInput.value.trim(),
+        firstName: fullnameInput.value.trim().split(' ')[0] || '',
+        headline: document.getElementById('sos-manual-headline') ? document.getElementById('sos-manual-headline').value.trim() : '',
+        company: document.getElementById('sos-manual-company') ? document.getElementById('sos-manual-company').value.trim() : '',
+        bio: document.getElementById('sos-manual-bio') ? document.getElementById('sos-manual-bio').value.trim() : '',
+        about: document.getElementById('sos-manual-bio') ? document.getElementById('sos-manual-bio').value.trim() : '',
+        notes: document.getElementById('sos-manual-notes').value.trim(),
+        recentPost: document.getElementById('sos-manual-post').value.trim(),
+        followers_count: followersEl ? parseFollowersCount(followersEl.value) : null,
+        profileUrl: buildProfileUrl(platform, usernameInput.value.trim()),
+        source: 'manual_input',
+        manualEntry: true
+      };
+
+      confirmBtn.disabled = true;
+      confirmBtn.innerHTML = '<span class="sos-spinner"></span> Ajout...';
+
+      if (onConfirm) {
+        onConfirm(profileData)
+          .then(function() {
+            sosShowToast('Prospect ajouté avec succès !', 'success');
+            closeModal();
+            window.open(window.SOS_CONFIG.APP_URL + '/prospects?source=' + platform, '_blank');
+          })
+          .catch(function(err) {
+            sosError('Manual import failed', err);
+            sosShowToast('Erreur: ' + (err.message || 'Échec de l\'import'), 'error');
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = 'Ajouter le prospect';
+          });
+      }
+    });
+  };
+
+  function parseFollowersCount(str) {
+    if (!str) return null;
+    str = str.replace(/[,\s]/g, '').toLowerCase();
+    if (str.includes('k')) return Math.round(parseFloat(str) * 1000);
+    if (str.includes('m')) return Math.round(parseFloat(str) * 1000000);
+    return parseInt(str, 10) || null;
+  }
+
+  function buildProfileUrl(platform, username) {
+    username = (username || '').replace('@', '');
+    switch (platform) {
+      case 'linkedin': return 'https://www.linkedin.com/in/' + username;
+      case 'instagram': return 'https://www.instagram.com/' + username + '/';
+      case 'tiktok': return 'https://www.tiktok.com/@' + username;
+      default: return '';
+    }
+  }
+
+  // ============================================
+  // IMPORT MODAL (Legacy - kept for compatibility)
   // ============================================
 
   window.sosShowImportModal = function(profileData, onConfirm) {

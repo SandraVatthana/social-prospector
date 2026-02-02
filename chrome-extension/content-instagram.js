@@ -1,7 +1,8 @@
 /**
  * SOS Prospection - Instagram Content Script
- * Scrapes Instagram profiles and posts, sends to app, prefills DMs
+ * Assistant de saisie manuelle pour Instagram - 100% légal
  *
+ * Version 2.0 - Formulaire manuel (pas de scraping automatique)
  * Depends on: content-common.js (loaded first via manifest)
  */
 
@@ -61,223 +62,14 @@
     return detectPageType() === 'profile';
   }
 
+  // ============================================
+  // USERNAME EXTRACTION (from URL only - legal)
+  // ============================================
+
   function getCurrentUsername() {
     var path = window.location.pathname;
     var match = path.match(/^\/([^\/]+)/);
     return match ? match[1] : null;
-  }
-
-  // ============================================
-  // PROFILE SCRAPING
-  // ============================================
-
-  function scrapeProfileInfo() {
-    sosLog('Scraping Instagram profile...');
-
-    var username = getCurrentUsername();
-    if (!username) {
-      sosLog('Could not extract username from URL');
-      return null;
-    }
-
-    // Full name - usually in header section
-    var fullName = '';
-    var nameEl = document.querySelector('header section span[class*="x1lliihq"]') ||
-                 document.querySelector('header h2') ||
-                 document.querySelector('[data-testid="user-name"]');
-
-    // Try multiple selectors for name
-    if (!nameEl) {
-      var headerSection = document.querySelector('header section');
-      if (headerSection) {
-        var spans = headerSection.querySelectorAll('span');
-        for (var i = 0; i < spans.length; i++) {
-          var text = spans[i].innerText.trim();
-          if (text && text.length > 1 && text.length < 50 && !text.match(/^\d/)) {
-            fullName = text;
-            break;
-          }
-        }
-      }
-    } else {
-      fullName = nameEl.innerText.trim();
-    }
-
-    // Bio
-    var bio = '';
-    var bioEl = document.querySelector('header section > div > span') ||
-                document.querySelector('header section h1 + span') ||
-                document.querySelector('[data-testid="user-bio"]');
-
-    // Try to find bio in header section divs
-    if (!bioEl) {
-      var headerDivs = document.querySelectorAll('header section div');
-      for (var j = 0; j < headerDivs.length; j++) {
-        var div = headerDivs[j];
-        var divText = div.innerText.trim();
-        // Bio is usually longer text that's not a number
-        if (divText && divText.length > 20 && !divText.match(/^\d/) && !divText.includes('followers')) {
-          bio = divText.substring(0, 500);
-          break;
-        }
-      }
-    } else {
-      bio = bioEl.innerText.trim().substring(0, 500);
-    }
-
-    // Stats: followers, following, posts
-    var stats = scrapeProfileStats();
-
-    // Profile URL
-    var profileUrl = 'https://www.instagram.com/' + username + '/';
-
-    return {
-      platform: PLATFORM,
-      username: username,
-      fullName: fullName || username,
-      firstName: fullName ? fullName.split(' ')[0] : username,
-      bio: bio,
-      followers_count: stats.followers,
-      following_count: stats.following,
-      posts_count: stats.posts,
-      profileUrl: profileUrl,
-      source: 'profile'
-    };
-  }
-
-  function scrapeProfileStats() {
-    var stats = {
-      posts: null,
-      followers: null,
-      following: null
-    };
-
-    // Instagram shows stats in header with text like "123 posts", "1,234 followers"
-    var statElements = document.querySelectorAll('header section ul li');
-
-    if (statElements.length === 0) {
-      // Try alternative selectors
-      statElements = document.querySelectorAll('header section > ul > li');
-    }
-
-    statElements.forEach(function(el) {
-      var text = el.innerText.toLowerCase();
-      var numberMatch = text.match(/[\d,\.]+/);
-      var number = numberMatch ? parseNumber(numberMatch[0]) : null;
-
-      if (text.includes('post')) {
-        stats.posts = number;
-      } else if (text.includes('follower') && !text.includes('following')) {
-        stats.followers = number;
-      } else if (text.includes('following')) {
-        stats.following = number;
-      }
-    });
-
-    return stats;
-  }
-
-  function parseNumber(str) {
-    // Handle numbers like "1,234" or "1.2M" or "12K"
-    str = str.replace(/,/g, '');
-
-    if (str.includes('M') || str.includes('m')) {
-      return parseFloat(str) * 1000000;
-    }
-    if (str.includes('K') || str.includes('k')) {
-      return parseFloat(str) * 1000;
-    }
-
-    return parseInt(str, 10);
-  }
-
-  // ============================================
-  // POST SCRAPING
-  // ============================================
-
-  function scrapeRecentPosts() {
-    var posts = [];
-    sosLog('Scraping Instagram posts...');
-
-    // On profile page, posts are displayed in a grid
-    // Each post is usually an article or link element
-    var postLinks = document.querySelectorAll('article a[href*="/p/"]');
-
-    if (postLinks.length === 0) {
-      // Try alternative selectors
-      postLinks = document.querySelectorAll('main article a[href*="/p/"]') ||
-                  document.querySelectorAll('a[href*="/p/"]');
-    }
-
-    sosLog('Found post links:', postLinks.length);
-
-    // We can't easily get caption from the grid view
-    // We'll get the post URLs and the app can fetch more details if needed
-    var seenUrls = {};
-    postLinks.forEach(function(link, index) {
-      if (index >= 9) return; // Limit to 9 recent posts
-
-      var href = link.href;
-      if (!href || seenUrls[href]) return;
-      seenUrls[href] = true;
-
-      // Try to get image
-      var img = link.querySelector('img');
-      var imageUrl = img ? img.src : null;
-
-      posts.push({
-        url: href,
-        imageUrl: imageUrl,
-        type: href.includes('/reel/') ? 'reel' : 'post'
-      });
-    });
-
-    sosLog('Scraped posts:', posts.length);
-    return posts;
-  }
-
-  function scrapeCurrentPost() {
-    // If we're on a post page, scrape the caption
-    var caption = '';
-
-    var captionEl = document.querySelector('article span[class*="x193iq5w"]') ||
-                    document.querySelector('article h1 + span') ||
-                    document.querySelector('[data-testid="post-comment-root"] span');
-
-    if (captionEl) {
-      caption = captionEl.innerText.trim().substring(0, 1500);
-    }
-
-    return caption;
-  }
-
-  // ============================================
-  // FULL PROFILE DATA COLLECTION
-  // ============================================
-
-  function collectFullProfileData() {
-    var profileInfo = scrapeProfileInfo();
-
-    if (!profileInfo) {
-      return null;
-    }
-
-    var posts = scrapeRecentPosts();
-
-    // If on a post page, try to get current post caption
-    if (detectPageType() === 'post') {
-      var currentCaption = scrapeCurrentPost();
-      if (currentCaption) {
-        profileInfo.recentPost = currentCaption;
-      }
-    }
-
-    return {
-      platform: PLATFORM,
-      profile: profileInfo,
-      posts: posts,
-      scrapedAt: new Date().toISOString()
-    };
   }
 
   // ============================================
@@ -383,51 +175,48 @@
   }
 
   // ============================================
-  // UI HANDLERS
+  // UI HANDLERS - Manual Input Mode
   // ============================================
 
   function handleImport() {
     if (!isProfilePage()) {
-      sosShowToast('Allez sur un profil pour importer', 'warning');
+      sosShowToast('Allez sur un profil Instagram pour ajouter un prospect', 'warning');
       return;
     }
 
-    var data = collectFullProfileData();
+    var username = getCurrentUsername();
 
-    if (!data || !data.profile) {
-      sosShowToast('Impossible de lire le profil. Rechargez la page et réessayez.', 'error');
-      return;
-    }
-
-    sosShowImportModal(
-      Object.assign({}, data.profile, { posts: data.posts }),
-      function(profileData) {
-        return sendToApp({
-          profile: profileData,
-          posts: data.posts
-        });
+    // Ouvrir le formulaire de saisie manuelle
+    sosShowManualInputModal({
+      platform: PLATFORM,
+      username: username || '',
+      onConfirm: function(profileData) {
+        return sendToApp({ profile: profileData, posts: [] });
       }
-    );
+    });
   }
 
   function handlePrepareDM() {
     if (!isProfilePage()) {
-      sosShowToast('Allez sur un profil pour préparer un DM', 'warning');
+      sosShowToast('Allez sur un profil Instagram pour préparer un DM', 'warning');
       return;
     }
 
-    var profileData = scrapeProfileInfo();
-    var posts = scrapeRecentPosts();
+    var username = getCurrentUsername();
 
-    if (!profileData) {
-      sosShowToast('Impossible de lire le profil', 'error');
-      return;
-    }
-
-    profileData.posts = posts;
-
-    sosShowPrepareDMModal(profileData, function(prospect) {
-      return generateDMViaApp(prospect);
+    // On utilise le formulaire manuel pour collecter les infos
+    sosShowManualInputModal({
+      platform: PLATFORM,
+      username: username || '',
+      onConfirm: function(profileData) {
+        // Après validation, on montre le modal de préparation DM
+        return new Promise(function(resolve) {
+          sosShowPrepareDMModal(profileData, function(prospect) {
+            return generateDMViaApp(prospect);
+          });
+          resolve();
+        });
+      }
     });
   }
 
@@ -460,7 +249,7 @@
   }
 
   function init() {
-    sosLog('Instagram content script loaded');
+    sosLog('Instagram content script loaded (Manual Input Mode)');
     setupEventListeners();
     setTimeout(initUI, 2000); // Instagram loads slower
     sosObserveUrlChanges(initUI);
