@@ -1142,12 +1142,18 @@
    * Check authentication status and update the sync banner
    */
   function checkAndUpdateSyncStatus() {
+    console.log('[SOS] Checking auth status...');
     sosSendMessage('getAuthStatus', {})
       .then(function(result) {
+        console.log('[SOS] Auth status result:', result);
         var banner = document.getElementById('sos-sync-banner');
-        if (!banner) return;
+        if (!banner) {
+          console.log('[SOS] Banner element not found');
+          return;
+        }
 
         if (result && result.isAuthenticated) {
+          console.log('[SOS] User is authenticated!');
           banner.className = 'sos-sync-banner sos-sync-connected';
           banner.innerHTML =
             '<div class="sos-sync-icon">✅</div>' +
@@ -1161,21 +1167,35 @@
             window.open(window.SOS_CONFIG.APP_URL + '/prospects', '_blank');
           });
         } else {
+          console.log('[SOS] User is NOT authenticated, result:', result);
           banner.className = 'sos-sync-banner sos-sync-warning';
           banner.innerHTML =
             '<div class="sos-sync-icon">⚠️</div>' +
             '<div class="sos-sync-text">' +
               '<strong>Non connecté</strong>' +
-              '<span>Tes imports ne sont pas sauvegardés</span>' +
+              '<span>Ouvre l\'app puis clique "Actualiser"</span>' +
             '</div>' +
-            '<button class="sos-sync-btn" id="sos-connect-app-btn">Connecter</button>';
+            '<button class="sos-sync-btn sos-sync-btn-secondary" id="sos-refresh-auth-btn" title="Vérifier la connexion">🔄</button>' +
+            '<button class="sos-sync-btn" id="sos-connect-app-btn">Ouvrir l\'app</button>';
 
           document.getElementById('sos-connect-app-btn').addEventListener('click', function() {
             window.open(window.SOS_CONFIG.APP_URL, '_blank');
           });
+
+          document.getElementById('sos-refresh-auth-btn').addEventListener('click', function() {
+            var btn = this;
+            btn.disabled = true;
+            btn.textContent = '...';
+            checkAndUpdateSyncStatus();
+            setTimeout(function() {
+              btn.disabled = false;
+              btn.textContent = '🔄';
+            }, 1000);
+          });
         }
       })
       .catch(function(err) {
+        console.error('[SOS] Auth status check failed:', err);
         sosError('Failed to check auth status', err);
       });
   }

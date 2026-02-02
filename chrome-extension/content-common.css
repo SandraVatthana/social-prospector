@@ -1188,6 +1188,21 @@
   box-shadow: 0 2px 6px rgba(255,152,0,0.4);
 }
 
+.sos-sync-btn-secondary {
+  background: #f5f5f5 !important;
+  color: #666 !important;
+  min-width: 32px;
+}
+
+.sos-sync-btn-secondary:hover {
+  background: #e0e0e0 !important;
+  box-shadow: none !important;
+}
+
+.sos-sync-btn-secondary:disabled {
+  opacity: 0.5;
+}
+
 .sos-sync-connected .sos-sync-btn {
   background: var(--sos-primary);
   color: white;
