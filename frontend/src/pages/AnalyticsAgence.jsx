@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import Header from '../components/layout/Header';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../components/ui/Toast';
 import { generateAgencyClientPDF, generateAgencyGlobalPDF } from '../lib/pdfExport';
 
 // Données mock pour la démo agence
@@ -177,6 +178,7 @@ const mockVoicePerformance = [
 export default function AnalyticsAgence() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [periode, setPeriode] = useState('30d');
   const [selectedClient, setSelectedClient] = useState(null);
@@ -211,8 +213,8 @@ export default function AnalyticsAgence() {
   };
 
   const handleSendReport = (client) => {
-    // TODO: Implémenter l'envoi par email
-    alert(`Fonctionnalité d'envoi par email en cours de développement pour ${client?.name}`);
+    // Fonctionnalité d'envoi par email à implémenter côté backend
+    toast.info('Bientôt disponible', `L'envoi par email pour ${client?.name} sera disponible prochainement`);
   };
 
   const getStatusColor = (status) => {

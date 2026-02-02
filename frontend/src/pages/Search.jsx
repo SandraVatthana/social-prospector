@@ -395,7 +395,9 @@ export default function Search() {
           if (errorData.error) {
             errorMessage = errorData.error;
           }
-        } catch (e) {}
+        } catch {
+          // Ignore JSON parsing errors - use default errorMessage
+        }
         throw new Error(errorMessage);
       }
     } catch (err) {

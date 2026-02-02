@@ -3,6 +3,10 @@
  * Popup Script
  */
 
+const DEBUG = false;
+function sosLog(...args) { if (DEBUG) console.log('[SOS Popup]', ...args); }
+function sosError(...args) { if (DEBUG) console.error('[SOS Popup]', ...args); }
+
 // Éléments DOM - Instagram
 const statusDot = document.getElementById('statusDot');
 const statusText = document.getElementById('statusText');
@@ -85,7 +89,7 @@ async function checkCurrentStatus() {
     // Activer/désactiver le bouton d'ajout
     addAccountBtn.disabled = !isLoggedIn;
   } catch (error) {
-    console.error('Erreur lors de la verification du statut:', error);
+    sosError('Erreur lors de la verification du statut:', error);
     statusText.textContent = 'Erreur de verification';
   }
 }
@@ -111,7 +115,7 @@ async function checkAppAuthStatus() {
       openAppBtn.textContent = 'Se connecter';
     }
   } catch (error) {
-    console.error('Erreur lors de la verification de l\'auth app:', error);
+    sosError('Erreur lors de la verification de l\'auth app:', error);
     appAuthText.textContent = 'Erreur de verification';
   }
 }
@@ -132,7 +136,7 @@ async function loadSessions() {
 
     renderAccounts();
   } catch (error) {
-    console.error('Erreur lors du chargement des sessions:', error);
+    sosError('Erreur lors du chargement des sessions:', error);
     showToast('Erreur lors du chargement', 'error');
   }
 }
@@ -341,7 +345,7 @@ async function saveCurrentAccount() {
     await loadSessions();
     await checkCurrentStatus();
   } catch (error) {
-    console.error('Erreur lors de la sauvegarde:', error);
+    sosError('Erreur lors de la sauvegarde:', error);
     showToast(error.message || 'Erreur lors de la sauvegarde', 'error');
   } finally {
     confirmAddBtn.disabled = false;
@@ -378,7 +382,7 @@ async function switchToAccount(sessionId) {
     renderAccounts();
     await checkCurrentStatus();
   } catch (error) {
-    console.error('Erreur lors du switch:', error);
+    sosError('Erreur lors du switch:', error);
     showToast(error.message || 'Erreur lors du changement', 'error');
   } finally {
     if (item) {
@@ -410,7 +414,7 @@ async function deleteAccount(sessionId) {
     showToast('Compte supprime', 'success');
     await loadSessions();
   } catch (error) {
-    console.error('Erreur lors de la suppression:', error);
+    sosError('Erreur lors de la suppression:', error);
     showToast('Erreur lors de la suppression', 'error');
   }
 }

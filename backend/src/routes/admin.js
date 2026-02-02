@@ -5,17 +5,44 @@ import { supabaseAdmin } from '../utils/supabase.js';
 
 const router = Router();
 
-// Liste des admins autorisés
-const ADMIN_EMAILS = ['sandra@myinnerquest.fr', 'sandra.devonssay@gmail.com'];
+// Fallback admins (utilisé si la colonne is_admin n'existe pas encore en DB)
+const FALLBACK_ADMIN_EMAILS = ['sandra@myinnerquest.fr', 'contact@myinnerquest.fr'];
 
 /**
  * Middleware pour vérifier si l'utilisateur est admin
+ * Vérifie d'abord la colonne is_admin en base, sinon utilise la liste de fallback
  */
 async function requireAdmin(req, res, next) {
-  if (!req.user?.email || !ADMIN_EMAILS.includes(req.user.email.toLowerCase())) {
+  if (!req.user?.id) {
     return res.status(403).json(formatError('Accès non autorisé', 'FORBIDDEN'));
   }
-  next();
+
+  try {
+    // Vérifier le flag is_admin en base de données
+    const { data: user, error } = await supabaseAdmin
+      .from('users')
+      .select('is_admin, email')
+      .eq('id', req.user.id)
+      .single();
+
+    if (error || !user) {
+      return res.status(403).json(formatError('Accès non autorisé', 'FORBIDDEN'));
+    }
+
+    // Si is_admin est défini, l'utiliser
+    if (user.is_admin === true) {
+      return next();
+    }
+
+    // Sinon, fallback sur la liste d'emails (pour compatibilité)
+    if (FALLBACK_ADMIN_EMAILS.includes(user.email?.toLowerCase())) {
+      return next();
+    }
+
+    return res.status(403).json(formatError('Accès non autorisé', 'FORBIDDEN'));
+  } catch (err) {
+    return res.status(500).json(formatError('Erreur serveur', 'SERVER_ERROR'));
+  }
 }
 
 /**

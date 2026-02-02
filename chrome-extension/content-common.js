@@ -31,7 +31,9 @@
   };
 
   window.sosError = function(message, error) {
-    console.error('[SOS Prospection]', message, error || '');
+    if (window.SOS_CONFIG.DEBUG) {
+      console.error('[SOS Prospection]', message, error || '');
+    }
   };
 
   // ============================================

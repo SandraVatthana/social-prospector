@@ -3,13 +3,25 @@ export const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 /**
  * API Client pour Prospection par DM
+ *
+ * SECURITE: Le token JWT est stocké en mémoire (this.token) et synchronisé
+ * avec localStorage pour persister entre les sessions. Supabase gère
+ * l'authentification principale avec ses propres mécanismes sécurisés.
+ *
+ * Note: Pour une sécurité maximale en production, envisager:
+ * - HttpOnly cookies côté serveur (nécessite changements backend)
+ * - Token refresh automatique
+ * - Détection de session expirée
  */
 class API {
   constructor() {
-    // En production, utiliser l'URL du backend Railway
-    // En dev, utiliser le proxy Vite (/api)
     this.baseUrl = API_BASE_URL;
-    this.token = localStorage.getItem('token');
+    // Token en mémoire, chargé depuis localStorage au démarrage
+    this.token = null;
+    // Charger le token existant si présent
+    if (typeof window !== 'undefined') {
+      this.token = localStorage.getItem('sb-auth-token') || localStorage.getItem('token');
+    }
   }
 
   async request(endpoint, options = {}) {
@@ -36,10 +48,15 @@ class API {
 
   setToken(token) {
     this.token = token;
-    if (token) {
-      localStorage.setItem('token', token);
-    } else {
-      localStorage.removeItem('token');
+    if (typeof window !== 'undefined') {
+      if (token) {
+        // Stocker le token pour les requêtes API
+        localStorage.setItem('sb-auth-token', token);
+      } else {
+        // Nettoyer les tokens au logout
+        localStorage.removeItem('sb-auth-token');
+        localStorage.removeItem('token'); // Legacy cleanup
+      }
     }
   }
 

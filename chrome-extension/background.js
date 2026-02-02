@@ -15,8 +15,20 @@
 const CONFIG = {
   APP_URL: 'https://sosprospection.com',
   DEV_URL: 'http://localhost:5178',
-  API_TIMEOUT: 30000
+  API_TIMEOUT: 30000,
+  DEBUG: false
 };
+
+// Logging helpers (only log when DEBUG is true)
+function sosLog(...args) {
+  if (CONFIG.DEBUG) sosLog('', ...args);
+}
+function sosError(...args) {
+  if (CONFIG.DEBUG) sosError('', ...args);
+}
+function sosWarn(...args) {
+  if (CONFIG.DEBUG) sosWarn('', ...args);
+}
 
 const INSTAGRAM_DOMAIN = '.instagram.com';
 const INSTAGRAM_URL = 'https://www.instagram.com';
@@ -114,7 +126,7 @@ async function apiCall(endpoint, method = 'GET', body = null) {
  * Import a single prospect to the app
  */
 async function importProspect(platform, profile, posts = []) {
-  console.log('[SOS] Importing prospect:', { platform, profile });
+  sosLog(' Importing prospect:', { platform, profile });
 
   // First, store locally
   const { importedProspects = [] } = await chrome.storage.local.get('importedProspects');
@@ -154,7 +166,7 @@ async function importProspect(platform, profile, posts = []) {
       synced: true
     };
   } catch (error) {
-    console.warn('[SOS] Backend sync failed, stored locally:', error.message);
+    sosWarn(' Backend sync failed, stored locally:', error.message);
     return {
       success: true,
       prospectId: prospectData.id,
@@ -168,7 +180,7 @@ async function importProspect(platform, profile, posts = []) {
  * Import multiple prospects (bulk)
  */
 async function importProspects(platform, profiles) {
-  console.log('[SOS] Bulk importing prospects:', profiles.length);
+  sosLog(' Bulk importing prospects:', profiles.length);
 
   const results = [];
 
@@ -204,7 +216,7 @@ async function importProspects(platform, profiles) {
  * Generate DM via app API
  */
 async function generateDM(platform, prospect) {
-  console.log('[SOS] Generating DM for:', { platform, prospect: prospect.username });
+  sosLog(' Generating DM for:', { platform, prospect: prospect.username });
 
   try {
     const result = await apiCall('/api/sequence/first-dm', 'POST', {
@@ -224,7 +236,7 @@ async function generateDM(platform, prospect) {
 
     throw new Error('Réponse invalide de l\'API');
   } catch (error) {
-    console.error('[SOS] DM generation failed:', error);
+    sosError(' DM generation failed:', error);
     throw new Error('Échec de la génération: ' + error.message);
   }
 }
@@ -324,7 +336,7 @@ async function loadSession(sessionId) {
         expirationDate: cookie.expirationDate
       });
     } catch (e) {
-      console.warn(`Error restoring cookie ${cookie.name}:`, e);
+      sosWarn(`Error restoring cookie ${cookie.name}:`, e);
     }
   }
 
@@ -477,7 +489,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           throw new Error('Action inconnue: ' + request.action);
       }
     } catch (error) {
-      console.error('[SOS] Error handling message:', error);
+      sosError(' Error handling message:', error);
       return { error: error.message };
     }
   };
@@ -504,27 +516,27 @@ chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => 
   try {
     senderOrigin = new URL(sender.url).origin;
   } catch {
-    console.warn('[SOS] Invalid sender URL:', sender.url);
+    sosWarn(' Invalid sender URL:', sender.url);
     sendResponse({ error: 'Unauthorized origin' });
     return;
   }
 
   if (!allowedOrigins.includes(senderOrigin)) {
-    console.warn('[SOS] Rejected external message from:', senderOrigin);
+    sosWarn(' Rejected external message from:', senderOrigin);
     sendResponse({ error: 'Unauthorized origin' });
     return;
   }
 
-  console.log('[SOS] Received external message:', request.action);
+  sosLog(' Received external message:', request.action);
 
   if (request.action === 'setAuthToken') {
     saveAuthToken(request.token)
       .then(() => {
-        console.log('[SOS] Auth token saved from app');
+        sosLog(' Auth token saved from app');
         sendResponse({ success: true });
       })
       .catch(err => {
-        console.error('[SOS] Failed to save auth token:', err);
+        sosError(' Failed to save auth token:', err);
         sendResponse({ error: err.message });
       });
     return true; // Keep channel open for async response
@@ -539,7 +551,7 @@ chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => 
 
   if (request.action === 'clearAuthToken') {
     chrome.storage.local.remove('authToken', () => {
-      console.log('[SOS] Auth token cleared');
+      sosLog(' Auth token cleared');
       sendResponse({ success: true });
     });
     return true;
@@ -552,4 +564,4 @@ chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => 
 // STARTUP
 // ============================================
 
-console.log('[SOS Prospection] Extension loaded v3.1 - Multi-platform support');
+sosLog('Extension loaded v3.1 - Multi-platform support');

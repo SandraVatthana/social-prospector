@@ -1,6 +1,30 @@
 // Load environment variables FIRST - SOS Prospection Backend v2
 import 'dotenv/config';
 
+// Validate required environment variables at startup
+const requiredEnvVars = [
+  'SUPABASE_URL',
+  'SUPABASE_SERVICE_KEY',
+  'JWT_SECRET',
+];
+
+const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+if (missingVars.length > 0) {
+  console.error('ERROR: Missing required environment variables:');
+  missingVars.forEach(v => console.error(`  - ${v}`));
+  console.error('\nPlease check your .env file.');
+  process.exit(1);
+}
+
+// Warn about optional but recommended variables
+const optionalVars = ['ANTHROPIC_API_KEY', 'APIFY_API_TOKEN', 'FRONTEND_URL'];
+const missingOptional = optionalVars.filter(v => !process.env[v]);
+if (missingOptional.length > 0) {
+  console.warn('WARNING: Some optional environment variables are not set:');
+  missingOptional.forEach(v => console.warn(`  - ${v}`));
+  console.warn('Some features may not work correctly.\n');
+}
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -34,28 +58,56 @@ const PORT = process.env.PORT || 3001;
 // Security middleware
 app.use(helmet());
 
-// CORS configuration
+// CORS configuration - explicit origins only (no wildcard)
 const allowedOrigins = [
   'https://sosprospection.com',
   'https://www.sosprospection.com',
   'https://sosprospection.netlify.app',
   process.env.FRONTEND_URL,
+  // Development origins
+  'http://localhost:5173',
+  'http://localhost:5178',
+  'http://localhost:3000',
 ].filter(Boolean);
 
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? allowedOrigins
-    : true, // Allow all origins in development
+  origin: function(origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS not allowed'));
+    }
+  },
   credentials: true,
 }));
 
-// Rate limiting
-const limiter = rateLimit({
+// Rate limiting - general
+const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 100,
   message: { error: 'Trop de requêtes, réessayez dans 15 minutes' },
 });
-app.use('/api/', limiter);
+
+// Rate limiting - strict pour auth (prévention brute force)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 tentatives max
+  message: { error: 'Trop de tentatives de connexion, réessayez dans 15 minutes' },
+});
+
+// Rate limiting - modéré pour search (opérations coûteuses)
+const searchLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10, // 10 recherches par minute
+  message: { error: 'Trop de recherches, attendez une minute' },
+});
+
+app.use('/api/', generalLimiter);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/signup', authLimiter);
+app.use('/api/search', searchLimiter);
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));

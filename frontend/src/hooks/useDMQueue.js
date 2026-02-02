@@ -226,29 +226,16 @@ export function useDMQueue() {
   // Copier le message et ouvrir le profil
   const copyAndOpen = useCallback(async (item) => {
     try {
+      // Utiliser l'API Clipboard moderne (supportée par tous les navigateurs modernes)
       await navigator.clipboard.writeText(item.content);
       const url = getProfileUrl(item);
       window.open(url, '_blank', 'noopener,noreferrer');
       return true;
     } catch (error) {
-      console.error('Error copying message:', error);
-      // Fallback
-      try {
-        const textarea = document.createElement('textarea');
-        textarea.value = item.content;
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = '0';
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-
-        const url = getProfileUrl(item);
-        window.open(url, '_blank', 'noopener,noreferrer');
-        return true;
-      } catch {
-        return false;
-      }
+      // L'API Clipboard peut échouer si l'utilisateur n'a pas interagi avec la page
+      // ou si les permissions sont refusées
+      console.error('Clipboard error:', error);
+      return false;
     }
   }, [getProfileUrl]);
 
