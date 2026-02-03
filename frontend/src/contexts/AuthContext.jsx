@@ -13,7 +13,12 @@ const EXTENSION_ID = null; // Sera défini après publication sur le Chrome Web 
  * Utilise postMessage pour communiquer avec le content script de l'extension
  */
 async function syncTokenWithExtension(token) {
+  // Store token globally for extension requests
+  _currentExtensionToken = token;
+
   try {
+    console.log('[Auth] Syncing token with extension, has token:', !!token);
+
     // Méthode 1: Via chrome.runtime.sendMessage (si l'ID de l'extension est connu)
     if (EXTENSION_ID && typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
       chrome.runtime.sendMessage(EXTENSION_ID, {
@@ -23,7 +28,7 @@ async function syncTokenWithExtension(token) {
         if (chrome.runtime.lastError) {
           console.log('[Auth] Extension not found or not responding');
         } else if (response?.success) {
-          console.log('[Auth] Token synced with extension');
+          console.log('[Auth] Token synced with extension via runtime');
         }
       });
     }
@@ -45,6 +50,9 @@ async function syncTokenWithExtension(token) {
  * Clear auth token from Chrome extension
  */
 async function clearExtensionToken() {
+  // Clear global token
+  _currentExtensionToken = null;
+
   try {
     if (EXTENSION_ID && typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
       chrome.runtime.sendMessage(EXTENSION_ID, { action: 'clearAuthToken' });
@@ -56,6 +64,31 @@ async function clearExtensionToken() {
   } catch (error) {
     // Silently fail
   }
+}
+
+// Global variable to store current token for extension requests
+let _currentExtensionToken = null;
+
+/**
+ * Listen for extension presence and token requests
+ */
+if (typeof window !== 'undefined') {
+  window.addEventListener('message', (event) => {
+    if (event.source !== window) return;
+    if (event.data?.type === 'SOS_PROSPECTION_EXTENSION') {
+      console.log('[Auth] Extension detected, version:', event.data.version);
+
+      // If extension requests token and we have one, send it
+      if (event.data.requestToken && _currentExtensionToken) {
+        console.log('[Auth] Sending token to extension on request');
+        window.postMessage({
+          type: 'SOS_PROSPECTION_AUTH',
+          action: 'setAuthToken',
+          token: _currentExtensionToken
+        }, window.location.origin);
+      }
+    }
+  });
 }
 
 export function AuthProvider({ children }) {

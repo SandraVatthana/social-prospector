@@ -173,9 +173,12 @@
     var onPrepare = options.onPrepare || function() {};
     var showPrepare = options.showPrepare !== false;
 
-    // Remove existing
+    // Remove existing and clean up listeners
     var existing = document.getElementById('sos-floating-container');
-    if (existing) existing.remove();
+    if (existing) {
+      if (existing._sosDragCleanup) existing._sosDragCleanup();
+      existing.remove();
+    }
 
     var container = document.createElement('div');
     container.id = 'sos-floating-container';
@@ -212,24 +215,100 @@
     return container;
   };
 
+  // Make the side panel draggable by its header
+  function makePanelDraggable(panel) {
+    var isDragging = false;
+    var offsetX = 0;
+    var offsetY = 0;
+    var headerEl = null;
+
+    // Wait for header to be available (it's added via innerHTML)
+    setTimeout(function() {
+      headerEl = panel.querySelector('.sos-panel-header');
+      if (!headerEl) return;
+
+      headerEl.style.cursor = 'move';
+
+      headerEl.addEventListener('mousedown', function(e) {
+        // Don't drag if clicking buttons
+        if (e.target.closest('button')) return;
+
+        isDragging = true;
+        panel.classList.add('sos-panel-dragging');
+
+        var rect = panel.getBoundingClientRect();
+        offsetX = e.clientX - rect.left;
+        offsetY = e.clientY - rect.top;
+
+        // Convert to left/top positioning immediately
+        panel.style.left = rect.left + 'px';
+        panel.style.top = rect.top + 'px';
+        panel.style.right = 'auto';
+        panel.style.bottom = 'auto';
+
+        e.preventDefault();
+        e.stopPropagation();
+      });
+    }, 100);
+
+    document.addEventListener('mousemove', function(e) {
+      if (!isDragging) return;
+
+      var newX = e.clientX - offsetX;
+      var newY = e.clientY - offsetY;
+
+      // Keep within viewport
+      var maxX = window.innerWidth - panel.offsetWidth;
+      var maxY = window.innerHeight - panel.offsetHeight;
+      newX = Math.max(0, Math.min(newX, maxX));
+      newY = Math.max(0, Math.min(newY, maxY));
+
+      panel.style.left = newX + 'px';
+      panel.style.top = newY + 'px';
+
+      e.preventDefault();
+    });
+
+    document.addEventListener('mouseup', function() {
+      if (isDragging) {
+        isDragging = false;
+        panel.classList.remove('sos-panel-dragging');
+      }
+    });
+  }
+
   // Make element draggable
   function makeDraggable(element) {
     var isDragging = false;
     var offsetX = 0;
     var offsetY = 0;
 
-    element.addEventListener('mousedown', function(e) {
+    // Store handlers so we can remove them if element is destroyed
+    var onMouseDown = function(e) {
       // Only drag from the handle or container itself, not buttons
       if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+      if (e.target.tagName === 'SPAN' && e.target.closest('button')) return;
 
       isDragging = true;
       element.classList.add('sos-dragging');
-      offsetX = e.clientX - element.getBoundingClientRect().left;
-      offsetY = e.clientY - element.getBoundingClientRect().top;
-      e.preventDefault();
-    });
 
-    document.addEventListener('mousemove', function(e) {
+      // Get current position from bounding rect
+      var rect = element.getBoundingClientRect();
+      offsetX = e.clientX - rect.left;
+      offsetY = e.clientY - rect.top;
+
+      // CRITICAL: Convert from bottom/right to left/top positioning immediately
+      // This ensures subsequent mousemove events work correctly
+      element.style.left = rect.left + 'px';
+      element.style.top = rect.top + 'px';
+      element.style.right = 'auto';
+      element.style.bottom = 'auto';
+
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    var onMouseMove = function(e) {
       if (!isDragging) return;
 
       var newX = e.clientX - offsetX;
@@ -242,17 +321,28 @@
       newY = Math.max(0, Math.min(newY, maxY));
 
       element.style.left = newX + 'px';
-      element.style.right = 'auto';
       element.style.top = newY + 'px';
-      element.style.bottom = 'auto';
-    });
 
-    document.addEventListener('mouseup', function() {
+      e.preventDefault();
+    };
+
+    var onMouseUp = function() {
       if (isDragging) {
         isDragging = false;
         element.classList.remove('sos-dragging');
       }
-    });
+    };
+
+    element.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+
+    // Store cleanup function on element for later removal
+    element._sosDragCleanup = function() {
+      element.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
   }
 
   // ============================================
@@ -306,6 +396,9 @@
     var panel = document.createElement('div');
     panel.id = 'sos-side-panel';
     panel.className = 'sos-side-panel';
+
+    // Make the panel draggable
+    makePanelDraggable(panel);
 
     panel.innerHTML =
       '<div class="sos-panel-header" style="background: ' + config.color + '">' +
@@ -1159,9 +1252,9 @@
             '<div class="sos-sync-icon">✅</div>' +
             '<div class="sos-sync-text">' +
               '<strong>Connecté</strong>' +
-              '<span>Tes imports sont sauvegardés dans l\'app</span>' +
+              '<span>Tes imports sont sauvegardés</span>' +
             '</div>' +
-            '<button class="sos-sync-btn sos-sync-btn-open" id="sos-open-app-btn">Ouvrir l\'app</button>';
+            '<button class="sos-sync-btn sos-sync-btn-open" id="sos-open-app-btn">Voir mes prospects</button>';
 
           document.getElementById('sos-open-app-btn').addEventListener('click', function() {
             window.open(window.SOS_CONFIG.APP_URL + '/prospects', '_blank');
@@ -1173,13 +1266,14 @@
             '<div class="sos-sync-icon">⚠️</div>' +
             '<div class="sos-sync-text">' +
               '<strong>Non connecté</strong>' +
-              '<span>Ouvre l\'app puis clique "Actualiser"</span>' +
+              '<span>Connecte-toi à l\'app pour synchroniser</span>' +
             '</div>' +
-            '<button class="sos-sync-btn sos-sync-btn-secondary" id="sos-refresh-auth-btn" title="Vérifier la connexion">🔄</button>' +
-            '<button class="sos-sync-btn" id="sos-connect-app-btn">Ouvrir l\'app</button>';
+            '<button class="sos-sync-btn" id="sos-connect-app-btn">Se connecter</button>' +
+            '<button class="sos-sync-btn sos-sync-btn-secondary" id="sos-refresh-auth-btn" title="Vérifier">🔄</button>';
 
           document.getElementById('sos-connect-app-btn').addEventListener('click', function() {
-            window.open(window.SOS_CONFIG.APP_URL, '_blank');
+            // Open the app - the content-app.js will automatically sync the token
+            window.open(window.SOS_CONFIG.APP_URL + '/login', '_blank');
           });
 
           document.getElementById('sos-refresh-auth-btn').addEventListener('click', function() {
@@ -1190,7 +1284,7 @@
             setTimeout(function() {
               btn.disabled = false;
               btn.textContent = '🔄';
-            }, 1000);
+            }, 1500);
           });
         }
       })

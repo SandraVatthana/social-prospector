@@ -580,6 +580,12 @@
   display: none;
 }
 
+.sos-side-panel.sos-panel-dragging {
+  transition: none !important;
+  opacity: 0.95;
+  box-shadow: -8px 0 40px rgba(0, 0, 0, 0.3);
+}
+
 .sos-panel-header {
   display: flex;
   align-items: center;

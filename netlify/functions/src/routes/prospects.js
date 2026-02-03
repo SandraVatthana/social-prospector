@@ -964,26 +964,34 @@ Retourne UNIQUEMENT ce JSON (sans \`\`\`json ni autre formatage):
   },
   "signals": [
     {
-      "type": "fort",
-      "text": "Description du signal",
-      "source": "profil ou post",
-      "reason": "Pourquoi c'est intéressant"
+      "type": "fort ou faible",
+      "text": "CITATION EXACTE du texte qui révèle ce signal (entre guillemets)",
+      "category": "recrutement|lancement|problème|changement|croissance|frustration|recherche|intérêt",
+      "insight": "Ce que ça révèle concrètement sur cette personne"
     }
   ],
   "angles": [
     {
-      "hook": "Accroche suggérée",
-      "reason": "Pourquoi ça marcherait"
+      "hook": "Question ou accroche PERSONNALISÉE basée sur un élément SPÉCIFIQUE du contenu",
+      "basedOn": "L'élément précis du profil/post sur lequel tu te bases"
     }
   ]
 }
 
-IMPORTANT - Tu DOIS trouver des signaux même subtils:
-- Signal FORT: recherche d'aide, frustration, nouveau projet, changement de poste, lancement, recrutement, problème mentionné
-- Signal FAIBLE: centres d'intérêt, valeurs affichées, ton utilisé, sujets récurrents, hashtags, engagement sur certains sujets
+RÈGLES CRITIQUES:
+1. Pour chaque signal, CITE le texte exact du contenu entre guillemets dans "text"
+   - BON: "text": "Je cherche un développeur senior pour mon équipe"
+   - MAUVAIS: "text": "Recherche active mentionnée"
 
-Trouve AU MINIMUM 2 signaux et 2 angles d'approche. Sois créatif.
-Si le contenu est pauvre, déduis des signaux du secteur d'activité ou du poste.`;
+2. "insight" doit être SPÉCIFIQUE à cette personne:
+   - BON: "insight": "Recrute activement, probablement en phase de scale-up"
+   - MAUVAIS: "insight": "Expression d'un besoin"
+
+3. Les angles doivent mentionner un DÉTAIL PRÉCIS du contenu:
+   - BON: "hook": "J'ai vu que tu recrutes un dev senior - tu cherches quel profil exactement ?"
+   - MAUVAIS: "hook": "Ton profil m'a interpellé"
+
+4. Trouve 3-5 signaux et 2-3 angles ULTRA-PERSONNALISÉS.`;
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
@@ -1113,115 +1121,210 @@ function extractAnalysisManually(responseText, originalContent) {
 
 /**
  * Génère des signaux de fallback basés sur le contenu
+ * EXTRAIT le texte exact qui matche pour être plus spécifique
  */
 function generateFallbackSignals(content, platform) {
   const signals = [];
-  const lower = content.toLowerCase();
 
-  // Signaux forts - mots-clés explicites
-  const strongKeywords = [
-    { pattern: /recherche|cherche|besoin de|looking for/i, signal: 'Recherche active mentionnée', reason: 'Expression d\'un besoin' },
-    { pattern: /problème|difficulté|galère|struggle|challenge/i, signal: 'Difficulté évoquée', reason: 'Point de douleur potentiel' },
-    { pattern: /lancement|lance|nouveau projet|new project/i, signal: 'Nouveau projet en cours', reason: 'Moment propice pour proposer de l\'aide' },
-    { pattern: /recrute|hiring|on recrute|we\'re hiring/i, signal: 'Recrutement en cours', reason: 'Entreprise en croissance' },
-    { pattern: /freelance|indépendant|entrepreneur|fondateur|founder|ceo/i, signal: 'Entrepreneur/Indépendant', reason: 'Décideur direct' },
-    { pattern: /formation|coaching|accompagnement/i, signal: 'Intérêt pour le développement', reason: 'Ouvert à l\'apprentissage' },
+  // Helper pour extraire le contexte autour d'un match
+  function extractContext(text, pattern, maxLength = 80) {
+    const match = text.match(pattern);
+    if (!match) return null;
+
+    const index = match.index;
+    const matchText = match[0];
+
+    // Trouver le début et la fin de la phrase
+    let start = index;
+    let end = index + matchText.length;
+
+    // Reculer jusqu'au début de la phrase (max 40 chars)
+    while (start > 0 && start > index - 40 && !['.', '!', '?', '\n'].includes(text[start - 1])) {
+      start--;
+    }
+
+    // Avancer jusqu'à la fin de la phrase (max 40 chars)
+    while (end < text.length && end < index + matchText.length + 40 && !['.', '!', '?', '\n'].includes(text[end])) {
+      end++;
+    }
+
+    let extracted = text.substring(start, end).trim();
+    if (extracted.length > maxLength) {
+      extracted = extracted.substring(0, maxLength) + '...';
+    }
+    return extracted;
+  }
+
+  // Signaux forts - mots-clés explicites avec extraction du contexte
+  const strongPatterns = [
+    {
+      pattern: /(je |on |nous )?(recherche|cherche|besoin de?|looking for)[^.!?\n]{0,50}/i,
+      category: 'recherche',
+      insight: 'Exprime un besoin actif - opportunité de proposer une solution'
+    },
+    {
+      pattern: /(problème|difficulté|galère|du mal à|struggle|challenge|compliqué de)[^.!?\n]{0,50}/i,
+      category: 'problème',
+      insight: 'Mentionne une difficulté - point d\'entrée pour offrir de l\'aide'
+    },
+    {
+      pattern: /(lance|lancement|nouveau projet|nouvelle offre|je démarre|on lance)[^.!?\n]{0,50}/i,
+      category: 'lancement',
+      insight: 'En phase de lancement - besoin probable d\'accompagnement ou de visibilité'
+    },
+    {
+      pattern: /(recrute|hiring|on recrute|we\'re hiring|cherche.*profil|rejoindre.*équipe)[^.!?\n]{0,50}/i,
+      category: 'recrutement',
+      insight: 'Entreprise en croissance - budget disponible et besoins multiples'
+    },
+    {
+      pattern: /(vient de|just|nouvelle|nouveau poste|promu|rejoint)[^.!?\n]{0,40}/i,
+      category: 'changement',
+      insight: 'Changement récent - personne en phase de construction, ouverte aux opportunités'
+    },
   ];
 
-  for (const kw of strongKeywords) {
-    if (kw.pattern.test(content)) {
+  for (const sp of strongPatterns) {
+    const extracted = extractContext(content, sp.pattern);
+    if (extracted && signals.length < 3) {
       signals.push({
         type: 'fort',
-        text: kw.signal,
-        source: 'contenu',
-        reason: kw.reason
+        text: `"${extracted}"`,
+        category: sp.category,
+        insight: sp.insight
       });
-      if (signals.length >= 2) break;
     }
   }
 
   // Signaux faibles - déduction du contexte
-  const weakSignals = [
-    { pattern: /marketing|growth|acquisition/i, signal: 'Intérêt pour le marketing/growth', reason: 'Potentiellement ouvert aux outils marketing' },
-    { pattern: /vente|commercial|sales|business dev/i, signal: 'Profil commercial', reason: 'Comprend la valeur de la prospection' },
-    { pattern: /productivité|organisation|efficacité/i, signal: 'Focus sur l\'efficacité', reason: 'Sensible aux gains de temps' },
-    { pattern: /linkedin|instagram|tiktok|réseaux sociaux|social media/i, signal: 'Actif sur les réseaux', reason: 'Canal de communication pertinent' },
-    { pattern: /\d+k|\d+ abonnés|\d+ followers/i, signal: 'Audience établie', reason: 'Créateur de contenu actif' },
+  const weakPatterns = [
+    {
+      pattern: /(freelance|indépendant|entrepreneur|fondateur|founder|ceo|co-founder)/i,
+      category: 'statut',
+      insight: 'Décideur direct - pas besoin de passer par un intermédiaire'
+    },
+    {
+      pattern: /(coach|formateur|consultant|expert|spécialiste)/i,
+      category: 'expertise',
+      insight: 'Profil expert - comprend la valeur de l\'accompagnement'
+    },
+    {
+      pattern: /(\d+[kK]|\d{4,})\s*(abonnés|followers|contacts|relations)/i,
+      category: 'audience',
+      insight: 'Audience établie - créateur de contenu actif avec influence'
+    },
+    {
+      pattern: /(aider|accompagner|transformer|impact|mission)/i,
+      category: 'valeurs',
+      insight: 'Orienté impact - sensible aux arguments de valeur ajoutée'
+    },
   ];
 
-  for (const kw of weakSignals) {
-    if (kw.pattern.test(content) && signals.length < 4) {
+  for (const wp of weakPatterns) {
+    const extracted = extractContext(content, wp.pattern, 60);
+    if (extracted && signals.length < 5) {
       signals.push({
         type: 'faible',
-        text: kw.signal,
-        source: 'contenu',
-        reason: kw.reason
+        text: `"${extracted}"`,
+        category: wp.category,
+        insight: wp.insight
       });
     }
   }
 
-  // Si toujours pas de signaux, générer des signaux génériques basés sur la plateforme
+  // Si toujours pas de signaux, analyser le titre/headline
   if (signals.length === 0) {
-    signals.push({
-      type: 'faible',
-      text: `Présence active sur ${platform || 'les réseaux'}`,
-      source: 'plateforme',
-      reason: 'Accessible via DM'
-    });
-    signals.push({
-      type: 'faible',
-      text: 'Profil public visible',
-      source: 'plateforme',
-      reason: 'Ouvert aux échanges'
-    });
+    const lines = content.split('\n').filter(l => l.trim());
+    if (lines.length >= 2) {
+      const possibleHeadline = lines[1].trim();
+      if (possibleHeadline.length > 10 && possibleHeadline.length < 150) {
+        signals.push({
+          type: 'faible',
+          text: `"${possibleHeadline.substring(0, 80)}"`,
+          category: 'profil',
+          insight: 'Titre de profil - point de départ pour personnaliser l\'approche'
+        });
+      }
+    }
   }
 
   return signals;
 }
 
 /**
- * Génère des angles d'approche de fallback
+ * Génère des angles d'approche de fallback ULTRA-PERSONNALISÉS
  */
 function generateFallbackAngles(content, platform, profile) {
   const angles = [];
   const lower = content.toLowerCase();
 
-  // Angle basé sur le poste/titre
+  // Extraire des éléments spécifiques du contenu pour personnaliser
+  const lines = content.split('\n').filter(l => l.trim() && l.length > 10);
+
+  // 1. Angle basé sur le titre/headline
   if (profile?.headline) {
+    const headline = profile.headline;
+    // Extraire le métier principal
+    const jobMatch = headline.match(/^([^|•\-@]+)/);
+    if (jobMatch) {
+      const job = jobMatch[1].trim();
+      angles.push({
+        hook: `En tant que ${job}, comment tu gères [problème spécifique à leur métier] ?`,
+        basedOn: `Titre: "${headline.substring(0, 50)}"`
+      });
+    }
+  }
+
+  // 2. Angle basé sur un post/contenu spécifique
+  const postMatch = content.match(/(j'ai|je suis|on a|nous avons|🔥|💡|✨)[^.!?\n]{20,80}/i);
+  if (postMatch) {
+    const postExcerpt = postMatch[0].substring(0, 60);
     angles.push({
-      hook: `J'ai vu que tu es ${profile.headline.split(' chez ')[0] || profile.headline.substring(0, 50)}...`,
-      reason: 'Personnalisation basée sur le titre'
+      hook: `J'ai vu ton post "${postExcerpt}..." - tu pourrais m'en dire plus sur [aspect spécifique] ?`,
+      basedOn: `Post mentionnant: "${postExcerpt}"`
     });
   }
 
-  // Angle basé sur le contenu
-  if (lower.includes('coach') || lower.includes('formateur') || lower.includes('consultant')) {
+  // 3. Angle basé sur l'entreprise/activité
+  if (profile?.company) {
     angles.push({
-      hook: 'Comment tu gères ta prospection actuellement ?',
-      reason: 'Question ouverte sur leur processus'
+      hook: `Chez ${profile.company}, vous utilisez quoi pour [besoin lié à leur activité] ?`,
+      basedOn: `Entreprise: ${profile.company}`
     });
   }
 
-  if (lower.includes('entrepreneur') || lower.includes('fondateur') || lower.includes('ceo')) {
+  // 4. Angle basé sur des mots-clés métier détectés
+  const metierAngles = [
+    { pattern: /coach|accompagn/i, hook: 'Comment tu trouves tes clients actuellement ? Bouche à oreille ou autre chose ?', basedOn: 'Profil de coach/accompagnant' },
+    { pattern: /freelance|indépendant/i, hook: 'Tu arrives à avoir un flux régulier de clients ou c\'est encore irrégulier ?', basedOn: 'Statut freelance/indépendant' },
+    { pattern: /recruteur|rh|talent/i, hook: 'C\'est galère en ce moment pour trouver les bons profils ?', basedOn: 'Profil RH/Recrutement' },
+    { pattern: /market|growth|acquisition/i, hook: 'Vous testez quels canaux d\'acquisition en ce moment ?', basedOn: 'Profil Marketing/Growth' },
+    { pattern: /commercial|sales|business dev/i, hook: 'LinkedIn c\'est ton canal principal pour prospecter ou tu diversifies ?', basedOn: 'Profil Commercial/Sales' },
+    { pattern: /agence|studio|collectif/i, hook: 'Comment vous gérez la prospection en agence ? Chacun fait la sienne ?', basedOn: 'Structure agence/studio' },
+  ];
+
+  for (const ma of metierAngles) {
+    if (ma.pattern.test(content) && angles.length < 3) {
+      angles.push({
+        hook: ma.hook,
+        basedOn: ma.basedOn
+      });
+    }
+  }
+
+  // 5. Si toujours rien, utiliser le nom pour personnaliser
+  if (angles.length === 0 && profile?.fullName) {
+    const firstName = profile.fullName.split(' ')[0];
     angles.push({
-      hook: 'Tu arrives à trouver le temps de prospecter avec tout ce que tu gères ?',
-      reason: 'Empathie sur la charge de travail'
+      hook: `${firstName}, petite question rapide : tu utilises quoi pour [besoin probable] ?`,
+      basedOn: `Prénom: ${firstName}`
     });
   }
 
-  // Angles génériques si rien trouvé
-  if (angles.length === 0) {
-    angles.push({
-      hook: 'Ton profil m\'a interpellé...',
-      reason: 'Accroche curiosité'
-    });
-    angles.push({
-      hook: `Je t'ai trouvé via ${platform || 'LinkedIn'} et je voulais te poser une question rapide`,
-      reason: 'Approche directe et honnête'
-    });
-  }
-
-  return angles.slice(0, 3);
+  // Nettoyer les angles génériques et garder max 3
+  return angles
+    .filter(a => !a.hook.includes('[') || angles.length <= 2) // Garder les hooks à compléter si pas assez
+    .slice(0, 3);
 }
 
 /**
