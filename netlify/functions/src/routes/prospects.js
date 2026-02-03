@@ -940,19 +940,24 @@ router.post('/analyze-paste', async (req, res) => {
     console.log(`[Analyze Paste] Platform: ${platform}, Username: ${username}, Content length: ${content.length}`);
 
     // Construire le prompt d'analyse
-    const systemPrompt = `Tu es un expert en analyse de profils pour la prospection commerciale.
-Tu analyses le texte collé pour extraire des informations utiles à un commercial qui veut contacter cette personne.
+    const systemPrompt = `Tu es un expert en prospection B2B et en analyse comportementale.
+Tu analyses le contenu de profils/posts pour identifier des OPPORTUNITÉS CONCRÈTES de prise de contact.
 
-RÈGLE ABSOLUE: Tu DOIS retourner UNIQUEMENT du JSON valide, sans aucun texte avant ou après.
-Pas de markdown, pas d'explication, juste le JSON.`;
+Tu penses comme un commercial expérimenté qui cherche:
+1. Des PROBLÈMES que le prospect pourrait avoir
+2. Des MOMENTS de transition (nouveau poste, lancement, croissance)
+3. Des BESOINS exprimés ou implicites
+4. Des POINTS COMMUNS potentiels pour créer du lien
 
-    const userPrompt = `Analyse ce contenu collé depuis ${platform || 'un réseau social'}:
+RÈGLE ABSOLUE: Tu DOIS retourner UNIQUEMENT du JSON valide, sans aucun texte avant ou après.`;
+
+    const userPrompt = `Analyse en profondeur ce contenu de ${platform || 'réseau social'}:
 
 """
 ${content.substring(0, 6000)}
 """
 
-Retourne UNIQUEMENT ce JSON (sans \`\`\`json ni autre formatage):
+Retourne UNIQUEMENT ce JSON:
 {
   "profile": {
     "fullName": "Nom complet ou null",
@@ -965,33 +970,43 @@ Retourne UNIQUEMENT ce JSON (sans \`\`\`json ni autre formatage):
   "signals": [
     {
       "type": "fort ou faible",
-      "text": "CITATION EXACTE du texte qui révèle ce signal (entre guillemets)",
+      "text": "CITATION EXACTE entre guillemets du passage révélateur",
       "category": "recrutement|lancement|problème|changement|croissance|frustration|recherche|intérêt",
-      "insight": "Ce que ça révèle concrètement sur cette personne"
+      "insight": "Analyse: ce que ça révèle sur ses besoins/situation actuels"
     }
   ],
   "angles": [
     {
-      "hook": "Question ou accroche PERSONNALISÉE basée sur un élément SPÉCIFIQUE du contenu",
-      "basedOn": "L'élément précis du profil/post sur lequel tu te bases"
+      "hook": "Message d'accroche COMPLET et PRÊT À ENVOYER (2-3 phrases)",
+      "basedOn": "L'élément précis qui justifie cette approche",
+      "why": "Pourquoi cet angle peut fonctionner avec ce prospect"
     }
   ]
 }
 
-RÈGLES CRITIQUES:
-1. Pour chaque signal, CITE le texte exact du contenu entre guillemets dans "text"
-   - BON: "text": "Je cherche un développeur senior pour mon équipe"
-   - MAUVAIS: "text": "Recherche active mentionnée"
+RÈGLES POUR LES SIGNAUX:
+- CITE TOUJOURS le texte exact entre guillemets
+- L'insight doit EXPLIQUER pourquoi c'est une opportunité
+- Exemple BON: {"text": "On recrute 3 devs ce trimestre", "insight": "Forte croissance = budget disponible, besoin d'outils/formation pour onboarder vite"}
+- Exemple MAUVAIS: {"text": "Recrutement mentionné", "insight": "Il recrute"}
 
-2. "insight" doit être SPÉCIFIQUE à cette personne:
-   - BON: "insight": "Recrute activement, probablement en phase de scale-up"
-   - MAUVAIS: "insight": "Expression d'un besoin"
+RÈGLES POUR LES ANGLES (CRUCIAL):
+- Chaque angle doit être un MESSAGE COMPLET prêt à copier-coller
+- Le message doit CITER un élément spécifique du contenu
+- Il doit poser une QUESTION ouverte qui invite à la discussion
+- Il doit être NATUREL, pas commercial
 
-3. Les angles doivent mentionner un DÉTAIL PRÉCIS du contenu:
-   - BON: "hook": "J'ai vu que tu recrutes un dev senior - tu cherches quel profil exactement ?"
-   - MAUVAIS: "hook": "Ton profil m'a interpellé"
+Exemples de BONS angles:
+- "J'ai vu ton post sur les galères de recrutement de devs seniors. C'est un vrai sujet en ce moment ! Tu as trouvé des solutions qui marchent pour attirer les bons profils ?"
+- "Félicitations pour le lancement de [produit] ! Curieux de savoir comment vous gérez l'afflux de demandes au démarrage ?"
+- "Ton parcours de freelance à fondateur est inspirant. C'est quoi le plus gros défi que t'as rencontré dans cette transition ?"
 
-4. Trouve 3-5 signaux et 2-3 angles ULTRA-PERSONNALISÉS.`;
+Exemples de MAUVAIS angles (À ÉVITER):
+- "Ton profil m'a interpellé" (trop vague)
+- "J'aimerais échanger avec toi" (pas de contexte)
+- "Je peux t'aider à..." (trop commercial trop vite)
+
+Génère 2-4 signaux pertinents et 2-3 angles d'approche VRAIMENT personnalisés et actionnables.`;
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
@@ -1256,68 +1271,69 @@ function generateFallbackSignals(content, platform) {
  */
 function generateFallbackAngles(content, platform, profile) {
   const angles = [];
-  const lower = content.toLowerCase();
-
-  // Extraire des éléments spécifiques du contenu pour personnaliser
-  const lines = content.split('\n').filter(l => l.trim() && l.length > 10);
+  const firstName = profile?.fullName?.split(' ')[0] || '';
 
   // 1. Angle basé sur le titre/headline
   if (profile?.headline) {
     const headline = profile.headline;
-    // Extraire le métier principal
     const jobMatch = headline.match(/^([^|•\-@]+)/);
     if (jobMatch) {
       const job = jobMatch[1].trim();
       angles.push({
-        hook: `En tant que ${job}, comment tu gères [problème spécifique à leur métier] ?`,
-        basedOn: `Titre: "${headline.substring(0, 50)}"`
+        hook: `Salut${firstName ? ' ' + firstName : ''} ! J'ai vu que tu es ${job}. Curieux de savoir quel est ton plus gros défi au quotidien dans ce rôle ?`,
+        basedOn: `Titre: "${headline.substring(0, 50)}"`,
+        why: 'Question ouverte sur leur métier qui invite à la discussion'
       });
     }
   }
 
   // 2. Angle basé sur un post/contenu spécifique
-  const postMatch = content.match(/(j'ai|je suis|on a|nous avons|🔥|💡|✨)[^.!?\n]{20,80}/i);
+  const postMatch = content.match(/(j'ai|je suis|on a|nous avons|je viens de|on vient de)[^.!?\n]{15,60}/i);
   if (postMatch) {
-    const postExcerpt = postMatch[0].substring(0, 60);
+    const postExcerpt = postMatch[0].trim();
     angles.push({
-      hook: `J'ai vu ton post "${postExcerpt}..." - tu pourrais m'en dire plus sur [aspect spécifique] ?`,
-      basedOn: `Post mentionnant: "${postExcerpt}"`
+      hook: `Hello${firstName ? ' ' + firstName : ''} ! J'ai vu que "${postExcerpt}". Ça a l'air intéressant, tu pourrais m'en dire plus ?`,
+      basedOn: `Citation du contenu`,
+      why: 'Montre qu\'on a vraiment lu le contenu, pas un message générique'
     });
   }
 
   // 3. Angle basé sur l'entreprise/activité
   if (profile?.company) {
     angles.push({
-      hook: `Chez ${profile.company}, vous utilisez quoi pour [besoin lié à leur activité] ?`,
-      basedOn: `Entreprise: ${profile.company}`
+      hook: `Salut${firstName ? ' ' + firstName : ''} ! Je vois que tu es chez ${profile.company}. Comment vous gérez [aspect clé de leur activité] en ce moment ?`,
+      basedOn: `Entreprise: ${profile.company}`,
+      why: 'Montre un intérêt pour leur entreprise spécifique'
     });
   }
 
-  // 4. Angle basé sur des mots-clés métier détectés
+  // 4. Angles basés sur des mots-clés métier détectés
   const metierAngles = [
-    { pattern: /coach|accompagn/i, hook: 'Comment tu trouves tes clients actuellement ? Bouche à oreille ou autre chose ?', basedOn: 'Profil de coach/accompagnant' },
-    { pattern: /freelance|indépendant/i, hook: 'Tu arrives à avoir un flux régulier de clients ou c\'est encore irrégulier ?', basedOn: 'Statut freelance/indépendant' },
-    { pattern: /recruteur|rh|talent/i, hook: 'C\'est galère en ce moment pour trouver les bons profils ?', basedOn: 'Profil RH/Recrutement' },
-    { pattern: /market|growth|acquisition/i, hook: 'Vous testez quels canaux d\'acquisition en ce moment ?', basedOn: 'Profil Marketing/Growth' },
-    { pattern: /commercial|sales|business dev/i, hook: 'LinkedIn c\'est ton canal principal pour prospecter ou tu diversifies ?', basedOn: 'Profil Commercial/Sales' },
-    { pattern: /agence|studio|collectif/i, hook: 'Comment vous gérez la prospection en agence ? Chacun fait la sienne ?', basedOn: 'Structure agence/studio' },
+    { pattern: /coach|accompagn|mentor/i, hook: `Hello${firstName ? ' ' + firstName : ''} ! Comment tu trouves tes clients actuellement ? Bouche à oreille principalement ou tu as d'autres canaux qui marchent bien ?`, basedOn: 'Activité de coaching/accompagnement', why: 'Les coachs cherchent souvent à diversifier leur acquisition' },
+    { pattern: /freelance|indépendant|solo/i, hook: `Salut${firstName ? ' ' + firstName : ''} ! En tant qu'indépendant, t'arrives à avoir un flux régulier de missions ou c'est le yo-yo ? Curieux de savoir comment tu gères ça.`, basedOn: 'Statut freelance/indépendant', why: 'La régularité est le défi n°1 des freelances' },
+    { pattern: /recrut|rh|talent|people/i, hook: `Hello${firstName ? ' ' + firstName : ''} ! C'est galère en ce moment de trouver les bons profils ? J'entends ça de tous les côtés...`, basedOn: 'Profil RH/Recrutement', why: 'Le recrutement est un pain point universel actuellement' },
+    { pattern: /market|growth|acqui|trafic/i, hook: `Salut${firstName ? ' ' + firstName : ''} ! Vous testez quels canaux d'acquisition en ce moment ? Curieux de savoir ce qui marche bien pour vous.`, basedOn: 'Profil Marketing/Growth', why: 'Les marketeurs adorent partager ce qui fonctionne' },
+    { pattern: /commercial|sales|business dev|vente/i, hook: `Hello${firstName ? ' ' + firstName : ''} ! LinkedIn c'est ton canal principal pour prospecter ou tu diversifies ? Je me demande ce qui marche le mieux dans ton secteur.`, basedOn: 'Profil Commercial/Sales', why: 'Ouvre une discussion sur les méthodes de prospection' },
+    { pattern: /agence|studio|collectif|founder|fondateur|ceo/i, hook: `Salut${firstName ? ' ' + firstName : ''} ! Comment vous gérez la croissance en ce moment ? C'est quoi le plus gros chantier ?`, basedOn: 'Dirigeant/Fondateur', why: 'Les dirigeants aiment parler de leurs défis de croissance' },
+    { pattern: /formation|formateur|pédago/i, hook: `Hello${firstName ? ' ' + firstName : ''} ! Tu fais tes formations en présentiel, en ligne ou les deux ? Je suis curieux de savoir ce qui fonctionne le mieux pour toi.`, basedOn: 'Activité de formation', why: 'Le format de livraison est un sujet central pour les formateurs' },
   ];
 
   for (const ma of metierAngles) {
     if (ma.pattern.test(content) && angles.length < 3) {
       angles.push({
         hook: ma.hook,
-        basedOn: ma.basedOn
+        basedOn: ma.basedOn,
+        why: ma.why
       });
     }
   }
 
-  // 5. Si toujours rien, utiliser le nom pour personnaliser
-  if (angles.length === 0 && profile?.fullName) {
-    const firstName = profile.fullName.split(' ')[0];
+  // 5. Angle générique de qualité si rien d'autre
+  if (angles.length === 0 && firstName) {
     angles.push({
-      hook: `${firstName}, petite question rapide : tu utilises quoi pour [besoin probable] ?`,
-      basedOn: `Prénom: ${firstName}`
+      hook: `Salut ${firstName} ! Ton profil a attiré mon attention. Tu travailles sur quoi en ce moment ?`,
+      basedOn: `Nom: ${firstName}`,
+      why: 'Question ouverte et naturelle pour démarrer une conversation'
     });
   }
 

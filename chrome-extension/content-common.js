@@ -489,6 +489,14 @@
               '</div>' +
             '</div>' +
 
+            '<!-- Approach Angles -->' +
+            '<div class="sos-result-section" id="sos-angles-section">' +
+              '<div class="sos-result-title">💡 Angles d\'approche</div>' +
+              '<div id="sos-angles-list" class="sos-angles-list">' +
+                '<!-- Angles ajoutés dynamiquement -->' +
+              '</div>' +
+            '</div>' +
+
             '<!-- Notes -->' +
             '<div class="sos-form-group">' +
               '<label>Notes personnelles</label>' +
@@ -528,7 +536,7 @@
           '<button class="sos-btn sos-btn-primary" id="sos-confirm-add">Ajouter au CRM</button>' +
         '</div>' +
         '<button class="sos-btn sos-btn-app" id="sos-open-app-footer">' +
-          '<span>📋</span> Voir mes prospects' +
+          '🚀 Aller à SOS Prospection' +
         '</button>' +
       '</div>';
 
@@ -822,6 +830,27 @@
             '</div>';
           signalsList.appendChild(signalEl);
         });
+      }
+
+      // Display angles
+      var anglesList = document.getElementById('sos-angles-list');
+      if (anglesList) {
+        anglesList.innerHTML = '';
+        var angles = result.angles || [];
+        if (angles.length === 0) {
+          anglesList.innerHTML = '<div class="sos-no-angles">Collez plus de contenu pour des suggestions d\'approche</div>';
+        } else {
+          angles.forEach(function(angle) {
+            var angleEl = document.createElement('div');
+            angleEl.className = 'sos-angle';
+            var hookText = typeof angle === 'string' ? angle : (angle.hook || angle.text || '');
+            var basedOnText = typeof angle === 'object' ? (angle.basedOn || angle.reason || '') : '';
+            angleEl.innerHTML =
+              '<div class="sos-angle-hook">"' + sosEscapeHtml(hookText) + '"</div>' +
+              (basedOnText ? '<div class="sos-angle-based">Basé sur: ' + sosEscapeHtml(basedOnText) + '</div>' : '');
+            anglesList.appendChild(angleEl);
+          });
+        }
       }
     }
 
@@ -1402,6 +1431,24 @@
               (quoteText ? '<span class="sos-signal-quote">' + sosEscapeHtml(quoteText) + '</span>' : '') +
               (insightText ? '<span class="sos-signal-reason">→ ' + sosEscapeHtml(insightText) + '</span>' : '') +
             '</div>' +
+          '</div>';
+        }).join('');
+      }
+    }
+
+    // Populate angles
+    var anglesList = document.getElementById('sos-angles-list');
+    if (anglesList) {
+      var angles = prospect.angles || [];
+      if (angles.length === 0) {
+        anglesList.innerHTML = '<div class="sos-no-angles">Aucun angle suggéré</div>';
+      } else {
+        anglesList.innerHTML = angles.map(function(angle) {
+          var hookText = typeof angle === 'string' ? angle : (angle.hook || angle.text || '');
+          var basedOnText = typeof angle === 'object' ? (angle.basedOn || angle.reason || '') : '';
+          return '<div class="sos-angle">' +
+            '<div class="sos-angle-hook">"' + sosEscapeHtml(hookText) + '"</div>' +
+            (basedOnText ? '<div class="sos-angle-based">Basé sur: ' + sosEscapeHtml(basedOnText) + '</div>' : '') +
           '</div>';
         }).join('');
       }
