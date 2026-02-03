@@ -397,9 +397,6 @@
     panel.id = 'sos-side-panel';
     panel.className = 'sos-side-panel';
 
-    // Make the panel draggable
-    makePanelDraggable(panel);
-
     panel.innerHTML =
       '<div class="sos-panel-header" style="background: ' + config.color + '">' +
         '<div class="sos-panel-title">' +
@@ -542,6 +539,9 @@
       '</div>';
 
     document.body.appendChild(panel);
+
+    // Make the panel draggable by its header
+    makePanelDraggable(panel);
 
     // Initialize state
     window._sosPanelState.pastedBlocks = [];
