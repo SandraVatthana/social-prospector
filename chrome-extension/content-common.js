@@ -489,14 +489,6 @@
               '</div>' +
             '</div>' +
 
-            '<!-- Approach Angles -->' +
-            '<div class="sos-result-section" id="sos-angles-section">' +
-              '<div class="sos-result-title">💡 Angles d\'approche</div>' +
-              '<div id="sos-angles-list" class="sos-angles-list">' +
-                '<!-- Angles ajoutés dynamiquement -->' +
-              '</div>' +
-            '</div>' +
-
             '<!-- Notes -->' +
             '<div class="sos-form-group">' +
               '<label>Notes personnelles</label>' +
@@ -533,9 +525,11 @@
         '</div>' +
         '<div id="sos-footer-results" style="display:none;">' +
           '<button class="sos-btn sos-btn-secondary" id="sos-cancel-add">Annuler</button>' +
-          '<button class="sos-btn sos-btn-secondary" id="sos-prepare-dm-btn">✉️ Préparer DM</button>' +
           '<button class="sos-btn sos-btn-primary" id="sos-confirm-add">Ajouter au CRM</button>' +
         '</div>' +
+        '<button class="sos-btn sos-btn-app" id="sos-open-app-footer">' +
+          '<span>📋</span> Voir mes prospects' +
+        '</button>' +
       '</div>';
 
     document.body.appendChild(panel);
@@ -706,31 +700,9 @@
       addToCRM();
     });
 
-    // Prepare DM button in panel
-    document.getElementById('sos-prepare-dm-btn').addEventListener('click', function() {
-      var data = window._sosPanelState.analyzedData || {};
-      var prospectData = {
-        platform: window._sosPanelState.platform,
-        username: username || data.username || '',
-        fullName: document.getElementById('sos-result-fullname').value || data.fullName || '',
-        headline: document.getElementById('sos-result-headline').value || data.headline || '',
-        company: document.getElementById('sos-result-company').value || data.company || '',
-        bio: data.bio || '',
-        signals: window._sosPanelState.signals || [],
-        angles: window._sosPanelState.angles || []
-      };
-
-      if (!prospectData.fullName) {
-        sosShowToast('Analysez d\'abord un profil', 'warning');
-        return;
-      }
-
-      sosShowPrepareDMModal(prospectData, function(prospect) {
-        return sosSendMessage('generateDM', {
-          platform: window._sosPanelState.platform,
-          prospect: prospect
-        });
-      });
+    // Open app button (always visible in footer)
+    document.getElementById('sos-open-app-footer').addEventListener('click', function() {
+      window.open(window.SOS_CONFIG.APP_URL + '/prospects', '_blank');
     });
 
     // Raw content toggle
@@ -829,40 +801,47 @@
       signalsList.innerHTML = '';
       var signals = result.signals || [];
       if (signals.length === 0) {
-        signalsList.innerHTML = '<div class="sos-no-signals">Aucun signal détecté</div>';
+        signalsList.innerHTML = '<div class="sos-no-signals">Aucun signal détecté - collez plus de contenu</div>';
       } else {
         signals.forEach(function(signal) {
           var isStrong = signal.type === 'fort';
           var signalEl = document.createElement('div');
           signalEl.className = 'sos-signal ' + (isStrong ? 'sos-signal-strong' : 'sos-signal-weak');
+
+          // Build signal HTML with category, quote and insight
+          var categoryLabel = getCategoryLabel(signal.category);
+          var quoteText = signal.text || '';
+          var insightText = signal.insight || signal.reason || '';
+
           signalEl.innerHTML =
             '<span class="sos-signal-icon">' + (isStrong ? '🔥' : '💡') + '</span>' +
             '<div class="sos-signal-content">' +
-              '<span class="sos-signal-text">' + sosEscapeHtml(signal.text || '') + '</span>' +
-              (signal.reason ? '<span class="sos-signal-reason">' + sosEscapeHtml(signal.reason) + '</span>' : '') +
+              '<span class="sos-signal-text">' + categoryLabel + '</span>' +
+              (quoteText ? '<span class="sos-signal-quote">' + sosEscapeHtml(quoteText) + '</span>' : '') +
+              (insightText ? '<span class="sos-signal-reason">→ ' + sosEscapeHtml(insightText) + '</span>' : '') +
             '</div>';
           signalsList.appendChild(signalEl);
         });
       }
+    }
 
-      // Display angles
-      var anglesList = document.getElementById('sos-angles-list');
-      anglesList.innerHTML = '';
-      var angles = result.angles || [];
-      if (angles.length === 0) {
-        anglesList.innerHTML = '<div class="sos-no-angles">Collez plus de contenu pour des suggestions</div>';
-      } else {
-        angles.forEach(function(angle) {
-          var angleEl = document.createElement('div');
-          angleEl.className = 'sos-angle';
-          var hookText = typeof angle === 'string' ? angle : (angle.hook || angle.text || '');
-          var reasonText = typeof angle === 'object' ? (angle.reason || '') : '';
-          angleEl.innerHTML =
-            '<span class="sos-angle-hook">' + sosEscapeHtml(hookText) + '</span>' +
-            (reasonText ? '<span class="sos-angle-reason">' + sosEscapeHtml(reasonText) + '</span>' : '');
-          anglesList.appendChild(angleEl);
-        });
-      }
+    function getCategoryLabel(category) {
+      var labels = {
+        'recherche': '🔍 Recherche active',
+        'recrutement': '👥 Recrutement en cours',
+        'problème': '⚠️ Problème évoqué',
+        'lancement': '🚀 Lancement/Nouveau projet',
+        'changement': '🔄 Changement récent',
+        'croissance': '📈 Phase de croissance',
+        'frustration': '😤 Frustration exprimée',
+        'intérêt': '👀 Intérêt manifesté',
+        'statut': '💼 Statut décisionnel',
+        'expertise': '🎯 Expertise/Spécialisation',
+        'audience': '📊 Audience établie',
+        'valeurs': '💡 Valeurs/Mission',
+        'profil': '👤 Information de profil'
+      };
+      return labels[category] || '📌 Signal détecté';
     }
 
     function addToCRM() {
@@ -1413,30 +1392,16 @@
       } else {
         signalsList.innerHTML = signals.map(function(signal) {
           var isStrong = signal.type === 'fort';
+          var categoryLabel = getCategoryLabel(signal.category);
+          var quoteText = signal.text || '';
+          var insightText = signal.insight || signal.reason || '';
           return '<div class="sos-signal ' + (isStrong ? 'sos-signal-strong' : 'sos-signal-weak') + '">' +
             '<span class="sos-signal-icon">' + (isStrong ? '🔥' : '💡') + '</span>' +
             '<div class="sos-signal-content">' +
-              '<span class="sos-signal-text">' + sosEscapeHtml(signal.text || '') + '</span>' +
-              (signal.reason ? '<span class="sos-signal-reason">' + sosEscapeHtml(signal.reason) + '</span>' : '') +
+              '<span class="sos-signal-text">' + categoryLabel + '</span>' +
+              (quoteText ? '<span class="sos-signal-quote">' + sosEscapeHtml(quoteText) + '</span>' : '') +
+              (insightText ? '<span class="sos-signal-reason">→ ' + sosEscapeHtml(insightText) + '</span>' : '') +
             '</div>' +
-          '</div>';
-        }).join('');
-      }
-    }
-
-    // Populate angles
-    var anglesList = document.getElementById('sos-angles-list');
-    if (anglesList) {
-      var angles = prospect.angles || [];
-      if (angles.length === 0) {
-        anglesList.innerHTML = '<div class="sos-no-angles">Aucun angle suggéré</div>';
-      } else {
-        anglesList.innerHTML = angles.map(function(angle) {
-          var hookText = typeof angle === 'string' ? angle : (angle.hook || angle.text || '');
-          var reasonText = typeof angle === 'object' ? (angle.reason || '') : '';
-          return '<div class="sos-angle">' +
-            '<span class="sos-angle-hook">' + sosEscapeHtml(hookText) + '</span>' +
-            (reasonText ? '<span class="sos-angle-reason">' + sosEscapeHtml(reasonText) + '</span>' : '') +
           '</div>';
         }).join('');
       }

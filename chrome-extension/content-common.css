@@ -657,6 +657,18 @@
   font-size: 13px;
 }
 
+.sos-btn-app {
+  width: 100%;
+  margin-top: 8px;
+  background: linear-gradient(135deg, var(--sos-primary), #818cf8);
+  color: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
 .sos-block-count {
   font-size: 12px;
   color: var(--sos-text-muted);
@@ -932,15 +944,28 @@
 
 .sos-signal-text {
   color: var(--sos-text);
-  line-height: 1.4;
+  line-height: 1.5;
   font-weight: 500;
+  font-size: 13px;
+}
+
+.sos-signal-quote {
+  display: block;
+  background: rgba(0,0,0,0.05);
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 6px 0 4px 0;
+  font-style: italic;
+  font-size: 12px;
+  color: #555;
+  border-left: 2px solid var(--sos-primary);
 }
 
 .sos-signal-reason {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--sos-text-muted);
-  line-height: 1.3;
-  font-style: italic;
+  line-height: 1.4;
+  margin-top: 4px;
 }
 
 .sos-no-signals,
