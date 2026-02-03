@@ -20,7 +20,14 @@
     "https://*.instagram.com/*",
     "https://*.linkedin.com/*",
     "https://*.tiktok.com/*",
-    "https://sosprospection.com/*"
+    "https://sosprospection.com/*",
+    "https://www.sosprospection.com/*",
+    "https://*.sosprospection.com/*",
+    "https://sosprospection.netlify.app/*",
+    "https://*.netlify.app/*",
+    "http://localhost:5173/*",
+    "http://localhost:5174/*",
+    "http://localhost:5178/*"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline'"
@@ -57,7 +64,7 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://sosprospection.com/*"],
+      "matches": ["https://sosprospection.com/*", "https://www.sosprospection.com/*", "https://*.sosprospection.com/*", "https://sosprospection.netlify.app/*", "https://*.netlify.app/*", "http://localhost:5173/*", "http://localhost:5174/*", "http://localhost:5178/*"],
       "js": ["content-app.js"],
       "run_at": "document_idle"
     }

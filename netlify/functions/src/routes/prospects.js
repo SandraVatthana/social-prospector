@@ -940,73 +940,95 @@ router.post('/analyze-paste', async (req, res) => {
     console.log(`[Analyze Paste] Platform: ${platform}, Username: ${username}, Content length: ${content.length}`);
 
     // Construire le prompt d'analyse
-    const systemPrompt = `Tu es un expert en prospection B2B et en analyse comportementale.
-Tu analyses le contenu de profils/posts pour identifier des OPPORTUNITÉS CONCRÈTES de prise de contact.
+    const systemPrompt = `Tu es un expert en analyse de profils professionnels.
+Ta mission: extraire des informations PRÉCISES et identifier des SUJETS DE CONVERSATION authentiques.
 
-Tu penses comme un commercial expérimenté qui cherche:
-1. Des PROBLÈMES que le prospect pourrait avoir
-2. Des MOMENTS de transition (nouveau poste, lancement, croissance)
-3. Des BESOINS exprimés ou implicites
-4. Des POINTS COMMUNS potentiels pour créer du lien
+Tu NE VENDS PAS. Tu cherches à COMPRENDRE la personne pour engager une vraie discussion.
 
-RÈGLE ABSOLUE: Tu DOIS retourner UNIQUEMENT du JSON valide, sans aucun texte avant ou après.`;
+RÈGLE ABSOLUE: Retourne UNIQUEMENT du JSON valide, sans texte avant/après.`;
 
-    const userPrompt = `Analyse en profondeur ce contenu de ${platform || 'réseau social'}:
+    const userPrompt = `Analyse ce contenu ${platform === 'linkedin' ? 'LinkedIn' : platform || 'de profil'}:
 
 """
 ${content.substring(0, 6000)}
 """
 
-Retourne UNIQUEMENT ce JSON:
+${username ? `Username connu: ${username}` : ''}
+
+Retourne ce JSON:
 {
   "profile": {
-    "fullName": "Nom complet ou null",
-    "headline": "Titre/fonction ou null",
-    "company": "Entreprise ou null",
-    "bio": "Résumé bio max 200 chars ou null",
-    "location": "Lieu ou null",
-    "followers": "Nombre followers ou null"
+    "fullName": "UNIQUEMENT le prénom et nom de la personne (ex: 'Marie Dupont'), PAS de titre ni de texte parasite",
+    "headline": "Titre/fonction professionnelle",
+    "company": "Nom de l'entreprise actuelle",
+    "bio": "Résumé en 1-2 phrases max",
+    "location": "Ville/Pays ou null"
   },
+  "posts": [
+    {
+      "summary": "Résumé du post en 1 phrase",
+      "topic": "Le sujet principal abordé",
+      "engagement": "fort/moyen/faible selon les réactions visibles"
+    }
+  ],
   "signals": [
     {
-      "type": "fort ou faible",
-      "text": "CITATION EXACTE entre guillemets du passage révélateur",
-      "category": "recrutement|lancement|problème|changement|croissance|frustration|recherche|intérêt",
-      "insight": "Analyse: ce que ça révèle sur ses besoins/situation actuels"
+      "type": "fort",
+      "category": "lancement|croissance|recrutement|changement|problème|projet|expertise|passion",
+      "text": "Citation EXACTE et COURTE du texte révélateur",
+      "insight": "Ce que ça révèle: [besoin/situation/opportunité concrète]"
     }
   ],
   "angles": [
     {
-      "hook": "Message d'accroche COMPLET et PRÊT À ENVOYER (2-3 phrases)",
-      "basedOn": "L'élément précis qui justifie cette approche",
-      "why": "Pourquoi cet angle peut fonctionner avec ce prospect"
+      "question": "Une QUESTION simple et curieuse basée sur un élément précis",
+      "context": "Ce qui dans le profil/post justifie cette question",
+      "tone": "curieux|félicitations|intérêt_commun"
     }
   ]
 }
 
-RÈGLES POUR LES SIGNAUX:
-- CITE TOUJOURS le texte exact entre guillemets
-- L'insight doit EXPLIQUER pourquoi c'est une opportunité
-- Exemple BON: {"text": "On recrute 3 devs ce trimestre", "insight": "Forte croissance = budget disponible, besoin d'outils/formation pour onboarder vite"}
-- Exemple MAUVAIS: {"text": "Recrutement mentionné", "insight": "Il recrute"}
+=== RÈGLES CRITIQUES POUR LE NOM ===
+- fullName = SEULEMENT "Prénom Nom" (ex: "Céline De Almeida")
+- JAMAIS de texte comme "Lien vers...", "Photo de...", "Voir le profil de..."
+- Si tu ne trouves pas le nom clairement, mets null
 
-RÈGLES POUR LES ANGLES (CRUCIAL):
-- Chaque angle doit être un MESSAGE COMPLET prêt à copier-coller
-- Le message doit CITER un élément spécifique du contenu
-- Il doit poser une QUESTION ouverte qui invite à la discussion
-- Il doit être NATUREL, pas commercial
+=== RÈGLES POUR LES POSTS ===
+- Analyse les 3 derniers posts/publications visibles dans le contenu
+- Si pas de posts, mets un tableau vide []
 
-Exemples de BONS angles:
-- "J'ai vu ton post sur les galères de recrutement de devs seniors. C'est un vrai sujet en ce moment ! Tu as trouvé des solutions qui marchent pour attirer les bons profils ?"
-- "Félicitations pour le lancement de [produit] ! Curieux de savoir comment vous gérez l'afflux de demandes au démarrage ?"
-- "Ton parcours de freelance à fondateur est inspirant. C'est quoi le plus gros défi que t'as rencontré dans cette transition ?"
+=== RÈGLES POUR LES SIGNAUX ===
+- Signal FORT = action récente/concrète (lancement, recrutement, levée de fonds, nouveau projet)
+- Signal FAIBLE = intérêt/passion mentionnés mais pas d'action immédiate
+- La citation doit être EXACTE et COURTE (max 15 mots)
+- L'insight explique POURQUOI c'est intéressant pour engager une conversation
 
-Exemples de MAUVAIS angles (À ÉVITER):
-- "Ton profil m'a interpellé" (trop vague)
-- "J'aimerais échanger avec toi" (pas de contexte)
-- "Je peux t'aider à..." (trop commercial trop vite)
+Exemple BON signal:
+{"type": "fort", "category": "lancement", "text": "Je viens de lancer ma formation", "insight": "Nouveau produit = elle cherche probablement ses premiers clients/retours"}
 
-Génère 2-4 signaux pertinents et 2-3 angles d'approche VRAIMENT personnalisés et actionnables.`;
+=== RÈGLES POUR LES ANGLES (TRÈS IMPORTANT) ===
+L'objectif n'est PAS de vendre, c'est d'OUVRIR UNE DISCUSSION par CURIOSITÉ.
+
+La question doit:
+- Montrer que tu as LU quelque chose de spécifique
+- Être une VRAIE question (pas rhétorique)
+- Inviter à partager son expérience/opinion
+- Être COURTE (1 phrase)
+
+EXEMPLES DE BONNES QUESTIONS:
+- "J'ai vu que tu lançais une campagne de crowdfunding. Elle s'adresse à qui principalement ?"
+- "Tu mentionnes le passage de freelance à agence - c'est quoi le plus dur dans cette transition ?"
+- "Curieux: tu utilises quoi comme outil pour [sujet mentionné] ?"
+- "Tu recrutes des devs, c'est pour un nouveau projet ou de la croissance ?"
+
+EXEMPLES À ÉVITER ABSOLUMENT:
+- "Ton profil m'a interpellé..." ❌ (vague, commercial)
+- "J'aimerais échanger avec toi sur..." ❌ (pas de question)
+- "Je peux t'aider à..." ❌ (vente directe)
+- "Ton parcours est inspirant..." ❌ (flatterie vide)
+- "J'ai une question rapide..." ❌ (pose la question directement!)
+
+Génère 2-4 signaux et 2-3 questions d'approche basées sur des éléments CONCRETS du contenu.`;
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',

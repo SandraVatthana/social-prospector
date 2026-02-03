@@ -48,7 +48,7 @@ const syncWarningBanner = document.getElementById('syncWarningBanner');
 const connectAppBtn = document.getElementById('connectAppBtn');
 
 // Configuration
-const APP_URL = 'https://sosprospection.com';
+const APP_URL = 'https://sosprospection.netlify.app';
 const MAX_RECENT_IMPORTS = 5;
 
 // État
@@ -66,6 +66,9 @@ async function init() {
   await checkAppAuthStatus();
   await loadRecentImports();
   setupEventListeners();
+
+  // Default to LinkedIn tab
+  switchPlatformTab('linkedin');
 }
 
 /**
@@ -433,6 +436,57 @@ function setupEventListeners() {
   }
   if (refreshTikTok) {
     refreshTikTok.addEventListener('click', () => loadRecentImports());
+  }
+
+  // Debug buttons
+  const debugRefreshBtn = document.getElementById('debugRefreshBtn');
+  const debugClearTokenBtn = document.getElementById('debugClearTokenBtn');
+  const debugClearAllBtn = document.getElementById('debugClearAllBtn');
+  const debugInfo = document.getElementById('debugInfo');
+
+  if (debugRefreshBtn) {
+    debugRefreshBtn.addEventListener('click', async () => {
+      try {
+        const storage = await chrome.storage.local.get(null);
+        const authToken = storage.authToken;
+        const prospects = storage.importedProspects || [];
+
+        let html = `<strong>Auth Token:</strong> ${authToken ? '✅ ' + authToken.substring(0, 20) + '...' : '❌ Non défini'}<br>`;
+        html += `<strong>Prospects stockés:</strong> ${prospects.length}<br>`;
+
+        if (prospects.length > 0) {
+          html += '<strong>Derniers:</strong><br>';
+          prospects.slice(-3).forEach(p => {
+            html += `- ${p.platform}: ${p.username || p.fullName} (synced: ${p.synced})<br>`;
+          });
+        }
+
+        html += `<br><strong>Toutes les clés:</strong> ${Object.keys(storage).join(', ')}`;
+        debugInfo.innerHTML = html;
+      } catch (e) {
+        debugInfo.innerHTML = 'Erreur: ' + e.message;
+      }
+    });
+  }
+
+  if (debugClearTokenBtn) {
+    debugClearTokenBtn.addEventListener('click', async () => {
+      await chrome.storage.local.remove('authToken');
+      showToast('Token effacé', 'info');
+      checkAppAuthStatus();
+    });
+  }
+
+  if (debugClearAllBtn) {
+    debugClearAllBtn.addEventListener('click', async () => {
+      if (confirm('Effacer TOUTES les données de l\'extension ?')) {
+        await chrome.storage.local.clear();
+        showToast('Tout effacé', 'info');
+        loadSessions();
+        loadRecentImports();
+        checkAppAuthStatus();
+      }
+    });
   }
 }
 

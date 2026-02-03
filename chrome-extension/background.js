@@ -10,7 +10,7 @@ console.log('[SOS] ====== SERVICE WORKER STARTING ======');
 // ============================================
 
 const CONFIG = {
-  APP_URL: 'https://sosprospection.com',
+  APP_URL: 'https://sosprospection.netlify.app',
   DEV_URL: 'http://localhost:5178',
   API_TIMEOUT: 30000,
   DEBUG: false

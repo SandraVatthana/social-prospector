@@ -11,7 +11,7 @@
   // ============================================
 
   window.SOS_CONFIG = {
-    APP_URL: 'https://sosprospection.com',
+    APP_URL: 'https://sosprospection.netlify.app',
     DEV_URL: 'http://localhost:5178',
     DEBUG: false
   };
@@ -356,7 +356,9 @@
     onConfirm: null,
     pastedBlocks: [],
     analyzedData: null,
-    signals: null
+    posts: null,
+    signals: null,
+    angles: null
   };
 
   /**
@@ -481,6 +483,14 @@
               '</div>' +
             '</div>' +
 
+            '<!-- Posts Analysis -->' +
+            '<div class="sos-result-section" id="sos-posts-section">' +
+              '<div class="sos-result-title">📝 Derniers posts analysés</div>' +
+              '<div id="sos-posts-list" class="sos-posts-list">' +
+                '<!-- Posts ajoutés dynamiquement -->' +
+              '</div>' +
+            '</div>' +
+
             '<!-- Signals -->' +
             '<div class="sos-result-section" id="sos-signals-section">' +
               '<div class="sos-result-title">🎯 Signaux détectés</div>' +
@@ -489,11 +499,11 @@
               '</div>' +
             '</div>' +
 
-            '<!-- Approach Angles -->' +
+            '<!-- Conversation Starters -->' +
             '<div class="sos-result-section" id="sos-angles-section">' +
-              '<div class="sos-result-title">💡 Angles d\'approche</div>' +
+              '<div class="sos-result-title">💬 Questions pour engager la conversation</div>' +
               '<div id="sos-angles-list" class="sos-angles-list">' +
-                '<!-- Angles ajoutés dynamiquement -->' +
+                '<!-- Questions ajoutées dynamiquement -->' +
               '</div>' +
             '</div>' +
 
@@ -548,6 +558,9 @@
     // Initialize state
     window._sosPanelState.pastedBlocks = [];
     window._sosPanelState.analyzedData = null;
+    window._sosPanelState.posts = null;
+    window._sosPanelState.signals = null;
+    window._sosPanelState.angles = null;
 
     // Show panel with animation
     setTimeout(function() {
@@ -560,6 +573,9 @@
 
     // Load recent imports
     loadRecentImportsInPanel(platform);
+
+    // Auto-restore analysis if we have stored data for this profile
+    autoRestoreAnalysisForCurrentProfile(platform, username);
 
     // Connect app button
     document.getElementById('sos-connect-app-btn').addEventListener('click', function() {
@@ -746,7 +762,9 @@
         .then(function(result) {
           console.log('[SOS Content] Analysis result:', result);
           console.log('[SOS Content] Signals received:', result.signals?.length || 0);
+          console.log('[SOS Content] Posts received:', result.posts?.length || 0);
           window._sosPanelState.analyzedData = result.profile || {};
+          window._sosPanelState.posts = result.posts || [];
           window._sosPanelState.signals = result.signals || [];
           window._sosPanelState.angles = result.angles || [];
 
@@ -804,6 +822,32 @@
       }).join('\n\n');
       document.getElementById('sos-raw-text').textContent = rawText;
 
+      // Display posts analysis
+      var postsList = document.getElementById('sos-posts-list');
+      var postsSection = document.getElementById('sos-posts-section');
+      if (postsList) {
+        postsList.innerHTML = '';
+        var posts = result.posts || [];
+        if (posts.length === 0) {
+          postsSection.style.display = 'none';
+        } else {
+          postsSection.style.display = 'block';
+          posts.forEach(function(post, index) {
+            var postEl = document.createElement('div');
+            postEl.className = 'sos-post-item';
+            var engagementIcon = post.engagement === 'fort' ? '🔥' : (post.engagement === 'moyen' ? '👍' : '📝');
+            postEl.innerHTML =
+              '<div class="sos-post-header">' +
+                '<span class="sos-post-number">Post ' + (index + 1) + '</span>' +
+                '<span class="sos-post-engagement">' + engagementIcon + '</span>' +
+              '</div>' +
+              '<div class="sos-post-topic"><strong>Sujet:</strong> ' + sosEscapeHtml(post.topic || 'Non identifié') + '</div>' +
+              '<div class="sos-post-summary">' + sosEscapeHtml(post.summary || '') + '</div>';
+            postsList.appendChild(postEl);
+          });
+        }
+      }
+
       // Display signals
       var signalsList = document.getElementById('sos-signals-list');
       signalsList.innerHTML = '';
@@ -825,30 +869,50 @@
             '<span class="sos-signal-icon">' + (isStrong ? '🔥' : '💡') + '</span>' +
             '<div class="sos-signal-content">' +
               '<span class="sos-signal-text">' + categoryLabel + '</span>' +
-              (quoteText ? '<span class="sos-signal-quote">' + sosEscapeHtml(quoteText) + '</span>' : '') +
+              (quoteText ? '<span class="sos-signal-quote">"' + sosEscapeHtml(quoteText) + '"</span>' : '') +
               (insightText ? '<span class="sos-signal-reason">→ ' + sosEscapeHtml(insightText) + '</span>' : '') +
             '</div>';
           signalsList.appendChild(signalEl);
         });
       }
 
-      // Display angles
+      // Display conversation starters (angles)
       var anglesList = document.getElementById('sos-angles-list');
       if (anglesList) {
         anglesList.innerHTML = '';
         var angles = result.angles || [];
         if (angles.length === 0) {
-          anglesList.innerHTML = '<div class="sos-no-angles">Collez plus de contenu pour des suggestions d\'approche</div>';
+          anglesList.innerHTML = '<div class="sos-no-angles">Collez plus de contenu pour des suggestions de questions</div>';
         } else {
-          angles.forEach(function(angle) {
+          angles.forEach(function(angle, index) {
             var angleEl = document.createElement('div');
             angleEl.className = 'sos-angle';
-            var hookText = typeof angle === 'string' ? angle : (angle.hook || angle.text || '');
-            var basedOnText = typeof angle === 'object' ? (angle.basedOn || angle.reason || '') : '';
+
+            // Support both old format (hook) and new format (question)
+            var questionText = typeof angle === 'string' ? angle : (angle.question || angle.hook || angle.text || '');
+            var contextText = typeof angle === 'object' ? (angle.context || angle.basedOn || angle.reason || '') : '';
+            var toneText = angle.tone || '';
+
+            var toneIcon = toneText === 'félicitations' ? '🎉' : (toneText === 'intérêt_commun' ? '🤝' : '🤔');
+
             angleEl.innerHTML =
-              '<div class="sos-angle-hook">"' + sosEscapeHtml(hookText) + '"</div>' +
-              (basedOnText ? '<div class="sos-angle-based">Basé sur: ' + sosEscapeHtml(basedOnText) + '</div>' : '');
+              '<div class="sos-angle-question">' +
+                '<span class="sos-angle-icon">' + toneIcon + '</span>' +
+                '<span class="sos-angle-text">' + sosEscapeHtml(questionText) + '</span>' +
+                '<button class="sos-angle-copy" data-text="' + sosEscapeHtml(questionText).replace(/"/g, '&quot;') + '" title="Copier">📋</button>' +
+              '</div>' +
+              (contextText ? '<div class="sos-angle-context">💡 ' + sosEscapeHtml(contextText) + '</div>' : '');
             anglesList.appendChild(angleEl);
+          });
+
+          // Add copy handlers
+          anglesList.querySelectorAll('.sos-angle-copy').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+              e.stopPropagation();
+              var text = this.getAttribute('data-text');
+              sosCopyToClipboard(text);
+              sosShowToast('Question copiée !', 'success');
+            });
           });
         }
       }
@@ -889,6 +953,7 @@
         bio: data.bio || '',
         about: data.bio || '',
         notes: document.getElementById('sos-result-notes').value || '',
+        posts: window._sosPanelState.posts || [],
         signals: window._sosPanelState.signals || [],
         angles: window._sosPanelState.angles || [],
         rawContent: window._sosPanelState.pastedBlocks.map(function(b) { return b.text; }).join('\n\n'),
@@ -921,6 +986,7 @@
       window._sosPanelState.analyzedData = null;
       window._sosPanelState.signals = null;
       window._sosPanelState.angles = null;
+      window._sosPanelState.posts = null;
       pastedBlocksContainer.innerHTML = '';
       updateBlockCount();
       clearBlocksBtn.style.display = 'none';
@@ -1282,17 +1348,22 @@
           document.getElementById('sos-connect-app-btn').addEventListener('click', function() {
             // Open the app - the content-app.js will automatically sync the token
             window.open(window.SOS_CONFIG.APP_URL + '/login', '_blank');
+            // Auto-refresh auth status after a delay (user will have logged in)
+            setTimeout(checkAndUpdateSyncStatus, 3000);
+            setTimeout(checkAndUpdateSyncStatus, 8000);
+            setTimeout(checkAndUpdateSyncStatus, 15000);
           });
 
           document.getElementById('sos-refresh-auth-btn').addEventListener('click', function() {
             var btn = this;
             btn.disabled = true;
             btn.textContent = '...';
+            console.log('[SOS] Manual refresh of auth status...');
             checkAndUpdateSyncStatus();
             setTimeout(function() {
               btn.disabled = false;
               btn.textContent = '🔄';
-            }, 1500);
+            }, 2000);
           });
         }
       })
@@ -1378,6 +1449,43 @@
   }
 
   /**
+   * Auto-restore analysis if we have stored data for the current profile
+   */
+  function autoRestoreAnalysisForCurrentProfile(platform, currentUsername) {
+    if (!currentUsername) {
+      console.log('[SOS] No username for auto-restore');
+      return;
+    }
+
+    console.log('[SOS] Checking for stored analysis for:', currentUsername, 'on', platform);
+
+    sosGetStorage('importedProspects').then(function(prospects) {
+      prospects = prospects || [];
+
+      // Find matching prospect by username
+      var match = prospects.find(function(p) {
+        return p.platform === platform &&
+               (p.username === currentUsername ||
+                p.username === currentUsername.toLowerCase() ||
+                (p.profileUrl && p.profileUrl.includes(currentUsername)));
+      });
+
+      if (match && match.signals && match.signals.length > 0) {
+        console.log('[SOS] Found stored analysis for:', match.fullName || match.username, 'with', match.signals.length, 'signals');
+        // Show a toast and auto-load the analysis
+        sosShowToast('Analyse précédente trouvée - Chargement...', 'info');
+        setTimeout(function() {
+          showProspectAnalysis(match);
+        }, 300);
+      } else if (match) {
+        console.log('[SOS] Found stored prospect but no analysis:', match.fullName || match.username);
+      } else {
+        console.log('[SOS] No stored analysis found for:', currentUsername);
+      }
+    });
+  }
+
+  /**
    * Show a prospect's analysis in the panel
    */
   function showProspectAnalysis(prospect) {
@@ -1385,6 +1493,7 @@
     window._sosPanelState.analyzedData = prospect;
     window._sosPanelState.signals = prospect.signals || [];
     window._sosPanelState.angles = prospect.angles || [];
+    window._sosPanelState.posts = prospect.posts || [];
 
     // Switch to results view
     var stepPaste = document.getElementById('sos-step-paste');
@@ -1412,6 +1521,29 @@
     if (headlineEl) headlineEl.value = prospect.headline || '';
     if (companyEl) companyEl.value = prospect.company || '';
 
+    // Populate posts
+    var postsList = document.getElementById('sos-posts-list');
+    var postsSection = document.getElementById('sos-posts-section');
+    if (postsList && postsSection) {
+      var posts = prospect.posts || [];
+      if (posts.length === 0) {
+        postsSection.style.display = 'none';
+      } else {
+        postsSection.style.display = 'block';
+        postsList.innerHTML = posts.map(function(post, index) {
+          var engagementIcon = post.engagement === 'fort' ? '🔥' : (post.engagement === 'moyen' ? '👍' : '📝');
+          return '<div class="sos-post-item">' +
+            '<div class="sos-post-header">' +
+              '<span class="sos-post-number">Post ' + (index + 1) + '</span>' +
+              '<span class="sos-post-engagement">' + engagementIcon + '</span>' +
+            '</div>' +
+            '<div class="sos-post-topic"><strong>Sujet:</strong> ' + sosEscapeHtml(post.topic || 'Non identifié') + '</div>' +
+            '<div class="sos-post-summary">' + sosEscapeHtml(post.summary || '') + '</div>' +
+          '</div>';
+        }).join('');
+      }
+    }
+
     // Populate signals
     var signalsList = document.getElementById('sos-signals-list');
     if (signalsList) {
@@ -1428,7 +1560,7 @@
             '<span class="sos-signal-icon">' + (isStrong ? '🔥' : '💡') + '</span>' +
             '<div class="sos-signal-content">' +
               '<span class="sos-signal-text">' + categoryLabel + '</span>' +
-              (quoteText ? '<span class="sos-signal-quote">' + sosEscapeHtml(quoteText) + '</span>' : '') +
+              (quoteText ? '<span class="sos-signal-quote">"' + sosEscapeHtml(quoteText) + '"</span>' : '') +
               (insightText ? '<span class="sos-signal-reason">→ ' + sosEscapeHtml(insightText) + '</span>' : '') +
             '</div>' +
           '</div>';
@@ -1436,21 +1568,38 @@
       }
     }
 
-    // Populate angles
+    // Populate conversation starters (angles)
     var anglesList = document.getElementById('sos-angles-list');
     if (anglesList) {
       var angles = prospect.angles || [];
       if (angles.length === 0) {
-        anglesList.innerHTML = '<div class="sos-no-angles">Aucun angle suggéré</div>';
+        anglesList.innerHTML = '<div class="sos-no-angles">Aucune suggestion de question</div>';
       } else {
         anglesList.innerHTML = angles.map(function(angle) {
-          var hookText = typeof angle === 'string' ? angle : (angle.hook || angle.text || '');
-          var basedOnText = typeof angle === 'object' ? (angle.basedOn || angle.reason || '') : '';
+          var questionText = typeof angle === 'string' ? angle : (angle.question || angle.hook || angle.text || '');
+          var contextText = typeof angle === 'object' ? (angle.context || angle.basedOn || angle.reason || '') : '';
+          var toneText = angle.tone || '';
+          var toneIcon = toneText === 'félicitations' ? '🎉' : (toneText === 'intérêt_commun' ? '🤝' : '🤔');
+
           return '<div class="sos-angle">' +
-            '<div class="sos-angle-hook">"' + sosEscapeHtml(hookText) + '"</div>' +
-            (basedOnText ? '<div class="sos-angle-based">Basé sur: ' + sosEscapeHtml(basedOnText) + '</div>' : '') +
+            '<div class="sos-angle-question">' +
+              '<span class="sos-angle-icon">' + toneIcon + '</span>' +
+              '<span class="sos-angle-text">' + sosEscapeHtml(questionText) + '</span>' +
+              '<button class="sos-angle-copy" data-text="' + sosEscapeHtml(questionText).replace(/"/g, '&quot;') + '" title="Copier">📋</button>' +
+            '</div>' +
+            (contextText ? '<div class="sos-angle-context">💡 ' + sosEscapeHtml(contextText) + '</div>' : '') +
           '</div>';
         }).join('');
+
+        // Add copy handlers
+        anglesList.querySelectorAll('.sos-angle-copy').forEach(function(btn) {
+          btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var text = this.getAttribute('data-text');
+            sosCopyToClipboard(text);
+            sosShowToast('Question copiée !', 'success');
+          });
+        });
       }
     }
 

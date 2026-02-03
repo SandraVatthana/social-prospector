@@ -1010,6 +1010,101 @@
   border-top: 1px dashed rgba(0,0,0,0.1);
 }
 
+/* New angle question format */
+.sos-angle-question {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.sos-angle-icon {
+  flex-shrink: 0;
+  font-size: 16px;
+}
+
+.sos-angle-text {
+  flex: 1;
+  font-size: 13px;
+  color: var(--sos-text);
+  line-height: 1.5;
+}
+
+.sos-angle-copy {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  font-size: 14px;
+  opacity: 0.6;
+  transition: opacity 0.2s, transform 0.2s;
+  border-radius: 4px;
+}
+
+.sos-angle-copy:hover {
+  opacity: 1;
+  transform: scale(1.1);
+  background: rgba(0,0,0,0.05);
+}
+
+.sos-angle-context {
+  font-size: 11px;
+  color: var(--sos-text-muted);
+  line-height: 1.4;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(0,0,0,0.1);
+}
+
+/* Posts List */
+.sos-posts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sos-post-item {
+  padding: 10px 12px;
+  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+  border-radius: var(--sos-radius);
+  border-left: 3px solid #0ea5e9;
+}
+
+.sos-post-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.sos-post-number {
+  font-size: 11px;
+  font-weight: 600;
+  color: #0369a1;
+  text-transform: uppercase;
+}
+
+.sos-post-engagement {
+  font-size: 14px;
+}
+
+.sos-post-topic {
+  font-size: 12px;
+  color: var(--sos-text);
+  margin-bottom: 4px;
+}
+
+.sos-post-topic strong {
+  color: #0369a1;
+}
+
+.sos-post-summary {
+  font-size: 12px;
+  color: var(--sos-text-muted);
+  line-height: 1.4;
+  font-style: italic;
+}
+
 /* Raw Content Toggle */
 .sos-raw-toggle {
   display: flex;

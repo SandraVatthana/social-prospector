@@ -17,7 +17,7 @@ async function syncTokenWithExtension(token) {
   _currentExtensionToken = token;
 
   try {
-    console.log('[Auth] Syncing token with extension, has token:', !!token);
+    console.log('[Auth] Syncing token with extension, has token:', !!token, 'extension detected:', _extensionDetected);
 
     // Méthode 1: Via chrome.runtime.sendMessage (si l'ID de l'extension est connu)
     if (EXTENSION_ID && typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
@@ -34,11 +34,19 @@ async function syncTokenWithExtension(token) {
     }
 
     // Méthode 2: Via window.postMessage (pour le content script)
-    window.postMessage({
-      type: 'SOS_PROSPECTION_AUTH',
-      action: token ? 'setAuthToken' : 'clearAuthToken',
-      token: token
-    }, window.location.origin);
+    if (token) {
+      broadcastTokenToExtension();
+      // Retry a few times in case extension listener isn't ready yet
+      setTimeout(broadcastTokenToExtension, 500);
+      setTimeout(broadcastTokenToExtension, 1500);
+      setTimeout(broadcastTokenToExtension, 3000);
+    } else {
+      window.postMessage({
+        type: 'SOS_PROSPECTION_AUTH',
+        action: 'clearAuthToken',
+        token: null
+      }, window.location.origin);
+    }
 
   } catch (error) {
     // Silently fail - extension may not be installed
@@ -68,6 +76,21 @@ async function clearExtensionToken() {
 
 // Global variable to store current token for extension requests
 let _currentExtensionToken = null;
+let _extensionDetected = false;
+
+/**
+ * Broadcast token to extension (called when token changes or extension is detected)
+ */
+function broadcastTokenToExtension() {
+  if (!_currentExtensionToken) return;
+
+  console.log('[Auth] Broadcasting token to extension, length:', _currentExtensionToken.length);
+  window.postMessage({
+    type: 'SOS_PROSPECTION_AUTH',
+    action: 'setAuthToken',
+    token: _currentExtensionToken
+  }, window.location.origin);
+}
 
 /**
  * Listen for extension presence and token requests
@@ -76,17 +99,21 @@ if (typeof window !== 'undefined') {
   window.addEventListener('message', (event) => {
     if (event.source !== window) return;
     if (event.data?.type === 'SOS_PROSPECTION_EXTENSION') {
-      console.log('[Auth] Extension detected, version:', event.data.version);
+      console.log('[Auth] Extension detected, version:', event.data.version, 'requestToken:', event.data.requestToken);
+      _extensionDetected = true;
 
       // If extension requests token and we have one, send it
       if (event.data.requestToken && _currentExtensionToken) {
         console.log('[Auth] Sending token to extension on request');
-        window.postMessage({
-          type: 'SOS_PROSPECTION_AUTH',
-          action: 'setAuthToken',
-          token: _currentExtensionToken
-        }, window.location.origin);
+        broadcastTokenToExtension();
+      } else if (event.data.requestToken && !_currentExtensionToken) {
+        console.log('[Auth] Extension requested token but no token available yet');
       }
+    }
+
+    // Listen for auth response confirmation
+    if (event.data?.type === 'SOS_PROSPECTION_AUTH_RESPONSE') {
+      console.log('[Auth] Extension confirmed token sync:', event.data.success);
     }
   });
 }
