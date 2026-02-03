@@ -465,6 +465,142 @@ function ComparisonSection() {
             et <strong>zéro risque</strong> de bannissement.
           </p>
         </motion.div>
+
+        {/* Positioning statement */}
+        <motion.div
+          initial="hidden"
+          animate={isInView ? 'visible' : 'hidden'}
+          variants={fadeInUp}
+          className="mt-8 text-center"
+        >
+          <p className="text-warm-600 text-lg italic max-w-2xl mx-auto">
+            "SOS Prospection n'est pas un outil de cold outreach de masse.
+            <br />
+            C'est un copilote pour les créateurs, coachs et solopreneurs qui veulent
+            <strong className="text-brand-600"> 5–20 vraies conversations par semaine</strong>,
+            sans scraping, sans spam, sans risque de ban."
+          </p>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+// ==========================================
+// SECTION: POUR QUI C'EST FAIT
+// ==========================================
+function ForWhoSection() {
+  const { ref, isInView } = useScrollAnimation();
+
+  const notFor = [
+    "Tu veux envoyer 500 messages par jour en automatique, sans même ouvrir les profils.",
+    "Tu cherches un outil qui se connecte à ton compte pour tout faire à ta place.",
+    "Tu considères tes prospects comme des \"volumes\" et pas comme des personnes.",
+    "Tu es à l'aise avec le scraping massif et le risque de ban \"tant que ça passe\".",
+  ];
+
+  const isFor = [
+    "Tu préfères envoyer 10–30 messages ultra-qualitatifs plutôt que spammer 300 inconnus.",
+    "Tu veux t'appuyer sur l'IA pour préparer le terrain, tout en gardant la main sur chaque conversation.",
+    "Tu veux protéger ton compte, ton image, et rester 100% dans les règles des plateformes.",
+    "Tu crois que les meilleures relations business commencent par de vraies conversations.",
+  ];
+
+  return (
+    <section ref={ref} className="py-24 bg-white">
+      <div className="max-w-5xl mx-auto px-4">
+        <motion.div
+          initial="hidden"
+          animate={isInView ? 'visible' : 'hidden'}
+          variants={fadeInUp}
+          className="text-center mb-12"
+        >
+          <h2 className="font-display text-3xl md:text-4xl font-bold text-warm-900 mb-4">
+            Est-ce que c'est fait pour toi ?
+          </h2>
+          <p className="text-lg text-warm-600">
+            On préfère être clairs dès le départ.
+          </p>
+        </motion.div>
+
+        <div className="grid md:grid-cols-2 gap-8">
+          {/* NOT FOR */}
+          <motion.div
+            initial="hidden"
+            animate={isInView ? 'visible' : 'hidden'}
+            variants={fadeInUp}
+            className="bg-red-50 rounded-2xl p-8 border-2 border-red-100"
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
+                <X className="w-5 h-5 text-red-600" />
+              </div>
+              <h3 className="font-display text-xl font-bold text-red-700">
+                Ce n'est PAS pour toi si...
+              </h3>
+            </div>
+            <ul className="space-y-4">
+              {notFor.map((item, index) => (
+                <motion.li
+                  key={index}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={isInView ? { opacity: 1, x: 0 } : {}}
+                  transition={{ delay: 0.1 * index }}
+                  className="flex items-start gap-3 text-red-700"
+                >
+                  <X className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <span>{item}</span>
+                </motion.li>
+              ))}
+            </ul>
+          </motion.div>
+
+          {/* IS FOR */}
+          <motion.div
+            initial="hidden"
+            animate={isInView ? 'visible' : 'hidden'}
+            variants={fadeInUp}
+            className="bg-green-50 rounded-2xl p-8 border-2 border-green-100"
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
+                <Check className="w-5 h-5 text-green-600" />
+              </div>
+              <h3 className="font-display text-xl font-bold text-green-700">
+                C'est fait pour toi si...
+              </h3>
+            </div>
+            <ul className="space-y-4">
+              {isFor.map((item, index) => (
+                <motion.li
+                  key={index}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={isInView ? { opacity: 1, x: 0 } : {}}
+                  transition={{ delay: 0.1 * index }}
+                  className="flex items-start gap-3 text-green-700"
+                >
+                  <Check className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <span>{item}</span>
+                </motion.li>
+              ))}
+            </ul>
+          </motion.div>
+        </div>
+
+        {/* Micro-slogan */}
+        <motion.div
+          initial="hidden"
+          animate={isInView ? 'visible' : 'hidden'}
+          variants={fadeInUp}
+          className="mt-12 text-center"
+        >
+          <p className="text-2xl font-display font-bold text-brand-600">
+            "Pas juste le profil. Leur monde."
+          </p>
+          <p className="text-warm-500 mt-2">
+            On ne lit pas que la bio. On lit ce qu'ils vivent.
+          </p>
+        </motion.div>
       </div>
     </section>
   );
@@ -1471,6 +1607,7 @@ export default function Landing() {
       <HeroSection />
       <DisclaimerSection />
       <ComparisonSection />
+      <ForWhoSection />
       <DiscernementSection />
       <LeadScoringSection />
       <ProblemSection />
