@@ -286,8 +286,19 @@ Réponds en JSON avec ce format exact :
 
     const result = JSON.parse(cleanedResponse);
 
+    // Clean up any remaining placeholders/brackets from the comment
+    let cleanComment = (result.comment || '')
+      .replace(/\s*\[[^\]]*\]\s*/g, ' ')  // Remove [anything in brackets]
+      .replace(/\s+/g, ' ')               // Normalize whitespace
+      .trim();
+
+    // If comment is too short after cleanup, it was mostly placeholders
+    if (cleanComment.length < 20) {
+      throw new Error('Comment was mostly placeholders');
+    }
+
     return {
-      comment: result.comment || '',
+      comment: cleanComment,
       angle: result.angle || 'apport de valeur',
       strategy: result.strategy || ''
     };
