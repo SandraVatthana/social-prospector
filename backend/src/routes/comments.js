@@ -256,7 +256,7 @@ Réponds en JSON avec ce format exact :
 
   try {
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-3-5-sonnet-20241022',
       max_tokens: 500,
       temperature: 0.7,
       system: systemPrompt,
