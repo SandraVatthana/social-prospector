@@ -44,7 +44,13 @@ app.use(express.urlencoded({ extended: true }));
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString(), platform: 'netlify' });
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    platform: 'netlify',
+    version: '2.1.0',
+    routes: ['auth', 'comments', 'campaigns', 'prospects', 'voice']
+  });
 });
 
 // API Routes
