@@ -290,4 +290,105 @@ router.delete('/:id/prospects', requireAuth, async (req, res) => {
   }
 });
 
+// ============================================
+// CAMPAIGN VOICE PROFILES (Agency Mode)
+// ============================================
+
+/**
+ * GET /api/campaigns/:id/voice
+ * Get voice profile for a campaign
+ */
+router.get('/:id/voice', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    // Verify campaign ownership
+    const { data: campaign, error: campaignError } = await supabaseAdmin
+      .from('campaigns')
+      .select('id')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single();
+
+    if (campaignError || !campaign) {
+      return res.status(404).json(formatError('Campagne non trouvée'));
+    }
+
+    // Get voice profile
+    const { data, error } = await supabaseAdmin
+      .from('campaign_voice_profiles')
+      .select('*')
+      .eq('campaign_id', id)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
+
+    res.json(formatResponse(data || null));
+
+  } catch (error) {
+    console.error('[Campaigns] Error fetching voice profile:', error);
+    res.status(500).json(formatError('Erreur serveur'));
+  }
+});
+
+/**
+ * POST /api/campaigns/:id/voice
+ * Create or update voice profile for a campaign
+ */
+router.post('/:id/voice', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const voiceData = req.body;
+
+    // Verify campaign ownership
+    const { data: campaign, error: campaignError } = await supabaseAdmin
+      .from('campaigns')
+      .select('id')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single();
+
+    if (campaignError || !campaign) {
+      return res.status(404).json(formatError('Campagne non trouvée'));
+    }
+
+    // Upsert voice profile
+    const { data, error } = await supabaseAdmin
+      .from('campaign_voice_profiles')
+      .upsert({
+        campaign_id: id,
+        user_id: userId,
+        client_name: voiceData.client_name || null,
+        industry: voiceData.industry || null,
+        expertise: voiceData.expertise || null,
+        tone: voiceData.tone || 'professionnel mais accessible',
+        style_notes: voiceData.style_notes || null,
+        sample_intro: voiceData.sample_intro || null,
+        sample_dm: voiceData.sample_dm || null,
+        sample_comment: voiceData.sample_comment || null,
+        keywords: voiceData.keywords || [],
+        avoid_words: voiceData.avoid_words || [],
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'campaign_id'
+      })
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    res.json(formatResponse(data, 'Profil de voix sauvegardé'));
+
+  } catch (error) {
+    console.error('[Campaigns] Error saving voice profile:', error);
+    res.status(500).json(formatError('Erreur serveur'));
+  }
+});
+
 export default router;

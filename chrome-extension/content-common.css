@@ -608,6 +608,18 @@
   font-size: 16px;
 }
 
+.sos-panel-title-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.sos-panel-subtitle {
+  font-size: 10px;
+  font-weight: 400;
+  opacity: 0.85;
+}
+
 .sos-panel-actions {
   display: flex;
   gap: 4px;
@@ -642,24 +654,38 @@
 
 .sos-panel-footer {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   gap: 8px;
-  padding: 10px 16px;
+  padding: 12px 16px;
   border-top: 1px solid var(--sos-border);
   background: var(--sos-surface);
   border-radius: 0 0 0 var(--sos-radius-lg);
   flex-shrink: 0;
 }
 
+#sos-footer-paste {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#sos-footer-results {
+  display: none;
+  gap: 8px;
+  justify-content: stretch;
+}
+
+#sos-footer-results .sos-btn {
+  flex: 1;
+}
+
 .sos-panel-footer .sos-btn {
-  padding: 8px 14px;
+  padding: 10px 14px;
   font-size: 13px;
 }
 
 .sos-btn-app {
   width: 100%;
-  margin-top: 8px;
   background: linear-gradient(135deg, var(--sos-primary), #818cf8);
   color: white;
   border: none;
@@ -949,23 +975,48 @@
   font-size: 13px;
 }
 
+.sos-signal-category {
+  display: block;
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--sos-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
 .sos-signal-quote {
   display: block;
   background: rgba(0,0,0,0.05);
-  padding: 6px 10px;
+  padding: 8px 12px;
   border-radius: 4px;
-  margin: 6px 0 4px 0;
+  margin: 6px 0;
   font-style: italic;
-  font-size: 12px;
-  color: #555;
-  border-left: 2px solid var(--sos-primary);
+  font-size: 13px;
+  color: #333;
+  border-left: 3px solid var(--sos-primary);
+  line-height: 1.4;
 }
 
+.sos-signal-fact {
+  display: block;
+  font-size: 12px;
+  color: #1d4ed8;
+  font-weight: 500;
+  margin: 4px 0;
+  padding: 4px 8px;
+  background: rgba(37, 99, 235, 0.08);
+  border-radius: 4px;
+}
+
+.sos-signal-opportunity,
 .sos-signal-reason {
+  display: block;
   font-size: 12px;
   color: var(--sos-text-muted);
   line-height: 1.4;
-  margin-top: 4px;
+  margin-top: 6px;
+  padding-left: 4px;
 }
 
 .sos-no-signals,
@@ -1056,6 +1107,105 @@
   border-top: 1px dashed rgba(0,0,0,0.1);
 }
 
+/* DM Generation Section */
+.sos-dm-section {
+  background: linear-gradient(135deg, #fefce8, #fef9c3) !important;
+  border-left-color: #eab308 !important;
+}
+
+.sos-dm-empty {
+  text-align: center;
+  padding: 16px 12px;
+}
+
+.sos-dm-empty p {
+  font-size: 13px;
+  color: var(--sos-text-muted);
+  margin: 0 0 12px 0;
+}
+
+.sos-dm-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
+  color: var(--sos-text-muted);
+  font-size: 13px;
+}
+
+.sos-dm-result {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sos-dm-message {
+  width: 100%;
+  background: white;
+  padding: 14px 16px;
+  border-radius: var(--sos-radius);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--sos-text);
+  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  white-space: pre-wrap;
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.sos-dm-message:focus {
+  outline: none;
+  border-color: var(--sos-primary);
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+}
+
+.sos-dm-hint {
+  font-size: 11px;
+  color: var(--sos-primary);
+  text-align: center;
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+.sos-dm-review-hint {
+  font-size: 11px;
+  color: var(--sos-text-muted);
+  text-align: center;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--sos-border);
+  font-style: italic;
+}
+
+.sos-dm-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sos-dm-meta-item {
+  font-size: 11px;
+  color: var(--sos-text-muted);
+  background: rgba(0,0,0,0.04);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.sos-dm-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.sos-dm-actions .sos-btn {
+  flex: 1;
+  max-width: 140px;
+}
+
 /* Posts List */
 .sos-posts-list {
   display: flex;
@@ -1098,11 +1248,22 @@
   color: #0369a1;
 }
 
+.sos-post-keyphrase {
+  font-size: 12px;
+  color: #333;
+  font-style: italic;
+  background: rgba(0,0,0,0.04);
+  padding: 6px 10px;
+  border-radius: 4px;
+  border-left: 2px solid var(--sos-primary);
+  margin: 6px 0;
+  line-height: 1.4;
+}
+
 .sos-post-summary {
   font-size: 12px;
   color: var(--sos-text-muted);
   line-height: 1.4;
-  font-style: italic;
 }
 
 /* Raw Content Toggle */
@@ -1494,4 +1655,651 @@
   text-align: center;
   font-size: 12px;
   color: var(--sos-text-muted);
+}
+
+/* ============================================
+   MESSAGING PANEL (LinkedIn DMs)
+   ============================================ */
+
+.sos-messaging-panel {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  width: 320px;
+  max-height: 500px;
+  background: var(--sos-background);
+  border-radius: var(--sos-radius-lg);
+  box-shadow: var(--sos-shadow-lg), 0 0 0 1px rgba(0,0,0,0.05);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  z-index: 999998;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transform: translateY(20px) scale(0.95);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+}
+
+.sos-messaging-panel.sos-msg-panel-open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.sos-messaging-panel.sos-msg-panel-minimized .sos-msg-body {
+  display: none;
+}
+
+.sos-messaging-panel.sos-msg-panel-minimized {
+  max-height: auto;
+}
+
+/* Header */
+.sos-msg-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, var(--sos-primary), #818cf8);
+  border-radius: var(--sos-radius-lg) var(--sos-radius-lg) 0 0;
+  color: white;
+}
+
+.sos-msg-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.sos-msg-logo {
+  font-size: 16px;
+}
+
+.sos-msg-title-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.sos-msg-subtitle {
+  font-size: 10px;
+  font-weight: 400;
+  opacity: 0.85;
+}
+
+.sos-msg-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.sos-msg-minimize,
+.sos-msg-close {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: rgba(255,255,255,0.2);
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.sos-msg-minimize:hover,
+.sos-msg-close:hover {
+  background: rgba(255,255,255,0.3);
+}
+
+/* Body */
+.sos-msg-body {
+  padding: 12px;
+  overflow-y: auto;
+  max-height: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sos-msg-section {
+  background: var(--sos-surface);
+  border-radius: var(--sos-radius);
+  padding: 12px;
+}
+
+/* Prospect Info */
+.sos-msg-prospect {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sos-msg-prospect-name {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--sos-text);
+}
+
+.sos-msg-prospect-status {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.sos-msg-badge {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.sos-msg-badge-tracked {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.sos-msg-badge-new {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* Sync Button */
+.sos-btn-full {
+  width: 100%;
+  justify-content: center;
+}
+
+.sos-msg-hint {
+  font-size: 11px;
+  color: var(--sos-text-muted);
+  text-align: center;
+  margin: 8px 0 0 0;
+}
+
+/* Analysis Section */
+.sos-msg-analysis {
+  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+  border-left: 3px solid #0ea5e9;
+}
+
+.sos-msg-analysis-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.sos-msg-analysis-icon {
+  font-size: 20px;
+}
+
+.sos-msg-analysis-label {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.sos-msg-temp-hot { color: #dc2626; }
+.sos-msg-temp-warm { color: #16a34a; }
+.sos-msg-temp-neutral { color: #2563eb; }
+.sos-msg-temp-cold { color: #64748b; }
+.sos-msg-temp-drop { color: #9ca3af; }
+
+.sos-msg-analysis-insight {
+  font-size: 13px;
+  color: var(--sos-text);
+  line-height: 1.5;
+}
+
+/* Suggestion Section */
+.sos-msg-suggestion {
+  background: linear-gradient(135deg, #fefce8, #fef9c3);
+  border-left: 3px solid #eab308;
+}
+
+.sos-msg-suggestion-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sos-text-muted);
+  margin-bottom: 8px;
+}
+
+.sos-msg-suggestion-text {
+  width: 100%;
+  background: white;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--sos-text);
+  border: 1px solid rgba(0,0,0,0.06);
+  margin-bottom: 4px;
+  resize: vertical;
+  min-height: 60px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.sos-msg-suggestion-text:focus {
+  outline: none;
+  border-color: var(--sos-primary);
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+}
+
+.sos-msg-edit-hint {
+  font-size: 10px;
+  color: var(--sos-primary);
+  text-align: center;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.sos-msg-suggestion-meta {
+  font-size: 11px;
+  color: var(--sos-text-muted);
+  margin-bottom: 10px;
+}
+
+.sos-msg-review-hint {
+  font-size: 10px;
+  color: var(--sos-text-muted);
+  text-align: center;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--sos-border);
+  font-style: italic;
+}
+
+.sos-msg-suggestion-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.sos-msg-suggestion-actions .sos-btn {
+  flex: 1;
+  font-size: 12px;
+  padding: 8px 12px;
+}
+
+/* Quick Actions */
+.sos-msg-quick-actions {
+  background: transparent;
+  padding: 0;
+}
+
+.sos-msg-quick-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--sos-text-muted);
+  margin-bottom: 8px;
+}
+
+.sos-msg-quick-buttons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.sos-msg-quick-btn {
+  flex: 1;
+  min-width: 90px;
+  padding: 8px 10px;
+  border: 1px solid var(--sos-border);
+  background: white;
+  border-radius: 6px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--sos-text);
+}
+
+.sos-msg-quick-btn:hover {
+  border-color: var(--sos-primary);
+  background: var(--sos-surface);
+}
+
+/* Loading */
+.sos-msg-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
+  color: var(--sos-text-muted);
+  font-size: 13px;
+}
+
+/* ============================================
+   COMMENT PANEL - Strategic Comments
+   ============================================ */
+
+.sos-comment-panel {
+  position: fixed;
+  bottom: 80px;
+  right: -340px;
+  width: 320px;
+  max-height: 500px;
+  background: var(--sos-background);
+  border-radius: var(--sos-radius-lg);
+  box-shadow: -4px 4px 25px rgba(0, 0, 0, 0.15);
+  z-index: 999997;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  transition: right 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sos-comment-panel.sos-comment-panel-open {
+  right: 20px;
+}
+
+.sos-comment-panel.sos-comment-panel-minimized {
+  max-height: 48px;
+  overflow: hidden;
+}
+
+.sos-comment-panel.sos-comment-panel-minimized .sos-comment-body {
+  display: none;
+}
+
+/* Header */
+.sos-comment-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  border-radius: var(--sos-radius-lg) var(--sos-radius-lg) 0 0;
+  color: white;
+}
+
+.sos-comment-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.sos-comment-logo {
+  font-size: 18px;
+}
+
+.sos-comment-title-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.sos-comment-subtitle {
+  font-size: 10px;
+  font-weight: 400;
+  opacity: 0.9;
+}
+
+.sos-comment-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.sos-comment-minimize,
+.sos-comment-close {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: rgba(255,255,255,0.2);
+  border-radius: 4px;
+  color: white;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.sos-comment-minimize:hover,
+.sos-comment-close:hover {
+  background: rgba(255,255,255,0.3);
+}
+
+/* Body */
+.sos-comment-body {
+  padding: 12px;
+  overflow-y: auto;
+  max-height: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sos-comment-section {
+  background: var(--sos-surface);
+  border-radius: var(--sos-radius);
+  padding: 12px;
+}
+
+/* Author */
+.sos-comment-author {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sos-comment-author-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--sos-text);
+}
+
+.sos-comment-author-headline {
+  font-size: 12px;
+  color: var(--sos-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sos-comment-icp-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #16a34a;
+}
+
+.sos-icp-icon {
+  font-size: 14px;
+}
+
+/* Post Summary */
+.sos-comment-post-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--sos-text-muted);
+  margin-bottom: 6px;
+}
+
+.sos-comment-post-summary {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--sos-text);
+}
+
+/* Comment Type Selector */
+.sos-comment-type-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--sos-text-muted);
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.sos-comment-types {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.sos-comment-type-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px;
+  border: 2px solid var(--sos-border);
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sos-comment-type-btn:hover {
+  border-color: #f59e0b;
+  background: #fffbeb;
+}
+
+.sos-comment-type-btn.active {
+  border-color: #f59e0b;
+  background: linear-gradient(135deg, #fffbeb, #fef3c7);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
+}
+
+.sos-type-icon {
+  font-size: 18px;
+}
+
+.sos-type-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--sos-text);
+}
+
+.sos-comment-type-btn.active .sos-type-name {
+  color: #92400e;
+}
+
+/* Hint */
+.sos-comment-hint {
+  font-size: 11px;
+  color: var(--sos-text-muted);
+  text-align: center;
+  margin-top: 8px;
+}
+
+/* Loading */
+.sos-comment-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
+  color: var(--sos-text-muted);
+  font-size: 13px;
+}
+
+/* Suggestion */
+.sos-comment-suggestion {
+  background: linear-gradient(135deg, #fffbeb, #fef3c7) !important;
+}
+
+.sos-comment-suggestion-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #92400e;
+  margin-bottom: 8px;
+}
+
+.sos-comment-suggestion-text {
+  width: 100%;
+  background: white;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--sos-text);
+  border: 1px solid rgba(0,0,0,0.06);
+  margin-bottom: 4px;
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.sos-comment-suggestion-text:focus {
+  outline: none;
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.1);
+}
+
+.sos-comment-edit-hint {
+  font-size: 10px;
+  color: #f59e0b;
+  text-align: center;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.sos-comment-suggestion-meta {
+  font-size: 11px;
+  color: var(--sos-text-muted);
+  margin-bottom: 10px;
+}
+
+.sos-comment-suggestion-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.sos-comment-suggestion-actions .sos-btn {
+  flex: 1;
+  font-size: 12px;
+  padding: 8px 12px;
+}
+
+.sos-comment-strategy-hint {
+  font-size: 11px;
+  color: #92400e;
+  text-align: center;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(146, 64, 14, 0.2);
+  font-weight: 500;
+}
+
+/* Track Section */
+.sos-comment-track {
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+/* Feed Comment Buttons */
+.sos-feed-comment-btn {
+  padding: 4px 10px;
+  margin-left: 8px;
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  color: white;
+  border: none;
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.sos-feed-comment-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
 }

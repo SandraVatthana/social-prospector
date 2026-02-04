@@ -361,6 +361,208 @@ router.get('/:prospectId/history', requireAuth, async (req, res) => {
 });
 
 /**
+ * POST /api/conversations/analyze
+ * Analyse une conversation en cours et suggère la prochaine réponse
+ * Utilisé par l'extension Chrome pour le panel de messaging
+ */
+router.post('/analyze', requireAuth, async (req, res) => {
+  try {
+    const { platform, prospect, messages } = req.body;
+
+    if (!messages || messages.length === 0) {
+      return res.status(400).json(formatError('Messages requis', 'VALIDATION_ERROR'));
+    }
+
+    // Get the last message from them (not from us)
+    const theirMessages = messages.filter(m => !m.isMe);
+    const lastTheirMessage = theirMessages[theirMessages.length - 1];
+
+    if (!lastTheirMessage) {
+      return res.json(formatResponse({
+        temperature: 'neutral',
+        insight: 'En attente de leur réponse.',
+        suggestion: null,
+        nextAction: 'wait'
+      }));
+    }
+
+    // Get user's voice profile for personalization
+    const { data: voiceProfile } = await supabaseAdmin
+      .from('voice_profiles')
+      .select('*')
+      .eq('user_id', req.user.id)
+      .eq('is_active', true)
+      .single();
+
+    // Analyze the conversation with AI
+    const analysis = await analyzeConversationWithAI({
+      prospect,
+      messages,
+      lastResponse: lastTheirMessage.text,
+      voiceProfile: voiceProfile?.profil_json || voiceProfile
+    });
+
+    res.json(formatResponse(analysis));
+
+  } catch (error) {
+    console.error('[Conversations] Analyze error:', error);
+    // Return a fallback analysis instead of error
+    const { messages, prospect } = req.body;
+    const fallback = generateFallbackAnalysis(messages, prospect);
+    res.json(formatResponse(fallback));
+  }
+});
+
+/**
+ * Analyze conversation using AI to determine interest level and suggest response
+ */
+async function analyzeConversationWithAI({ prospect, messages, lastResponse, voiceProfile }) {
+  const { callClaude, parseClaudeJSON } = await import('../services/claude.js');
+
+  const firstName = (prospect?.fullName || '').split(' ')[0];
+  const tutoiement = voiceProfile?.tutoiement === 'Toujours' ? 'tutoie' : 'vouvoie';
+
+  // Build conversation context
+  const conversationContext = messages.map(m =>
+    `${m.isMe ? 'MOI' : 'EUX'}: ${m.text}`
+  ).join('\n');
+
+  const systemPrompt = `Tu es un assistant de prospection expert en analyse de conversations LinkedIn.
+Tu analyses les réponses des prospects pour déterminer leur niveau d'intérêt et suggérer la meilleure réponse.
+
+Tu ${tutoiement} dans tes suggestions (comme l'utilisateur).
+
+RÈGLE ABSOLUE: Les réponses suggérées doivent faire 3-4 phrases MAX. Pas de pavés !`;
+
+  const userPrompt = `Analyse cette conversation et la dernière réponse du prospect:
+
+PROSPECT: ${prospect?.fullName || 'Contact LinkedIn'}
+POSTE: ${prospect?.headline || 'Non spécifié'}
+
+CONVERSATION:
+${conversationContext}
+
+DERNIÈRE RÉPONSE DU PROSPECT:
+"${lastResponse}"
+
+Réponds en JSON:
+{
+  "temperature": "hot|warm|neutral|cold|drop",
+  "temperatureReason": "Explication courte de pourquoi ce niveau",
+  "insight": "Ce que cette réponse révèle sur l'intérêt du prospect (1-2 phrases)",
+  "suggestion": {
+    "message": "La réponse suggérée (3-4 phrases MAX, personnalisée)",
+    "reason": "Pourquoi cette approche",
+    "nextAction": "continue|propose_call|share_value|wait|drop"
+  },
+  "signals": ["liste des signaux détectés dans sa réponse"]
+}
+
+GUIDE TEMPÉRATURE:
+- hot: Questions actives, demande d'infos, enthousiasme, mentionne un besoin
+- warm: Réponse positive/curieuse, mais pas d'engagement fort
+- neutral: Réponse polie mais sans signal clair
+- cold: Réponse courte/distante, "pas le moment", "pas intéressé"
+- drop: Refus clair, hostilité, demande d'arrêt
+
+GUIDE RÉPONSE:
+- Si hot → propose un échange/call
+- Si warm → creuse avec une question sur son expérience/ses défis
+- Si neutral → relance avec un élément de valeur ou question ouverte
+- Si cold → message de clôture poli
+- Si drop → remercie et arrête`;
+
+  try {
+    const response = await callClaude(systemPrompt, userPrompt, {
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 600,
+      temperature: 0.7
+    });
+
+    const parsed = parseClaudeJSON(response);
+
+    if (parsed && parsed.temperature) {
+      return {
+        temperature: parsed.temperature,
+        insight: parsed.insight || parsed.temperatureReason || 'Analyse terminée',
+        suggestion: parsed.suggestion || null,
+        signals: parsed.signals || [],
+        nextAction: parsed.suggestion?.nextAction || 'continue'
+      };
+    }
+
+    throw new Error('Invalid AI response');
+  } catch (error) {
+    console.error('[Conversations] AI analysis failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Generate fallback analysis when AI is unavailable
+ */
+function generateFallbackAnalysis(messages, prospect) {
+  const theirMessages = (messages || []).filter(m => !m.isMe);
+  const lastTheirMessage = theirMessages[theirMessages.length - 1];
+
+  if (!lastTheirMessage) {
+    return {
+      temperature: 'neutral',
+      insight: 'En attente de leur réponse.',
+      suggestion: null
+    };
+  }
+
+  const text = lastTheirMessage.text.toLowerCase();
+  const firstName = (prospect?.fullName || '').split(' ')[0];
+
+  // Simple keyword analysis
+  const positiveWords = ['merci', 'intéressant', 'super', 'génial', 'curieux', 'oui', 'volontiers'];
+  const negativeWords = ['non merci', 'pas intéressé', 'pas le moment', 'pas besoin'];
+  const questionWords = ['comment', 'pourquoi', 'quand', 'quel', '?'];
+
+  const hasPositive = positiveWords.some(w => text.includes(w));
+  const hasNegative = negativeWords.some(w => text.includes(w));
+  const hasQuestion = questionWords.some(w => text.includes(w));
+
+  let temperature = 'neutral';
+  let insight = '';
+  let suggestion = null;
+
+  if (hasNegative) {
+    temperature = 'cold';
+    insight = 'Réponse négative. Mieux vaut ne pas insister.';
+    suggestion = {
+      message: 'Pas de souci, merci pour votre retour. Bonne continuation !',
+      reason: 'Clôture polie'
+    };
+  } else if (hasPositive && hasQuestion) {
+    temperature = 'hot';
+    insight = 'Signal très positif - questions et intérêt !';
+    suggestion = {
+      message: `Avec plaisir ${firstName || ''}! [Répondez et proposez un échange]`,
+      reason: 'Lead chaud - proposez un call'
+    };
+  } else if (hasPositive) {
+    temperature = 'warm';
+    insight = 'Réponse positive, continuez à creuser.';
+    suggestion = {
+      message: `Merci ${firstName || ''}! [Posez une question sur son expérience]`,
+      reason: 'Creusez pour comprendre ses besoins'
+    };
+  } else {
+    temperature = 'neutral';
+    insight = 'Réponse neutre - relancez avec une question.';
+    suggestion = {
+      message: `[Posez une question ouverte en lien avec son domaine]`,
+      reason: 'Une question peut relancer la conversation'
+    };
+  }
+
+  return { temperature, insight, suggestion };
+}
+
+/**
  * GET /api/conversations/analytics
  * Récupère les analytics des séquences de conversation
  */

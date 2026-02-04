@@ -252,6 +252,332 @@ async function generateDM(platform, prospect) {
 }
 
 // ============================================
+// CONVERSATION MANAGEMENT
+// ============================================
+
+/**
+ * Check if a name matches a known prospect in local storage
+ */
+async function checkProspect(name, platform) {
+  if (!name) return { found: false };
+
+  try {
+    // Get locally stored prospects
+    const result = await chrome.storage.local.get(['localProspects', 'recentImports']);
+    const prospects = result.localProspects || [];
+    const recentImports = result.recentImports || [];
+
+    // Combine and search
+    const allProspects = [...prospects, ...recentImports];
+
+    // Normalize name for comparison
+    const normalizedName = name.toLowerCase().trim();
+
+    const found = allProspects.find(p => {
+      const prospectName = (p.fullName || p.username || '').toLowerCase().trim();
+      return prospectName === normalizedName ||
+             prospectName.includes(normalizedName) ||
+             normalizedName.includes(prospectName);
+    });
+
+    if (found) {
+      return {
+        found: true,
+        prospect: found
+      };
+    }
+
+    return { found: false };
+  } catch (error) {
+    sosError('checkProspect failed:', error);
+    return { found: false };
+  }
+}
+
+/**
+ * Analyze a conversation and suggest next response
+ */
+async function analyzeConversation(platform, prospect, messages) {
+  sosLog('Analyzing conversation:', { platform, prospect: prospect?.fullName, messageCount: messages?.length });
+
+  try {
+    // Try API call first
+    const result = await apiCall('/api/conversations/analyze', 'POST', {
+      platform,
+      prospect,
+      messages
+    });
+
+    if (result.data) {
+      return {
+        success: true,
+        temperature: result.data.temperature || 'neutral',
+        insight: result.data.insight || 'Analyse terminée',
+        suggestion: result.data.suggestion || null,
+        nextAction: result.data.nextAction || null
+      };
+    }
+
+    throw new Error('Réponse invalide');
+  } catch (error) {
+    sosError('analyzeConversation API failed:', error);
+
+    // Fallback: generate local analysis
+    return generateLocalConversationAnalysis(messages, prospect);
+  }
+}
+
+/**
+ * Generate a local conversation analysis when API is unavailable
+ */
+function generateLocalConversationAnalysis(messages, prospect) {
+  if (!messages || messages.length === 0) {
+    return {
+      success: true,
+      temperature: 'neutral',
+      insight: 'Aucun message à analyser.',
+      suggestion: null
+    };
+  }
+
+  // Get last message from them (not from me)
+  const theirMessages = messages.filter(m => !m.isMe);
+  const lastTheirMessage = theirMessages[theirMessages.length - 1];
+
+  if (!lastTheirMessage) {
+    return {
+      success: true,
+      temperature: 'neutral',
+      insight: 'En attente de leur réponse.',
+      suggestion: null
+    };
+  }
+
+  const text = lastTheirMessage.text.toLowerCase();
+  const firstName = (prospect?.fullName || '').split(' ')[0];
+
+  // Simple sentiment analysis
+  let temperature = 'neutral';
+  let insight = '';
+  let suggestion = null;
+
+  // Check for positive signals
+  const positiveWords = ['merci', 'intéressant', 'super', 'génial', 'curieux', 'intéressé', 'volontiers', 'oui', 'bien sûr', 'avec plaisir'];
+  const negativeWords = ['non merci', 'pas intéressé', 'pas le moment', 'pas besoin', 'désabonner', 'stop'];
+  const questionWords = ['comment', 'pourquoi', 'quand', 'quel', 'quelle', '?'];
+
+  const hasPositive = positiveWords.some(w => text.includes(w));
+  const hasNegative = negativeWords.some(w => text.includes(w));
+  const hasQuestion = questionWords.some(w => text.includes(w));
+
+  if (hasNegative) {
+    temperature = 'cold';
+    insight = 'Réponse négative détectée. Mieux vaut ne pas insister.';
+    suggestion = {
+      message: 'Pas de souci, merci pour votre retour. Bonne continuation !',
+      reason: 'Réponse courtoise pour clôturer positivement'
+    };
+  } else if (hasPositive && hasQuestion) {
+    temperature = 'hot';
+    insight = 'Signal très positif ! Elle pose des questions et montre de l\'intérêt.';
+    suggestion = {
+      message: firstName ?
+        `Avec plaisir ${firstName} ! [Répondez à sa question et proposez un échange]` :
+        'Avec plaisir ! [Répondez à sa question et proposez un échange]',
+      reason: 'Lead chaud - c\'est le moment de proposer un échange'
+    };
+  } else if (hasPositive) {
+    temperature = 'warm';
+    insight = 'Réponse positive, mais pas encore d\'engagement fort.';
+    suggestion = {
+      message: firstName ?
+        `Merci ${firstName} ! [Posez une question ouverte sur son expérience]` :
+        'Merci ! [Posez une question ouverte sur son expérience]',
+      reason: 'Continuez à creuser pour comprendre ses besoins'
+    };
+  } else if (hasQuestion) {
+    temperature = 'warm';
+    insight = 'Elle pose des questions - signe de curiosité.';
+    suggestion = {
+      message: '[Répondez à sa question de façon concise et rebondissez]',
+      reason: 'Les questions montrent un intérêt - répondez et engagez'
+    };
+  } else {
+    temperature = 'neutral';
+    insight = 'Réponse neutre. Essayez de relancer avec une question.';
+    suggestion = {
+      message: firstName ?
+        `${firstName}, [posez une question en lien avec son domaine]` :
+        '[Posez une question en lien avec son domaine]',
+      reason: 'Une question ouverte peut relancer la conversation'
+    };
+  }
+
+  return {
+    success: true,
+    temperature,
+    insight,
+    suggestion
+  };
+}
+
+// ============================================
+// STRATEGIC COMMENTS
+// ============================================
+
+/**
+ * Generate a strategic comment for a LinkedIn post
+ */
+async function generateStrategicComment(platform, post, commentType = 'deepen') {
+  sosLog('Generating strategic comment:', { platform, author: post?.authorName, type: commentType });
+
+  try {
+    // Try API call first
+    const result = await apiCall('/api/comments/generate', 'POST', {
+      platform,
+      post,
+      commentType
+    });
+
+    if (result.data) {
+      return {
+        success: true,
+        comment: result.data.comment || '',
+        angle: result.data.angle || null,
+        strategy: result.data.strategy || null,
+        icpMatch: result.data.icpMatch || false
+      };
+    }
+
+    throw new Error('Réponse invalide');
+  } catch (error) {
+    sosError('generateStrategicComment API failed:', error);
+
+    // Fallback: generate local comment suggestion
+    return generateLocalComment(post);
+  }
+}
+
+/**
+ * Generate a local comment suggestion when API is unavailable
+ */
+function generateLocalComment(post) {
+  const authorName = post?.authorName || '';
+  const firstName = authorName.split(' ')[0];
+  const content = (post?.content || '').toLowerCase();
+
+  // Analyze content for themes
+  let angle = 'apport de valeur';
+  let comment = '';
+
+  // Check for different themes
+  const themes = {
+    experience: ['partage', 'retour', 'expérience', 'appris', 'leçon', 'erreur'],
+    advice: ['conseil', 'astuce', 'tips', 'recommand', 'suggère', 'devriez'],
+    question: ['?', 'avis', 'pensez', 'comment faites'],
+    achievement: ['fier', 'annonce', 'nouvelle', 'lancement', 'réussi', 'atteint'],
+    insight: ['observation', 'constat', 'tendance', 'évolution', 'changement']
+  };
+
+  let detectedTheme = 'general';
+  for (const [theme, keywords] of Object.entries(themes)) {
+    if (keywords.some(k => content.includes(k))) {
+      detectedTheme = theme;
+      break;
+    }
+  }
+
+  switch (detectedTheme) {
+    case 'experience':
+      angle = 'partage d\'expérience similaire';
+      comment = firstName
+        ? `Merci ${firstName} pour ce retour d'expérience ! [Ajoute ton propre vécu sur le sujet ou pose une question de suivi]`
+        : `Retour d'expérience précieux ! [Ajoute ton propre vécu ou pose une question pertinente]`;
+      break;
+    case 'advice':
+      angle = 'enrichissement du conseil';
+      comment = firstName
+        ? `Super conseil ${firstName} ! [Ajoute un point complémentaire ou une nuance issue de ton expérience]`
+        : `Excellent point ! [Ajoute une perspective ou un exemple concret de ton côté]`;
+      break;
+    case 'question':
+      angle = 'réponse expert';
+      comment = `Bonne question ! [Partage ta perspective d'expert sur le sujet avec un exemple concret]`;
+      break;
+    case 'achievement':
+      angle = 'félicitations + connexion';
+      comment = firstName
+        ? `Bravo ${firstName} ! [Félicite sincèrement et relie à un point commun ou à ton domaine d'expertise]`
+        : `Félicitations pour cette réussite ! [Fais le lien avec ton domaine ou pose une question sur les prochaines étapes]`;
+      break;
+    case 'insight':
+      angle = 'enrichissement du constat';
+      comment = `Observation pertinente ! [Ajoute un angle complémentaire ou des données de ton secteur]`;
+      break;
+    default:
+      angle = 'apport de valeur';
+      comment = firstName
+        ? `Merci ${firstName} pour ce partage ! [Ajoute une réflexion personnelle qui enrichit le sujet]`
+        : `Point de vue intéressant ! [Partage ta perspective unique ou une question qui fait réfléchir]`;
+  }
+
+  return {
+    success: true,
+    comment,
+    angle,
+    strategy: 'Un bon commentaire = visibilité + valeur. Tu te fais remarquer avant le DM.',
+    icpMatch: false
+  };
+}
+
+/**
+ * Track a comment interaction
+ */
+async function trackComment(platform, post, comment, icpMatch) {
+  sosLog('Tracking comment:', { platform, author: post?.authorName, icpMatch });
+
+  try {
+    // Try API call first
+    const result = await apiCall('/api/comments/track', 'POST', {
+      platform,
+      post,
+      comment,
+      icpMatch,
+      commentedAt: new Date().toISOString()
+    });
+
+    if (result.success) {
+      return { success: true };
+    }
+
+    throw new Error('Tracking failed');
+  } catch (error) {
+    sosError('trackComment API failed:', error);
+
+    // Fallback: store locally
+    const { trackedComments = [] } = await chrome.storage.local.get('trackedComments');
+    trackedComments.push({
+      platform,
+      authorName: post?.authorName || '',
+      authorHeadline: post?.authorHeadline || '',
+      postUrl: post?.url || '',
+      comment,
+      icpMatch,
+      commentedAt: new Date().toISOString()
+    });
+
+    // Keep only last 50 comments
+    if (trackedComments.length > 50) {
+      trackedComments.splice(0, trackedComments.length - 50);
+    }
+
+    await chrome.storage.local.set({ trackedComments });
+
+    return { success: true, storedLocally: true };
+  }
+}
+
+// ============================================
 // SMART PASTE ANALYSIS
 // ============================================
 
@@ -596,6 +922,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         case 'getLinkedInProfiles':
           return await getLinkedInProfiles();
+
+        // Conversation management
+        case 'checkProspect':
+          return await checkProspect(request.name, request.platform);
+
+        case 'analyzeConversation':
+          return await analyzeConversation(request.platform, request.prospect, request.messages);
+
+        // Strategic comment generation
+        case 'generateStrategicComment':
+          return await generateStrategicComment(request.platform, request.post, request.commentType);
+
+        // Track comment interaction
+        case 'trackComment':
+          return await trackComment(request.platform, request.post, request.comment, request.icpMatch);
 
         default:
           throw new Error('Action inconnue: ' + request.action);

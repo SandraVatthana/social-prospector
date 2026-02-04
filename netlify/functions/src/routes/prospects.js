@@ -375,12 +375,55 @@ router.post('/', requireAuth, async (req, res) => {
 /**
  * GET /api/prospects
  * Liste les prospects de l'utilisateur
+ * Supporte le filtrage par campaign_id
  */
 router.get('/', requireAuth, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { status, limit = 50, offset = 0 } = req.query;
+    const { status, campaign_id, limit = 50, offset = 0 } = req.query;
 
+    // Si filtrage par campagne, utiliser une requête avec jointure
+    if (campaign_id) {
+      // Récupérer les prospect_ids de la campagne
+      const { data: campaignProspects, error: cpError } = await supabaseAdmin
+        .from('campaign_prospects')
+        .select('prospect_id')
+        .eq('campaign_id', campaign_id);
+
+      if (cpError) {
+        console.error('[Prospects] Error fetching campaign prospects:', cpError);
+        return res.status(500).json(formatError('Erreur lors de la récupération', 'FETCH_ERROR'));
+      }
+
+      const prospectIds = campaignProspects.map(cp => cp.prospect_id);
+
+      if (prospectIds.length === 0) {
+        return res.json(formatResponse({ prospects: [] }));
+      }
+
+      let query = supabaseAdmin
+        .from('prospects')
+        .select('*')
+        .eq('user_id', userId)
+        .in('id', prospectIds)
+        .order('created_at', { ascending: false })
+        .range(parseInt(offset), parseInt(offset) + parseInt(limit) - 1);
+
+      if (status) {
+        query = query.eq('status', status);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('[Prospects] Error fetching:', error);
+        return res.status(500).json(formatError('Erreur lors de la récupération', 'FETCH_ERROR'));
+      }
+
+      return res.json(formatResponse({ prospects: data || [] }));
+    }
+
+    // Requête standard sans filtrage par campagne
     let query = supabaseAdmin
       .from('prospects')
       .select('*')
@@ -939,11 +982,10 @@ router.post('/analyze-paste', async (req, res) => {
 
     console.log(`[Analyze Paste] Platform: ${platform}, Username: ${username}, Content length: ${content.length}`);
 
-    // Construire le prompt d'analyse
-    const systemPrompt = `Tu es un expert en analyse de profils professionnels.
-Ta mission: extraire des informations PRÉCISES et identifier des SUJETS DE CONVERSATION authentiques.
+    // Construire le prompt d'analyse - VERSION ULTRA-CONCRÈTE
+    const systemPrompt = `Tu es un analyste de profils LinkedIn. Ta spécialité: extraire des FAITS VÉRIFIABLES et formuler des questions ULTRA-CIBLÉES.
 
-Tu NE VENDS PAS. Tu cherches à COMPRENDRE la personne pour engager une vraie discussion.
+RÈGLE N°1: ZÉRO GÉNÉRIQUE. Chaque signal et chaque question doit contenir un élément qu'on ne pourrait PAS appliquer à un autre profil.
 
 RÈGLE ABSOLUE: Retourne UNIQUEMENT du JSON valide, sans texte avant/après.`;
 
@@ -958,77 +1000,101 @@ ${username ? `Username connu: ${username}` : ''}
 Retourne ce JSON:
 {
   "profile": {
-    "fullName": "UNIQUEMENT le prénom et nom de la personne (ex: 'Marie Dupont'), PAS de titre ni de texte parasite",
-    "headline": "Titre/fonction professionnelle",
-    "company": "Nom de l'entreprise actuelle",
-    "bio": "Résumé en 1-2 phrases max",
+    "fullName": "UNIQUEMENT Prénom Nom (ex: 'Marie Dupont'), JAMAIS de texte parasite",
+    "headline": "Titre/fonction tel que affiché",
+    "company": "Nom de l'entreprise actuelle ou null",
+    "bio": "Résumé en 1-2 phrases",
     "location": "Ville/Pays ou null"
   },
   "posts": [
     {
-      "summary": "Résumé du post en 1 phrase",
-      "topic": "Le sujet principal abordé",
-      "engagement": "fort/moyen/faible selon les réactions visibles"
+      "summary": "Résumé factuel en 1 phrase",
+      "topic": "Sujet principal",
+      "keyPhrase": "Une citation EXACTE du post (5-15 mots)",
+      "engagement": "fort/moyen/faible"
     }
   ],
   "signals": [
     {
-      "type": "fort",
-      "category": "lancement|croissance|recrutement|changement|problème|projet|expertise|passion",
-      "text": "Citation EXACTE et COURTE du texte révélateur",
-      "insight": "Ce que ça révèle: [besoin/situation/opportunité concrète]"
+      "type": "fort|faible",
+      "category": "lancement|croissance|recrutement|changement|problème|projet|expertise",
+      "quote": "CITATION EXACTE du profil/post (copier-coller, 5-20 mots)",
+      "fact": "LE FAIT CONCRET: [qui] [fait quoi] [où/quand si dispo]",
+      "opportunity": "Pourquoi c'est un bon moment pour le contacter"
     }
   ],
   "angles": [
     {
-      "question": "Une QUESTION simple et curieuse basée sur un élément précis",
-      "context": "Ce qui dans le profil/post justifie cette question",
-      "tone": "curieux|félicitations|intérêt_commun"
+      "question": "Question contenant au moins 1 élément SPÉCIFIQUE du profil",
+      "specificElement": "L'élément précis utilisé (nom de boîte, projet, lieu, chiffre, etc.)",
+      "basedOn": "post|headline|experience|about"
     }
   ]
 }
 
-=== RÈGLES CRITIQUES POUR LE NOM ===
-- fullName = SEULEMENT "Prénom Nom" (ex: "Céline De Almeida")
-- JAMAIS de texte comme "Lien vers...", "Photo de...", "Voir le profil de..."
-- Si tu ne trouves pas le nom clairement, mets null
+=== EXTRACTION DU NOM ===
+- fullName = "Prénom Nom" uniquement
+- INTERDIT: "Lien vers...", "Photo de...", "Voir le profil..."
+- Si introuvable → null
 
-=== RÈGLES POUR LES POSTS ===
-- Analyse les 3 derniers posts/publications visibles dans le contenu
-- Si pas de posts, mets un tableau vide []
+=== POSTS (si présents) ===
+- Extrais les 3 derniers posts visibles
+- keyPhrase = copier-coller d'une phrase clé (pas de reformulation)
+- Si aucun post → tableau vide []
 
-=== RÈGLES POUR LES SIGNAUX ===
-- Signal FORT = action récente/concrète (lancement, recrutement, levée de fonds, nouveau projet)
-- Signal FAIBLE = intérêt/passion mentionnés mais pas d'action immédiate
-- La citation doit être EXACTE et COURTE (max 15 mots)
-- L'insight explique POURQUOI c'est intéressant pour engager une conversation
+=== SIGNAUX: EXIGENCE DE PREUVE ===
+Chaque signal DOIT contenir:
+1. "quote": une citation EXACTE copiée du contenu (entre guillemets)
+2. "fact": le fait reformulé clairement: QUI fait QUOI (et où/quand si disponible)
+3. "opportunity": pourquoi c'est intéressant MAINTENANT
 
-Exemple BON signal:
-{"type": "fort", "category": "lancement", "text": "Je viens de lancer ma formation", "insight": "Nouveau produit = elle cherche probablement ses premiers clients/retours"}
+❌ INTERDIT - Signal générique:
+{"quote": "Marketing", "fact": "S'intéresse au marketing", "opportunity": "Peut avoir besoin de conseils"}
 
-=== RÈGLES POUR LES ANGLES (TRÈS IMPORTANT) ===
-L'objectif n'est PAS de vendre, c'est d'OUVRIR UNE DISCUSSION par CURIOSITÉ.
+✅ OBLIGATOIRE - Signal spécifique:
+{"quote": "On recrute 3 commerciaux B2B sur Lyon", "fact": "Scale-up en phase de croissance commerciale à Lyon", "opportunity": "Budget recrutement = budget formation potentiel"}
 
-La question doit:
-- Montrer que tu as LU quelque chose de spécifique
-- Être une VRAIE question (pas rhétorique)
-- Inviter à partager son expérience/opinion
-- Être COURTE (1 phrase)
+❌ INTERDIT:
+- "Actif sur les réseaux" (= tout le monde)
+- "Intérêt pour le marketing" (= vague)
+- "Profil entrepreneurial" (= bateau)
 
-EXEMPLES DE BONNES QUESTIONS:
-- "J'ai vu que tu lançais une campagne de crowdfunding. Elle s'adresse à qui principalement ?"
-- "Tu mentionnes le passage de freelance à agence - c'est quoi le plus dur dans cette transition ?"
-- "Curieux: tu utilises quoi comme outil pour [sujet mentionné] ?"
-- "Tu recrutes des devs, c'est pour un nouveau projet ou de la croissance ?"
+✅ OBLIGATOIRE:
+- "Vient de lancer [nom du produit/projet]"
+- "Recrute [X profils] pour [raison]"
+- "Mentionne un problème de [sujet précis]"
+- "A publié [X] posts sur [thème] en [période]"
 
-EXEMPLES À ÉVITER ABSOLUMENT:
-- "Ton profil m'a interpellé..." ❌ (vague, commercial)
-- "J'aimerais échanger avec toi sur..." ❌ (pas de question)
-- "Je peux t'aider à..." ❌ (vente directe)
-- "Ton parcours est inspirant..." ❌ (flatterie vide)
-- "J'ai une question rapide..." ❌ (pose la question directement!)
+=== QUESTIONS: TEST DU COPIER-COLLER ===
+Avant de valider une question, fais ce test mental:
+"Est-ce que cette question marcherait si je l'envoie à 10 autres personnes au hasard?"
+→ Si OUI, la question est trop générique. REFORMULE.
 
-Génère 2-4 signaux et 2-3 questions d'approche basées sur des éléments CONCRETS du contenu.`;
+Chaque question DOIT contenir au moins UN de ces éléments tirés du profil:
+- Le nom de son entreprise/projet
+- Son rôle exact
+- Une ville/région
+- Un chiffre mentionné
+- Le nom d'un outil/méthode
+- Une citation d'un de ses posts
+- Un événement/changement récent
+
+✅ BONNES QUESTIONS (spécifiques):
+- "J'ai vu que tu accompagnes les artisans via [Nom de sa boîte]. C'est quoi le plus gros frein que tu vois chez eux ?"
+- "Tu recrutes des devs Python pour [Nom projet] - c'est pour scaler la tech ou un nouveau produit ?"
+- "Ton post sur [sujet précis] m'a interpellé. Tu utilises quoi comme méthode pour [action mentionnée] ?"
+- "Je vois que tu es passé de [ancien poste] à [nouveau poste]. C'est quoi qui a déclenché ce changement ?"
+
+❌ QUESTIONS INTERDITES (génériques):
+- "Comment tu gères ta prospection ?" (= applicable à tous)
+- "C'est quoi ton plus gros défi ?" (= trop vague)
+- "Ton profil m'a interpellé" (= pas une question)
+- "J'aimerais en savoir plus sur ton activité" (= vide)
+- Toute question commençant par "Ton parcours..." ou "Ton profil..."
+
+=== OUTPUT REQUIS ===
+- 2-4 signaux avec citations EXACTES
+- 2-3 questions contenant chacune un élément NOMMÉ du profil`;
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
@@ -1158,128 +1224,143 @@ function extractAnalysisManually(responseText, originalContent) {
 
 /**
  * Génère des signaux de fallback basés sur le contenu
- * EXTRAIT le texte exact qui matche pour être plus spécifique
+ * EXTRAIT le texte exact qui matche pour être ULTRA-SPÉCIFIQUE
  */
 function generateFallbackSignals(content, platform) {
   const signals = [];
 
-  // Helper pour extraire le contexte autour d'un match
-  function extractContext(text, pattern, maxLength = 80) {
+  // Helper pour extraire la phrase complète autour d'un match
+  function extractSentence(text, pattern, maxLength = 100) {
     const match = text.match(pattern);
     if (!match) return null;
 
     const index = match.index;
     const matchText = match[0];
 
-    // Trouver le début et la fin de la phrase
+    // Trouver les limites de la phrase
     let start = index;
     let end = index + matchText.length;
 
-    // Reculer jusqu'au début de la phrase (max 40 chars)
-    while (start > 0 && start > index - 40 && !['.', '!', '?', '\n'].includes(text[start - 1])) {
+    // Reculer jusqu'au début de la phrase
+    while (start > 0 && start > index - 60 && !['.', '!', '?', '\n'].includes(text[start - 1])) {
       start--;
     }
 
-    // Avancer jusqu'à la fin de la phrase (max 40 chars)
-    while (end < text.length && end < index + matchText.length + 40 && !['.', '!', '?', '\n'].includes(text[end])) {
+    // Avancer jusqu'à la fin de la phrase
+    while (end < text.length && end < index + matchText.length + 60 && !['.', '!', '?', '\n'].includes(text[end])) {
       end++;
     }
 
     let extracted = text.substring(start, end).trim();
+    // Nettoyer le début si ça commence par un séparateur
+    extracted = extracted.replace(/^[.!?\s]+/, '');
     if (extracted.length > maxLength) {
       extracted = extracted.substring(0, maxLength) + '...';
     }
     return extracted;
   }
 
-  // Signaux forts - mots-clés explicites avec extraction du contexte
+  // Helper pour extraire un fait structuré
+  function buildFact(match, category) {
+    const facts = {
+      'recherche': `Cherche activement: ${match}`,
+      'problème': `Mentionne un défi: ${match}`,
+      'lancement': `Nouveau projet/offre: ${match}`,
+      'recrutement': `En recrutement: ${match}`,
+      'changement': `Changement récent: ${match}`,
+      'statut': `Statut: ${match}`,
+      'expertise': `Expertise: ${match}`,
+      'audience': `Audience: ${match}`,
+    };
+    return facts[category] || match;
+  }
+
+  // Signaux FORTS avec contexte complet
   const strongPatterns = [
     {
-      pattern: /(je |on |nous )?(recherche|cherche|besoin de?|looking for)[^.!?\n]{0,50}/i,
+      pattern: /(je |on |nous )?(recherche|cherche|besoin de?|looking for)[^.!?\n]{5,60}/i,
       category: 'recherche',
-      insight: 'Exprime un besoin actif - opportunité de proposer une solution'
+      opportunity: 'Besoin exprimé = timing parfait pour proposer une solution'
     },
     {
-      pattern: /(problème|difficulté|galère|du mal à|struggle|challenge|compliqué de)[^.!?\n]{0,50}/i,
+      pattern: /(problème|difficulté|galère|du mal à|struggle|challenge|compliqué de)[^.!?\n]{5,60}/i,
       category: 'problème',
-      insight: 'Mentionne une difficulté - point d\'entrée pour offrir de l\'aide'
+      opportunity: 'Point de douleur identifié = entrée naturelle pour aider'
     },
     {
-      pattern: /(lance|lancement|nouveau projet|nouvelle offre|je démarre|on lance)[^.!?\n]{0,50}/i,
+      pattern: /(je lance|on lance|lancement de|nouveau projet|nouvelle offre|je démarre|viens de créer)[^.!?\n]{5,60}/i,
       category: 'lancement',
-      insight: 'En phase de lancement - besoin probable d\'accompagnement ou de visibilité'
+      opportunity: 'Phase de lancement = besoins multiples (visibilité, clients, feedback)'
     },
     {
-      pattern: /(recrute|hiring|on recrute|we\'re hiring|cherche.*profil|rejoindre.*équipe)[^.!?\n]{0,50}/i,
+      pattern: /(recrute|hiring|on recrute|we\'re hiring)[^.!?\n]{5,60}/i,
       category: 'recrutement',
-      insight: 'Entreprise en croissance - budget disponible et besoins multiples'
+      opportunity: 'Croissance active = budget et besoins en expansion'
     },
     {
-      pattern: /(vient de|just|nouvelle|nouveau poste|promu|rejoint)[^.!?\n]{0,40}/i,
+      pattern: /(viens de rejoindre|nouveau poste|promu|je rejoins|nouvelle aventure)[^.!?\n]{5,50}/i,
       category: 'changement',
-      insight: 'Changement récent - personne en phase de construction, ouverte aux opportunités'
+      opportunity: 'Transition = ouvert aux nouvelles connections et idées'
     },
   ];
 
   for (const sp of strongPatterns) {
-    const extracted = extractContext(content, sp.pattern);
-    if (extracted && signals.length < 3) {
+    const quote = extractSentence(content, sp.pattern);
+    if (quote && signals.length < 3) {
       signals.push({
         type: 'fort',
-        text: `"${extracted}"`,
         category: sp.category,
-        insight: sp.insight
+        quote: quote,
+        fact: buildFact(quote, sp.category),
+        opportunity: sp.opportunity
       });
     }
   }
 
-  // Signaux faibles - déduction du contexte
+  // Signaux FAIBLES (contextuels)
   const weakPatterns = [
     {
-      pattern: /(freelance|indépendant|entrepreneur|fondateur|founder|ceo|co-founder)/i,
+      pattern: /(freelance|indépendant|entrepreneur|fondateur|founder|ceo|co-founder)[^.!?\n]{0,40}/i,
       category: 'statut',
-      insight: 'Décideur direct - pas besoin de passer par un intermédiaire'
+      opportunity: 'Décideur = pas d\'intermédiaire, décision rapide'
     },
     {
-      pattern: /(coach|formateur|consultant|expert|spécialiste)/i,
+      pattern: /(coach|formateur|consultant|expert|accompagne)[^.!?\n]{5,50}/i,
       category: 'expertise',
-      insight: 'Profil expert - comprend la valeur de l\'accompagnement'
+      opportunity: 'Expert = comprend la valeur de l\'accompagnement pro'
     },
     {
-      pattern: /(\d+[kK]|\d{4,})\s*(abonnés|followers|contacts|relations)/i,
+      pattern: /(\d+[kK]?|\d{1,3}[\s,]\d{3})\s*(abonnés|followers|contacts|relations)/i,
       category: 'audience',
-      insight: 'Audience établie - créateur de contenu actif avec influence'
-    },
-    {
-      pattern: /(aider|accompagner|transformer|impact|mission)/i,
-      category: 'valeurs',
-      insight: 'Orienté impact - sensible aux arguments de valeur ajoutée'
+      opportunity: 'Créateur avec audience = influence et besoin de monétisation'
     },
   ];
 
   for (const wp of weakPatterns) {
-    const extracted = extractContext(content, wp.pattern, 60);
-    if (extracted && signals.length < 5) {
+    const quote = extractSentence(content, wp.pattern, 80);
+    if (quote && signals.length < 5) {
       signals.push({
         type: 'faible',
-        text: `"${extracted}"`,
         category: wp.category,
-        insight: wp.insight
+        quote: quote,
+        fact: buildFact(quote, wp.category),
+        opportunity: wp.opportunity
       });
     }
   }
 
-  // Si toujours pas de signaux, analyser le titre/headline
+  // Fallback: extraire le headline si rien d'autre
   if (signals.length === 0) {
-    const lines = content.split('\n').filter(l => l.trim());
+    const lines = content.split('\n').filter(l => l.trim() && l.length > 5);
     if (lines.length >= 2) {
-      const possibleHeadline = lines[1].trim();
-      if (possibleHeadline.length > 10 && possibleHeadline.length < 150) {
+      const headline = lines[1].trim();
+      if (headline.length > 10 && headline.length < 150 && !headline.includes('http')) {
         signals.push({
           type: 'faible',
-          text: `"${possibleHeadline.substring(0, 80)}"`,
           category: 'profil',
-          insight: 'Titre de profil - point de départ pour personnaliser l\'approche'
+          quote: headline.substring(0, 80),
+          fact: `Poste actuel: ${headline.substring(0, 80)}`,
+          opportunity: 'Base pour personnaliser l\'approche'
         });
       }
     }
@@ -1289,80 +1370,164 @@ function generateFallbackSignals(content, platform) {
 }
 
 /**
- * Génère des angles d'approche de fallback ULTRA-PERSONNALISÉS
+ * Génère des angles d'approche de fallback ULTRA-SPÉCIFIQUES
+ * Chaque question DOIT contenir un élément concret du profil
  */
 function generateFallbackAngles(content, platform, profile) {
   const angles = [];
   const firstName = profile?.fullName?.split(' ')[0] || '';
 
-  // 1. Angle basé sur le titre/headline
+  // Helper pour extraire des éléments nommés du contenu
+  function extractNamedElements(text) {
+    const elements = {
+      companies: [],
+      roles: [],
+      locations: [],
+      projects: [],
+      tools: [],
+      numbers: []
+    };
+
+    // Entreprises (mots avec majuscule après "chez", "at", "@")
+    const companyMatches = text.match(/(?:chez|at|@|pour)\s+([A-Z][A-Za-zÀ-ÿ0-9\s&]+?)(?:\s*[|•\-,.]|\s+depuis|\s+en\s+tant)/gi);
+    if (companyMatches) {
+      companyMatches.forEach(m => {
+        const company = m.replace(/^(chez|at|@|pour)\s+/i, '').replace(/\s*[|•\-,.].*$/, '').trim();
+        if (company.length > 2 && company.length < 40) elements.companies.push(company);
+      });
+    }
+
+    // Lieux
+    const locationMatches = text.match(/(?:à|basé à|région de|📍)\s*([A-ZÀ-Ÿ][a-zà-ÿ]+(?:\s+[A-ZÀ-Ÿ][a-zà-ÿ]+)?)/g);
+    if (locationMatches) {
+      locationMatches.forEach(m => {
+        const loc = m.replace(/^(à|basé à|région de|📍)\s*/i, '').trim();
+        if (loc.length > 2) elements.locations.push(loc);
+      });
+    }
+
+    // Chiffres significatifs
+    const numberMatches = text.match(/(\d+[kKmM]?)\s*(ans?|années?|clients?|entreprises?|personnes?|€|euros?|projets?)/gi);
+    if (numberMatches) elements.numbers = numberMatches.slice(0, 3);
+
+    return elements;
+  }
+
+  const elements = extractNamedElements(content);
+
+  // 1. Angle basé sur l'entreprise NOMMÉE
+  if (profile?.company || elements.companies.length > 0) {
+    const company = profile?.company || elements.companies[0];
+    angles.push({
+      question: `${firstName ? firstName + ', j' : 'J'}'ai vu que tu es chez ${company}. Vous êtes sur quel type de projet en ce moment ?`,
+      specificElement: company,
+      basedOn: 'company'
+    });
+  }
+
+  // 2. Angle basé sur le ROLE EXACT du headline
   if (profile?.headline) {
     const headline = profile.headline;
-    const jobMatch = headline.match(/^([^|•\-@]+)/);
-    if (jobMatch) {
-      const job = jobMatch[1].trim();
-      angles.push({
-        hook: `Salut${firstName ? ' ' + firstName : ''} ! J'ai vu que tu es ${job}. Curieux de savoir quel est ton plus gros défi au quotidien dans ce rôle ?`,
-        basedOn: `Titre: "${headline.substring(0, 50)}"`,
-        why: 'Question ouverte sur leur métier qui invite à la discussion'
-      });
+    // Extraire le rôle principal (avant le premier séparateur)
+    const roleMatch = headline.match(/^([^|•\-@]{5,50})/);
+    if (roleMatch) {
+      const role = roleMatch[1].trim();
+      // Éviter les rôles trop génériques
+      if (!['professionnel', 'expert', 'spécialiste'].some(g => role.toLowerCase().includes(g))) {
+        angles.push({
+          question: `${firstName ? firstName + ', e' : 'E'}n tant que ${role.toLowerCase()}, c'est quoi le sujet qui t'occupe le plus en ce moment ?`,
+          specificElement: role,
+          basedOn: 'headline'
+        });
+      }
     }
   }
 
-  // 2. Angle basé sur un post/contenu spécifique
-  const postMatch = content.match(/(j'ai|je suis|on a|nous avons|je viens de|on vient de)[^.!?\n]{15,60}/i);
-  if (postMatch) {
-    const postExcerpt = postMatch[0].trim();
+  // 3. Angle basé sur une CITATION de post/contenu
+  const actionMatch = content.match(/(j'ai lancé|on vient de|je viens de|nous avons créé|on a développé|je travaille sur)[^.!?\n]{10,60}/i);
+  if (actionMatch) {
+    const action = actionMatch[0].trim();
     angles.push({
-      hook: `Hello${firstName ? ' ' + firstName : ''} ! J'ai vu que "${postExcerpt}". Ça a l'air intéressant, tu pourrais m'en dire plus ?`,
-      basedOn: `Citation du contenu`,
-      why: 'Montre qu\'on a vraiment lu le contenu, pas un message générique'
+      question: `J'ai vu que ${action.toLowerCase()}. Ça avance comment ?`,
+      specificElement: action,
+      basedOn: 'post'
     });
   }
 
-  // 3. Angle basé sur l'entreprise/activité
-  if (profile?.company) {
+  // 4. Angle basé sur un LIEU spécifique
+  if (elements.locations.length > 0 && profile?.headline) {
+    const location = elements.locations[0];
+    const role = profile.headline.split(/[|•\-]/)[0].trim();
     angles.push({
-      hook: `Salut${firstName ? ' ' + firstName : ''} ! Je vois que tu es chez ${profile.company}. Comment vous gérez [aspect clé de leur activité] en ce moment ?`,
-      basedOn: `Entreprise: ${profile.company}`,
-      why: 'Montre un intérêt pour leur entreprise spécifique'
+      question: `${firstName ? firstName + ', t' : 'T'}u es ${role.toLowerCase()} sur ${location} ? C'est comment le marché là-bas en ce moment ?`,
+      specificElement: `${role} + ${location}`,
+      basedOn: 'headline+location'
     });
   }
 
-  // 4. Angles basés sur des mots-clés métier détectés
-  const metierAngles = [
-    { pattern: /coach|accompagn|mentor/i, hook: `Hello${firstName ? ' ' + firstName : ''} ! Comment tu trouves tes clients actuellement ? Bouche à oreille principalement ou tu as d'autres canaux qui marchent bien ?`, basedOn: 'Activité de coaching/accompagnement', why: 'Les coachs cherchent souvent à diversifier leur acquisition' },
-    { pattern: /freelance|indépendant|solo/i, hook: `Salut${firstName ? ' ' + firstName : ''} ! En tant qu'indépendant, t'arrives à avoir un flux régulier de missions ou c'est le yo-yo ? Curieux de savoir comment tu gères ça.`, basedOn: 'Statut freelance/indépendant', why: 'La régularité est le défi n°1 des freelances' },
-    { pattern: /recrut|rh|talent|people/i, hook: `Hello${firstName ? ' ' + firstName : ''} ! C'est galère en ce moment de trouver les bons profils ? J'entends ça de tous les côtés...`, basedOn: 'Profil RH/Recrutement', why: 'Le recrutement est un pain point universel actuellement' },
-    { pattern: /market|growth|acqui|trafic/i, hook: `Salut${firstName ? ' ' + firstName : ''} ! Vous testez quels canaux d'acquisition en ce moment ? Curieux de savoir ce qui marche bien pour vous.`, basedOn: 'Profil Marketing/Growth', why: 'Les marketeurs adorent partager ce qui fonctionne' },
-    { pattern: /commercial|sales|business dev|vente/i, hook: `Hello${firstName ? ' ' + firstName : ''} ! LinkedIn c'est ton canal principal pour prospecter ou tu diversifies ? Je me demande ce qui marche le mieux dans ton secteur.`, basedOn: 'Profil Commercial/Sales', why: 'Ouvre une discussion sur les méthodes de prospection' },
-    { pattern: /agence|studio|collectif|founder|fondateur|ceo/i, hook: `Salut${firstName ? ' ' + firstName : ''} ! Comment vous gérez la croissance en ce moment ? C'est quoi le plus gros chantier ?`, basedOn: 'Dirigeant/Fondateur', why: 'Les dirigeants aiment parler de leurs défis de croissance' },
-    { pattern: /formation|formateur|pédago/i, hook: `Hello${firstName ? ' ' + firstName : ''} ! Tu fais tes formations en présentiel, en ligne ou les deux ? Je suis curieux de savoir ce qui fonctionne le mieux pour toi.`, basedOn: 'Activité de formation', why: 'Le format de livraison est un sujet central pour les formateurs' },
+  // 5. Angle basé sur les CHIFFRES mentionnés
+  if (elements.numbers.length > 0) {
+    const number = elements.numbers[0];
+    angles.push({
+      question: `${firstName ? firstName + ', ' : ''}${number} c'est impressionnant ! C'est quoi qui a le plus contribué à ce résultat ?`,
+      specificElement: number,
+      basedOn: 'metrics'
+    });
+  }
+
+  // 6. Angles métier SPÉCIFIQUES avec éléments du profil
+  const specificMetierAngles = [
+    {
+      pattern: /accompagn[ea].*?(entrepreneur|dirigeant|indépendant|artisan|tpe|pme)/i,
+      buildQuestion: (match) => `Tu accompagnes les ${match[1].toLowerCase()}s. C'est quoi leur blocage n°1 quand ils arrivent ?`,
+      extract: (match) => match[1]
+    },
+    {
+      pattern: /form[ea].*?(vente|management|leadership|communication|marketing|dev|code)/i,
+      buildQuestion: (match) => `Tu formes sur ${match[1].toLowerCase()} - c'est du présentiel, distanciel ou les deux ?`,
+      extract: (match) => `formation ${match[1]}`
+    },
+    {
+      pattern: /recrute.*?(\d+|plusieurs|des)\s*(dev|commercial|ingénieur|consultant|profil)/i,
+      buildQuestion: (match) => `Vous recrutez ${match[1]} ${match[2]}s - c'est pour de la croissance ou un nouveau projet ?`,
+      extract: (match) => `${match[1]} ${match[2]}s`
+    },
+    {
+      pattern: /(croissance|scale|levée|fundraising|série [ab])/i,
+      buildQuestion: (match) => `Vous êtes en phase de ${match[1].toLowerCase()} - c'est quoi le plus gros chantier du moment ?`,
+      extract: (match) => match[1]
+    },
   ];
 
-  for (const ma of metierAngles) {
-    if (ma.pattern.test(content) && angles.length < 3) {
+  for (const ma of specificMetierAngles) {
+    const match = content.match(ma.pattern);
+    if (match && angles.length < 4) {
       angles.push({
-        hook: ma.hook,
-        basedOn: ma.basedOn,
-        why: ma.why
+        question: ma.buildQuestion(match),
+        specificElement: ma.extract(match),
+        basedOn: 'content_analysis'
       });
     }
   }
 
-  // 5. Angle générique de qualité si rien d'autre
-  if (angles.length === 0 && firstName) {
-    angles.push({
-      hook: `Salut ${firstName} ! Ton profil a attiré mon attention. Tu travailles sur quoi en ce moment ?`,
-      basedOn: `Nom: ${firstName}`,
-      why: 'Question ouverte et naturelle pour démarrer une conversation'
+  // Filtrer: ne garder que les questions avec de vrais éléments spécifiques
+  const validAngles = angles.filter(a =>
+    a.specificElement &&
+    a.specificElement.length > 2 &&
+    !a.question.includes('[') &&
+    !a.question.includes('undefined')
+  );
+
+  // Si on n'a rien de spécifique, mieux vaut être honnête
+  if (validAngles.length === 0 && firstName) {
+    validAngles.push({
+      question: `${firstName}, je serais curieux de savoir sur quoi tu travailles en ce moment ?`,
+      specificElement: firstName,
+      basedOn: 'name_only'
     });
   }
 
-  // Nettoyer les angles génériques et garder max 3
-  return angles
-    .filter(a => !a.hook.includes('[') || angles.length <= 2) // Garder les hooks à compléter si pas assez
-    .slice(0, 3);
+  return validAngles.slice(0, 3);
 }
 
 /**

@@ -403,7 +403,10 @@
       '<div class="sos-panel-header" style="background: ' + config.color + '">' +
         '<div class="sos-panel-title">' +
           '<span class="sos-panel-icon">🎯</span>' +
-          '<span>Analyser un prospect</span>' +
+          '<div class="sos-panel-title-text">' +
+            '<span>Ton copilote</span>' +
+            '<span class="sos-panel-subtitle">Lis, comprends, réponds mieux</span>' +
+          '</div>' +
         '</div>' +
         '<div class="sos-panel-actions">' +
           '<button class="sos-panel-minimize" id="sos-minimize-panel" title="Réduire">−</button>' +
@@ -501,9 +504,43 @@
 
             '<!-- Conversation Starters -->' +
             '<div class="sos-result-section" id="sos-angles-section">' +
-              '<div class="sos-result-title">💬 Questions pour engager la conversation</div>' +
+              '<div class="sos-result-title">💬 Questions pour engager</div>' +
               '<div id="sos-angles-list" class="sos-angles-list">' +
                 '<!-- Questions ajoutées dynamiquement -->' +
+              '</div>' +
+            '</div>' +
+
+            '<!-- DM Generation Section -->' +
+            '<div class="sos-result-section sos-dm-section" id="sos-dm-section">' +
+              '<div class="sos-result-title">✉️ Premier DM</div>' +
+              '<div id="sos-dm-container">' +
+                '<div id="sos-dm-empty" class="sos-dm-empty">' +
+                  '<p>Génère un message personnalisé basé sur l\'analyse</p>' +
+                  '<button class="sos-btn sos-btn-primary" id="sos-generate-dm-btn">' +
+                    '<span class="sos-btn-icon">✨</span>' +
+                    '<span>Générer le 1er DM</span>' +
+                  '</button>' +
+                '</div>' +
+                '<div id="sos-dm-loading" class="sos-dm-loading" style="display:none;">' +
+                  '<span class="sos-spinner"></span>' +
+                  '<span>Génération en cours...</span>' +
+                '</div>' +
+                '<div id="sos-dm-result" class="sos-dm-result" style="display:none;">' +
+                  '<textarea class="sos-dm-message" id="sos-dm-message" rows="4"></textarea>' +
+                  '<div class="sos-dm-hint">✏️ Tu peux modifier le message avant de copier</div>' +
+                  '<div class="sos-dm-meta" id="sos-dm-meta"></div>' +
+                  '<div class="sos-dm-actions">' +
+                    '<button class="sos-btn sos-btn-primary" id="sos-copy-dm-btn">' +
+                      '<span class="sos-btn-icon">📋</span>' +
+                      '<span>Copier</span>' +
+                    '</button>' +
+                    '<button class="sos-btn sos-btn-secondary" id="sos-regen-dm-btn">' +
+                      '<span class="sos-btn-icon">🔄</span>' +
+                      '<span>Autre version</span>' +
+                    '</button>' +
+                  '</div>' +
+                  '<div class="sos-dm-review-hint">📖 Relis avant d\'envoyer — tu restes aux commandes</div>' +
+                '</div>' +
               '</div>' +
             '</div>' +
 
@@ -561,6 +598,7 @@
     window._sosPanelState.posts = null;
     window._sosPanelState.signals = null;
     window._sosPanelState.angles = null;
+    window._sosPanelState.generatedDM = null;
 
     // Show panel with animation
     setTimeout(function() {
@@ -724,6 +762,20 @@
       addToCRM();
     });
 
+    // DM Generation handlers
+    document.getElementById('sos-generate-dm-btn').addEventListener('click', function() {
+      generateFirstDM();
+    });
+
+    document.getElementById('sos-copy-dm-btn').addEventListener('click', function() {
+      var dmMessage = document.getElementById('sos-dm-message').value;
+      sosCopyToClipboard(dmMessage);
+    });
+
+    document.getElementById('sos-regen-dm-btn').addEventListener('click', function() {
+      generateFirstDM();
+    });
+
     // Open app button (always visible in footer)
     document.getElementById('sos-open-app-footer').addEventListener('click', function() {
       window.open(window.SOS_CONFIG.APP_URL + '/prospects', '_blank');
@@ -836,19 +888,22 @@
             var postEl = document.createElement('div');
             postEl.className = 'sos-post-item';
             var engagementIcon = post.engagement === 'fort' ? '🔥' : (post.engagement === 'moyen' ? '👍' : '📝');
+            var keyPhraseHtml = post.keyPhrase ?
+              '<div class="sos-post-keyphrase">"' + sosEscapeHtml(post.keyPhrase) + '"</div>' : '';
             postEl.innerHTML =
               '<div class="sos-post-header">' +
                 '<span class="sos-post-number">Post ' + (index + 1) + '</span>' +
                 '<span class="sos-post-engagement">' + engagementIcon + '</span>' +
               '</div>' +
               '<div class="sos-post-topic"><strong>Sujet:</strong> ' + sosEscapeHtml(post.topic || 'Non identifié') + '</div>' +
+              keyPhraseHtml +
               '<div class="sos-post-summary">' + sosEscapeHtml(post.summary || '') + '</div>';
             postsList.appendChild(postEl);
           });
         }
       }
 
-      // Display signals
+      // Display signals - supports both old (text, insight) and new (quote, fact, opportunity) formats
       var signalsList = document.getElementById('sos-signals-list');
       signalsList.innerHTML = '';
       var signals = result.signals || [];
@@ -860,23 +915,32 @@
           var signalEl = document.createElement('div');
           signalEl.className = 'sos-signal ' + (isStrong ? 'sos-signal-strong' : 'sos-signal-weak');
 
-          // Build signal HTML with category, quote and insight
+          // Build signal HTML with category and details
           var categoryLabel = getCategoryLabel(signal.category);
-          var quoteText = signal.text || '';
-          var insightText = signal.insight || signal.reason || '';
+
+          // Support both old and new formats
+          var quoteText = signal.quote || signal.text || '';
+          var factText = signal.fact || '';
+          var opportunityText = signal.opportunity || signal.insight || signal.reason || '';
+
+          // Clean up quote (remove extra quotes if already quoted)
+          if (quoteText.startsWith('"') && quoteText.endsWith('"')) {
+            quoteText = quoteText.slice(1, -1);
+          }
 
           signalEl.innerHTML =
             '<span class="sos-signal-icon">' + (isStrong ? '🔥' : '💡') + '</span>' +
             '<div class="sos-signal-content">' +
-              '<span class="sos-signal-text">' + categoryLabel + '</span>' +
+              '<span class="sos-signal-category">' + categoryLabel + '</span>' +
               (quoteText ? '<span class="sos-signal-quote">"' + sosEscapeHtml(quoteText) + '"</span>' : '') +
-              (insightText ? '<span class="sos-signal-reason">→ ' + sosEscapeHtml(insightText) + '</span>' : '') +
+              (factText ? '<span class="sos-signal-fact">📌 ' + sosEscapeHtml(factText) + '</span>' : '') +
+              (opportunityText ? '<span class="sos-signal-opportunity">→ ' + sosEscapeHtml(opportunityText) + '</span>' : '') +
             '</div>';
           signalsList.appendChild(signalEl);
         });
       }
 
-      // Display conversation starters (angles)
+      // Display conversation starters (angles) - with specific elements highlighted
       var anglesList = document.getElementById('sos-angles-list');
       if (anglesList) {
         anglesList.innerHTML = '';
@@ -890,10 +954,19 @@
 
             // Support both old format (hook) and new format (question)
             var questionText = typeof angle === 'string' ? angle : (angle.question || angle.hook || angle.text || '');
-            var contextText = typeof angle === 'object' ? (angle.context || angle.basedOn || angle.reason || '') : '';
+            var specificElement = typeof angle === 'object' ? (angle.specificElement || '') : '';
+            var basedOn = typeof angle === 'object' ? (angle.basedOn || angle.context || '') : '';
             var toneText = angle.tone || '';
 
             var toneIcon = toneText === 'félicitations' ? '🎉' : (toneText === 'intérêt_commun' ? '🤝' : '🤔');
+
+            // Build context text showing what element was used
+            var contextDisplay = '';
+            if (specificElement) {
+              contextDisplay = '🎯 Basé sur: "' + specificElement + '"';
+            } else if (basedOn) {
+              contextDisplay = '💡 ' + basedOn;
+            }
 
             angleEl.innerHTML =
               '<div class="sos-angle-question">' +
@@ -901,7 +974,7 @@
                 '<span class="sos-angle-text">' + sosEscapeHtml(questionText) + '</span>' +
                 '<button class="sos-angle-copy" data-text="' + sosEscapeHtml(questionText).replace(/"/g, '&quot;') + '" title="Copier">📋</button>' +
               '</div>' +
-              (contextText ? '<div class="sos-angle-context">💡 ' + sosEscapeHtml(contextText) + '</div>' : '');
+              (contextDisplay ? '<div class="sos-angle-context">' + sosEscapeHtml(contextDisplay) + '</div>' : '');
             anglesList.appendChild(angleEl);
           });
 
@@ -937,12 +1010,97 @@
       return labels[category] || '📌 Signal détecté';
     }
 
+    // Generate First DM using AI
+    function generateFirstDM() {
+      var emptyEl = document.getElementById('sos-dm-empty');
+      var loadingEl = document.getElementById('sos-dm-loading');
+      var resultEl = document.getElementById('sos-dm-result');
+
+      // Show loading
+      emptyEl.style.display = 'none';
+      loadingEl.style.display = 'flex';
+      resultEl.style.display = 'none';
+
+      // Build prospect data from analyzed content
+      var data = window._sosPanelState.analyzedData || {};
+      var prospect = {
+        platform: window._sosPanelState.platform || 'linkedin',
+        username: username || data.username || '',
+        fullName: document.getElementById('sos-result-fullname').value || data.fullName || '',
+        firstName: (document.getElementById('sos-result-fullname').value || '').split(' ')[0] || '',
+        headline: document.getElementById('sos-result-headline').value || data.headline || '',
+        company: document.getElementById('sos-result-company').value || data.company || '',
+        bio: data.bio || '',
+        signals: window._sosPanelState.signals || [],
+        posts: window._sosPanelState.posts || [],
+        angles: window._sosPanelState.angles || [],
+        // Include recent post content for better personalization
+        recentPost: (window._sosPanelState.posts && window._sosPanelState.posts[0]) ?
+          (window._sosPanelState.posts[0].keyPhrase || window._sosPanelState.posts[0].summary || '') : '',
+        // Include raw analysis for context
+        analysis: {
+          signals: window._sosPanelState.signals || [],
+          angles: window._sosPanelState.angles || []
+        }
+      };
+
+      console.log('[SOS] Generating DM for prospect:', prospect);
+
+      sosSendMessage('generateDM', {
+        platform: prospect.platform,
+        prospect: prospect
+      })
+        .then(function(result) {
+          console.log('[SOS] DM generated:', result);
+
+          var message = result.message || '';
+          var metadata = result.metadata || {};
+
+          // Store the generated DM
+          window._sosPanelState.generatedDM = {
+            message: message,
+            metadata: metadata,
+            generatedAt: new Date().toISOString()
+          };
+
+          // Display the DM
+          var messageEl = document.getElementById('sos-dm-message');
+          var metaEl = document.getElementById('sos-dm-meta');
+
+          messageEl.value = message;
+
+          // Show metadata if available
+          if (metadata.hook_element) {
+            metaEl.innerHTML = '<span class="sos-dm-meta-item">🎯 Basé sur: ' + sosEscapeHtml(metadata.hook_element) + '</span>';
+          } else {
+            metaEl.innerHTML = '';
+          }
+
+          // Show result
+          loadingEl.style.display = 'none';
+          resultEl.style.display = 'block';
+
+          sosShowToast('DM généré !', 'success');
+        })
+        .catch(function(err) {
+          console.error('[SOS] DM generation failed:', err);
+
+          // Show empty state again with error
+          loadingEl.style.display = 'none';
+          emptyEl.style.display = 'block';
+
+          sosShowToast('Erreur: ' + (err.message || 'Génération échouée'), 'error');
+        });
+    }
+
     function addToCRM() {
       var confirmBtn = document.getElementById('sos-confirm-add');
       confirmBtn.disabled = true;
       confirmBtn.innerHTML = '<span class="sos-spinner"></span>';
 
       var data = window._sosPanelState.analyzedData || {};
+      var generatedDM = window._sosPanelState.generatedDM || null;
+
       var profileData = {
         platform: window._sosPanelState.platform,
         username: username || data.username || '',
@@ -959,7 +1117,10 @@
         rawContent: window._sosPanelState.pastedBlocks.map(function(b) { return b.text; }).join('\n\n'),
         profileUrl: buildProfileUrl(window._sosPanelState.platform, username),
         source: 'smart_paste',
-        manualEntry: true
+        manualEntry: true,
+        // Include generated DM if available
+        generatedDM: generatedDM ? generatedDM.message : null,
+        dmMetadata: generatedDM ? generatedDM.metadata : null
       };
 
       var currentOnConfirm = window._sosPanelState.onConfirm;
@@ -987,8 +1148,17 @@
       window._sosPanelState.signals = null;
       window._sosPanelState.angles = null;
       window._sosPanelState.posts = null;
+      window._sosPanelState.generatedDM = null;
       pastedBlocksContainer.innerHTML = '';
       updateBlockCount();
+
+      // Reset DM section
+      var dmEmpty = document.getElementById('sos-dm-empty');
+      var dmLoading = document.getElementById('sos-dm-loading');
+      var dmResult = document.getElementById('sos-dm-result');
+      if (dmEmpty) dmEmpty.style.display = 'block';
+      if (dmLoading) dmLoading.style.display = 'none';
+      if (dmResult) dmResult.style.display = 'none';
       clearBlocksBtn.style.display = 'none';
       analyzeBtn.disabled = true;
       document.getElementById('sos-result-notes').value = '';

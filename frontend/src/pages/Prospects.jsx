@@ -26,7 +26,9 @@ import {
   Play,
   Loader2,
   RefreshCw,
-  MessagesSquare
+  MessagesSquare,
+  FolderKanban,
+  Mic
 } from 'lucide-react';
 import Header from '../components/layout/Header';
 import GenerateMessageModal from '../components/dashboard/GenerateMessageModal';
@@ -124,10 +126,12 @@ const STATUS_CONFIG = {
 
 export default function Prospects() {
   const [prospects, setProspects] = useState([]);
+  const [campaigns, setCampaigns] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [platformFilter, setPlatformFilter] = useState('all');
+  const [campaignFilter, setCampaignFilter] = useState('all'); // Filtre par campagne
   const [sortBy, setSortBy] = useState('addedAt');
   const [sortOrder, setSortOrder] = useState('desc');
   const [selectedProspect, setSelectedProspect] = useState(null);
@@ -137,16 +141,46 @@ export default function Prospects() {
   const [openMenuId, setOpenMenuId] = useState(null); // Menu trois points ouvert
   const [scoreFilter, setScoreFilter] = useState('all'); // Filtre par score badge
   const [showScoreDetail, setShowScoreDetail] = useState(null); // Prospect pour le panel de score
+  const [showVoiceModal, setShowVoiceModal] = useState(false); // Modal voix client
 
-  // Charger les prospects depuis l'API au montage
+  // Charger les campagnes au montage
+  useEffect(() => {
+    fetchCampaigns();
+  }, []);
+
+  // Charger les prospects au montage et quand le filtre campagne change
   useEffect(() => {
     fetchProspects();
-  }, []);
+  }, [campaignFilter]);
+
+  // Charger les campagnes
+  const fetchCampaigns = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/campaigns`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCampaigns(data.data || []);
+      }
+    } catch (error) {
+      console.error('Erreur chargement campagnes:', error);
+    }
+  };
 
   const fetchProspects = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/prospects`, {
+      // Construire l'URL avec le filtre campagne si sélectionné
+      let url = `${API_BASE_URL}/prospects`;
+      if (campaignFilter !== 'all') {
+        url += `?campaign_id=${campaignFilter}`;
+      }
+
+      const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
@@ -299,11 +333,19 @@ export default function Prospects() {
 
   const tourContext = useTourContext();
 
+  // Trouver la campagne active pour l'affichage
+  const activeCampaign = campaignFilter !== 'all'
+    ? campaigns.find(c => c.id === campaignFilter)
+    : null;
+
   return (
     <>
       <Header
         title="Mes Prospects"
-        subtitle={`${stats.total} prospects sauvegardés • ${stats.contacted + stats.replied} contactés`}
+        subtitle={activeCampaign
+          ? `Campagne: ${activeCampaign.name} • ${stats.total} prospects`
+          : `${stats.total} prospects sauvegardés • ${stats.contacted + stats.replied} contactés`
+        }
         onStartTour={tourContext?.startTour}
       />
 
@@ -338,6 +380,30 @@ export default function Prospects() {
                 className="w-full pl-10 pr-4 py-2 border border-warm-200 rounded-lg focus:border-brand-500 outline-none text-sm"
               />
             </div>
+
+            {/* Filtre campagne */}
+            <select
+              value={campaignFilter}
+              onChange={(e) => setCampaignFilter(e.target.value)}
+              className="px-3 py-2 border border-warm-200 rounded-lg text-sm focus:border-brand-500 outline-none"
+            >
+              <option value="all">Toutes les campagnes</option>
+              {campaigns.map((campaign) => (
+                <option key={campaign.id} value={campaign.id}>{campaign.name}</option>
+              ))}
+            </select>
+
+            {/* Bouton Voix Client (visible si campagne sélectionnée) */}
+            {campaignFilter !== 'all' && (
+              <button
+                onClick={() => setShowVoiceModal(true)}
+                className="flex items-center gap-2 px-3 py-2 bg-accent-50 hover:bg-accent-100 text-accent-700 border border-accent-200 rounded-lg text-sm font-medium transition-colors"
+                title="Configurer la voix pour ce client"
+              >
+                <Mic className="w-4 h-4" />
+                <span>Voix client</span>
+              </button>
+            )}
 
             {/* Filtre statut */}
             <select
@@ -770,6 +836,14 @@ export default function Prospects() {
         prospect={prospectForMessage}
         posts={postsForMessage}
       />
+
+      {/* Modal voix client (campagne) */}
+      {showVoiceModal && activeCampaign && (
+        <CampaignVoiceModal
+          campaign={activeCampaign}
+          onClose={() => setShowVoiceModal(false)}
+        />
+      )}
     </>
   );
 }
@@ -1254,4 +1328,303 @@ function getMockPosts(prospect) {
       url: `https://${prospect.platform}.com/p/mock_3`,
     },
   ];
+}
+
+/**
+ * Modal pour configurer la voix d'un client (campagne)
+ */
+function CampaignVoiceModal({ campaign, onClose }) {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [voiceData, setVoiceData] = useState({
+    client_name: '',
+    industry: '',
+    expertise: '',
+    tone: 'professionnel mais accessible',
+    style_notes: '',
+    sample_intro: '',
+    sample_dm: '',
+    sample_comment: '',
+    keywords: '',
+    avoid_words: ''
+  });
+
+  // Charger le profil de voix existant
+  useEffect(() => {
+    loadVoiceProfile();
+  }, [campaign.id]);
+
+  const loadVoiceProfile = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/campaigns/${campaign.id}/voice`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.data) {
+          setVoiceData({
+            client_name: data.data.client_name || '',
+            industry: data.data.industry || '',
+            expertise: data.data.expertise || '',
+            tone: data.data.tone || 'professionnel mais accessible',
+            style_notes: data.data.style_notes || '',
+            sample_intro: data.data.sample_intro || '',
+            sample_dm: data.data.sample_dm || '',
+            sample_comment: data.data.sample_comment || '',
+            keywords: (data.data.keywords || []).join(', '),
+            avoid_words: (data.data.avoid_words || []).join(', ')
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Erreur chargement voix:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/campaigns/${campaign.id}/voice`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({
+          ...voiceData,
+          keywords: voiceData.keywords.split(',').map(k => k.trim()).filter(Boolean),
+          avoid_words: voiceData.avoid_words.split(',').map(k => k.trim()).filter(Boolean)
+        }),
+      });
+
+      if (response.ok) {
+        onClose();
+      }
+    } catch (error) {
+      console.error('Erreur sauvegarde voix:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateField = (field, value) => {
+    setVoiceData(prev => ({ ...prev, [field]: value }));
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="p-6 border-b border-warm-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-warm-900 flex items-center gap-2">
+                <Mic className="w-5 h-5 text-accent-500" />
+                Voix client : {campaign.name}
+              </h2>
+              <p className="text-sm text-warm-500 mt-1">
+                Configure la voix de ton client pour personnaliser les DMs et commentaires
+              </p>
+            </div>
+            <button onClick={onClose} className="p-2 hover:bg-warm-100 rounded-lg">
+              <X className="w-5 h-5 text-warm-500" />
+            </button>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 text-brand-500 animate-spin" />
+            </div>
+          ) : (
+            <>
+              {/* Info client */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-warm-700 mb-1">
+                    Nom du client
+                  </label>
+                  <input
+                    type="text"
+                    value={voiceData.client_name}
+                    onChange={(e) => updateField('client_name', e.target.value)}
+                    placeholder="Ex: Marie Dupont"
+                    className="w-full px-3 py-2 border border-warm-200 rounded-lg focus:border-brand-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-warm-700 mb-1">
+                    Secteur
+                  </label>
+                  <input
+                    type="text"
+                    value={voiceData.industry}
+                    onChange={(e) => updateField('industry', e.target.value)}
+                    placeholder="Ex: Coaching, Marketing..."
+                    className="w-full px-3 py-2 border border-warm-200 rounded-lg focus:border-brand-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Expertise et ton */}
+              <div>
+                <label className="block text-sm font-medium text-warm-700 mb-1">
+                  Expertise / Spécialité
+                </label>
+                <input
+                  type="text"
+                  value={voiceData.expertise}
+                  onChange={(e) => updateField('expertise', e.target.value)}
+                  placeholder="Ex: Coaching business pour freelances"
+                  className="w-full px-3 py-2 border border-warm-200 rounded-lg focus:border-brand-500 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-warm-700 mb-1">
+                  Ton de communication
+                </label>
+                <select
+                  value={voiceData.tone}
+                  onChange={(e) => updateField('tone', e.target.value)}
+                  className="w-full px-3 py-2 border border-warm-200 rounded-lg focus:border-brand-500 outline-none"
+                >
+                  <option value="professionnel mais accessible">Professionnel mais accessible</option>
+                  <option value="chaleureux et bienveillant">Chaleureux et bienveillant</option>
+                  <option value="expert et direct">Expert et direct</option>
+                  <option value="décontracté et fun">Décontracté et fun</option>
+                  <option value="inspirant et motivant">Inspirant et motivant</option>
+                </select>
+              </div>
+
+              {/* Exemples de textes */}
+              <div className="p-4 bg-accent-50 rounded-xl">
+                <h3 className="font-semibold text-warm-900 mb-3 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-accent-500" />
+                  Exemples de textes (pour l'IA)
+                </h3>
+                <p className="text-xs text-warm-500 mb-4">
+                  Colle des exemples de messages/commentaires écrits par ton client. L'IA s'en inspirera.
+                </p>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-warm-700 mb-1">
+                      Exemple d'intro / pitch
+                    </label>
+                    <textarea
+                      value={voiceData.sample_intro}
+                      onChange={(e) => updateField('sample_intro', e.target.value)}
+                      placeholder="Comment le client se présente..."
+                      rows={2}
+                      className="w-full px-3 py-2 border border-warm-200 rounded-lg focus:border-brand-500 outline-none text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-warm-700 mb-1">
+                      Exemple de DM
+                    </label>
+                    <textarea
+                      value={voiceData.sample_dm}
+                      onChange={(e) => updateField('sample_dm', e.target.value)}
+                      placeholder="Un DM type écrit par le client..."
+                      rows={3}
+                      className="w-full px-3 py-2 border border-warm-200 rounded-lg focus:border-brand-500 outline-none text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-warm-700 mb-1">
+                      Exemple de commentaire LinkedIn
+                    </label>
+                    <textarea
+                      value={voiceData.sample_comment}
+                      onChange={(e) => updateField('sample_comment', e.target.value)}
+                      placeholder="Un commentaire type..."
+                      rows={2}
+                      className="w-full px-3 py-2 border border-warm-200 rounded-lg focus:border-brand-500 outline-none text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Mots clés */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-warm-700 mb-1">
+                    Mots/expressions à utiliser
+                  </label>
+                  <input
+                    type="text"
+                    value={voiceData.keywords}
+                    onChange={(e) => updateField('keywords', e.target.value)}
+                    placeholder="Séparés par des virgules"
+                    className="w-full px-3 py-2 border border-warm-200 rounded-lg focus:border-brand-500 outline-none text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-warm-700 mb-1">
+                    Mots à éviter
+                  </label>
+                  <input
+                    type="text"
+                    value={voiceData.avoid_words}
+                    onChange={(e) => updateField('avoid_words', e.target.value)}
+                    placeholder="Séparés par des virgules"
+                    className="w-full px-3 py-2 border border-warm-200 rounded-lg focus:border-brand-500 outline-none text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Notes additionnelles */}
+              <div>
+                <label className="block text-sm font-medium text-warm-700 mb-1">
+                  Notes de style (optionnel)
+                </label>
+                <textarea
+                  value={voiceData.style_notes}
+                  onChange={(e) => updateField('style_notes', e.target.value)}
+                  placeholder="Autres instructions pour l'IA..."
+                  rows={2}
+                  className="w-full px-3 py-2 border border-warm-200 rounded-lg focus:border-brand-500 outline-none text-sm"
+                />
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-6 border-t border-warm-100 flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-warm-600 hover:bg-warm-100 rounded-lg font-medium"
+          >
+            Annuler
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-6 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-medium flex items-center gap-2 disabled:opacity-50"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Sauvegarde...
+              </>
+            ) : (
+              'Sauvegarder'
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }

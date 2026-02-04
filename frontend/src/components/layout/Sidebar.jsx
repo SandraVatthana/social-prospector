@@ -24,23 +24,19 @@ import { useSidebar } from '../../contexts/SidebarContext';
 import ClientSwitcher from '../agency/ClientSwitcher';
 import AddClientModal from '../agency/AddClientModal';
 
+// Navigation simplifiée - focus sur l'essentiel
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'MA VOIX', href: '/voice', icon: Mic, indicator: true, tourId: 'voice' },
-  { name: 'Recherche', href: '/search', icon: Search, tourId: 'search' },
-  { name: 'Campagnes', href: '/campaigns', icon: FolderKanban, tourId: 'campaigns' },
-  { name: 'Relances', href: '/followups', icon: CalendarClock, tourId: 'followups' },
-  { name: 'Prospects', href: '/prospects', icon: Users, badge: null, tourId: 'prospects' },
-  { name: 'Messages', href: '/messages', icon: MessageSquare, badge: null, tourId: 'messages' },
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard, tourId: 'dashboard' },
+  { name: 'Mes Prospects', href: '/prospects', icon: Users, badge: null, tourId: 'prospects' },
+  { name: 'Mes Campagnes', href: '/campaigns', icon: FolderKanban, tourId: 'campaigns' },
+  { name: 'Ma Voix', href: '/voice', icon: Mic, indicator: true, tourId: 'voice' },
+  { name: 'Analytics', href: '/analytics', icon: BarChart3, tourId: 'analytics' },
 ];
 
+// Section Insights - fonctionnalités avancées
 const insights = [
-  { name: 'CRM Dashboard', href: '/crm', icon: Inbox, badge: 'NEW', tourId: 'crm' },
-  { name: 'ICP & Scoring', href: '/icp', icon: Target, badge: 'NEW', tourId: 'icp' },
-  { name: 'Analytics', href: '/analytics', icon: BarChart3, tourId: 'analytics' },
   { name: 'Analytics Agence', href: '/analytics-agence', icon: Building2, badge: 'PRO', agencyOnly: true },
   { name: 'Mes Clients', href: '/clients', icon: Users, badge: 'PRO', agencyOnly: true },
-  { name: 'Abonnement', href: '/billing', icon: CreditCard, disabled: true, badge: 'Bientôt' },
 ];
 
 export default function Sidebar({ user, prospectsCount = 0, messagesCount = 0 }) {
