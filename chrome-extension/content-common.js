@@ -10,10 +10,12 @@
   // CONFIGURATION
   // ============================================
 
+  console.log('[SOS] ====== CONTENT-COMMON.JS LOADED ======');
+
   window.SOS_CONFIG = {
     APP_URL: 'https://sosprospection.netlify.app',
     DEV_URL: 'http://localhost:5178',
-    DEBUG: false
+    DEBUG: true
   };
 
   // Check for dev mode from storage (set via background.js or popup)
@@ -167,6 +169,7 @@
   // ============================================
 
   window.sosCreateFloatingButton = function(options) {
+    console.log('[SOS] sosCreateFloatingButton called with options:', options);
     options = options || {};
     var platform = options.platform || 'unknown';
     var onImport = options.onImport || function() {};
@@ -176,6 +179,7 @@
     // Remove existing and clean up listeners
     var existing = document.getElementById('sos-floating-container');
     if (existing) {
+      console.log('[SOS] Removing existing floating container');
       if (existing._sosDragCleanup) existing._sosDragCleanup();
       existing.remove();
     }
@@ -201,17 +205,25 @@
     container.innerHTML = '<div class="sos-floating-buttons">' + buttonsHtml + '</div>';
 
     document.body.appendChild(container);
+    console.log('[SOS] Floating container appended to body');
 
     // Make container draggable
     makeDraggable(container);
 
     // Event listeners
-    document.getElementById('sos-import-btn').addEventListener('click', onImport);
+    document.getElementById('sos-import-btn').addEventListener('click', function(e) {
+      console.log('[SOS] Import button clicked!');
+      onImport(e);
+    });
 
     if (showPrepare) {
-      document.getElementById('sos-prepare-btn').addEventListener('click', onPrepare);
+      document.getElementById('sos-prepare-btn').addEventListener('click', function(e) {
+        console.log('[SOS] Prepare DM button clicked!');
+        onPrepare(e);
+      });
     }
 
+    console.log('[SOS] Floating button created successfully');
     return container;
   };
 

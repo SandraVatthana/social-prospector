@@ -9,6 +9,8 @@
 (function() {
   'use strict';
 
+  console.log('[SOS] ====== CONTENT-LINKEDIN.JS LOADED ======');
+
   var PLATFORM = 'linkedin';
 
   // ============================================
@@ -150,11 +152,14 @@
   // ============================================
 
   function handleImport() {
+    console.log('[SOS] handleImport called');
     var pageType = detectPageType();
+    console.log('[SOS] handleImport pageType:', pageType);
 
     if (pageType === 'profile' || pageType === 'search') {
       // Ouvrir le formulaire de saisie manuelle
       var username = pageType === 'profile' ? getUsernameFromUrl() : '';
+      console.log('[SOS] Opening manual input modal for username:', username);
 
       sosShowManualInputModal({
         platform: PLATFORM,
@@ -164,6 +169,7 @@
         }
       });
     } else {
+      console.log('[SOS] Not on profile/search page, showing toast');
       sosShowToast('Allez sur un profil LinkedIn pour ajouter un prospect', 'warning');
     }
   }
@@ -1041,9 +1047,11 @@
 
   function initUI() {
     var pageType = detectPageType();
+    console.log('[SOS] initUI called, pageType:', pageType, 'URL:', window.location.href);
 
     // Afficher le bouton sur les profils (pour saisie manuelle)
     if (pageType === 'profile') {
+      console.log('[SOS] Creating floating button for profile page');
       sosCreateFloatingButton({
         platform: PLATFORM,
         onImport: handleImport,
@@ -1077,10 +1085,28 @@
   }
 
   function init() {
-    sosLog('LinkedIn content script loaded (Manual Input Mode)');
-    setupEventListeners();
-    setTimeout(initUI, 1500);
-    sosObserveUrlChanges(initUI);
+    try {
+      console.log('[SOS] init() called, document.readyState:', document.readyState);
+      sosLog('LinkedIn content script loaded (Manual Input Mode)');
+      setupEventListeners();
+      console.log('[SOS] Scheduling initUI in 1500ms...');
+      setTimeout(function() {
+        try {
+          initUI();
+        } catch (e) {
+          console.error('[SOS] ERROR in initUI:', e);
+        }
+      }, 1500);
+      sosObserveUrlChanges(function() {
+        try {
+          initUI();
+        } catch (e) {
+          console.error('[SOS] ERROR in initUI (URL change):', e);
+        }
+      });
+    } catch (e) {
+      console.error('[SOS] ERROR in init:', e);
+    }
   }
 
   // Start
