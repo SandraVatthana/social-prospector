@@ -971,21 +971,42 @@
 
   function addCommentButtonsToFeed() {
     // Add "Commenter stratégiquement" buttons to posts in the feed
-    var posts = document.querySelectorAll('.feed-shared-update-v2, .occludable-update');
+    // Multiple selectors to handle LinkedIn's changing DOM
+    var posts = document.querySelectorAll(
+      '.feed-shared-update-v2, ' +
+      '.occludable-update, ' +
+      '[data-urn*="activity"], ' +
+      '.update-components-actor, ' +
+      'div[data-id*="urn:li:activity"]'
+    );
 
+    console.log('[SOS] addCommentButtonsToFeed: Found', posts.length, 'potential posts');
+
+    var addedCount = 0;
     posts.forEach(function(post) {
       // Skip if already processed
       if (post.querySelector('.sos-feed-comment-btn')) return;
 
-      // Find the social actions bar
+      // Find the social actions bar (multiple selectors for compatibility)
       var actionsBar = post.querySelector('.feed-shared-social-actions') ||
-                       post.querySelector('.social-details-social-counts');
+                       post.querySelector('.social-details-social-counts') ||
+                       post.querySelector('[class*="social-actions"]') ||
+                       post.querySelector('[class*="feed-shared-social"]');
+
+      // If no actions bar, try to find the comment button area
+      if (!actionsBar) {
+        var commentBtn = post.querySelector('button[aria-label*="Comment"], button[aria-label*="comment"], button[aria-label*="Commenter"]');
+        if (commentBtn) {
+          actionsBar = commentBtn.parentElement;
+        }
+      }
 
       if (actionsBar) {
         var btn = document.createElement('button');
         btn.className = 'sos-feed-comment-btn';
         btn.innerHTML = '💬 SOS';
-        btn.title = 'Générer un commentaire stratégique';
+        btn.title = 'Générer un commentaire stratégique avec IA';
+        btn.style.cssText = 'margin-left: 8px; padding: 4px 12px; background: linear-gradient(135deg, #0077b5, #005582); color: white; border: none; border-radius: 16px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;';
         btn.addEventListener('click', function(e) {
           e.preventDefault();
           e.stopPropagation();
@@ -993,8 +1014,13 @@
         });
 
         actionsBar.appendChild(btn);
+        addedCount++;
       }
     });
+
+    if (addedCount > 0) {
+      console.log('[SOS] Added', addedCount, 'comment buttons to feed posts');
+    }
   }
 
   function openCommentPanelForPost(postElement) {
@@ -1076,10 +1102,12 @@
 
     // Ajouter les boutons de commentaire dans le feed
     if (pageType === 'feed') {
+      console.log('[SOS] Feed page detected - will add comment buttons to posts');
       setTimeout(function() {
+        console.log('[SOS] Starting to add comment buttons to feed...');
         addCommentButtonsToFeed();
         // Re-add buttons when feed updates (infinite scroll)
-        setInterval(addCommentButtonsToFeed, 3000);
+        setInterval(addCommentButtonsToFeed, 5000);
       }, 2000);
     }
   }
