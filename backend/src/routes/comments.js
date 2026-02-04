@@ -6,9 +6,17 @@ import Anthropic from '@anthropic-ai/sdk';
 
 const router = Router();
 
+// Check if API key is configured
+const apiKey = process.env.ANTHROPIC_API_KEY;
+if (!apiKey) {
+  console.warn('[Comments] WARNING: ANTHROPIC_API_KEY is not set! AI comments will use fallback.');
+} else {
+  console.log('[Comments] Anthropic API key configured (starts with:', apiKey.substring(0, 10) + '...)');
+}
+
 // Client Anthropic
 const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+  apiKey: apiKey || 'missing-key',
 });
 
 /**
@@ -280,7 +288,13 @@ Réponds en JSON avec ce format exact :
     };
 
   } catch (error) {
-    console.error('[Comments] AI generation failed:', error);
+    console.error('[Comments] AI generation failed:', error.message || error);
+    console.error('[Comments] Error details:', JSON.stringify({
+      name: error.name,
+      status: error.status,
+      message: error.message,
+      apiKeySet: !!process.env.ANTHROPIC_API_KEY
+    }));
 
     // Fallback response
     const firstName = (post.authorName || '').split(' ')[0];
