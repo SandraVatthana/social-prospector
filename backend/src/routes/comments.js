@@ -232,6 +232,9 @@ RÈGLES STRICTES :
 - Ton naturel, pas corporate
 - Pas d'émojis excessifs (max 1)
 - Pas de hashtags dans le commentaire
+- JAMAIS de crochets [] ou de placeholders - le commentaire doit être COMPLET et prêt à poster
+- JAMAIS d'instructions entre crochets comme [ajoute ceci] ou [fais cela]
+- Invente des détails crédibles si nécessaire plutôt que de laisser des blancs
 
 STRUCTURE EFFICACE :
 1. Hook/Accroche (optionnel) - rebondir sur un point précis
@@ -255,9 +258,11 @@ MON PROFIL (pour personnaliser) :
 - Ton : ${voiceProfile.tone || 'Professionnel mais accessible'}
 ` : ''}
 
+IMPORTANT : Le commentaire doit être COMPLET et prêt à copier-coller. Pas de crochets [], pas de placeholders, pas d'instructions. Écris comme si TU étais la personne qui commente.
+
 Réponds en JSON avec ce format exact :
 {
-  "comment": "Le commentaire à poster (3-4 phrases max)",
+  "comment": "Le commentaire COMPLET à poster (3-4 phrases max, SANS crochets ni instructions)",
   "angle": "L'angle utilisé (ex: 'partage d'expérience', 'question expert', 'complément de perspective')",
   "strategy": "Pourquoi ce commentaire va marquer les esprits (1 phrase)"
 }`;
