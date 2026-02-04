@@ -842,13 +842,13 @@
 
   function analyzePostForComment() {
     var loadingEl = document.getElementById('sos-comment-loading');
-    var analyzeSection = document.getElementById('sos-comment-analyze-section');
+    var typeSection = document.getElementById('sos-comment-type-section');
     var suggestionEl = document.getElementById('sos-comment-suggestion');
     var trackEl = document.getElementById('sos-comment-track');
 
     // Show loading
     loadingEl.style.display = 'flex';
-    analyzeSection.style.display = 'none';
+    if (typeSection) typeSection.style.display = 'none';
     suggestionEl.style.display = 'none';
 
     var postData = commentPanelState.currentPost || {};
@@ -887,7 +887,7 @@
   function displayCommentSuggestion(result) {
     var suggestionEl = document.getElementById('sos-comment-suggestion');
     var trackEl = document.getElementById('sos-comment-track');
-    var analyzeSection = document.getElementById('sos-comment-analyze-section');
+    var typeSection = document.getElementById('sos-comment-type-section');
 
     var commentText = document.getElementById('sos-comment-suggestion-text');
     var metaEl = document.getElementById('sos-comment-suggestion-meta');
@@ -913,7 +913,7 @@
 
     commentPanelState.suggestedComment = result;
 
-    analyzeSection.style.display = 'none';
+    if (typeSection) typeSection.style.display = 'none';
     suggestionEl.style.display = 'block';
     trackEl.style.display = 'block';
   }
@@ -921,7 +921,7 @@
   function generateFallbackComment(postData) {
     var suggestionEl = document.getElementById('sos-comment-suggestion');
     var trackEl = document.getElementById('sos-comment-track');
-    var analyzeSection = document.getElementById('sos-comment-analyze-section');
+    var typeSection = document.getElementById('sos-comment-type-section');
 
     var commentText = document.getElementById('sos-comment-suggestion-text');
     var metaEl = document.getElementById('sos-comment-suggestion-meta');
@@ -935,7 +935,7 @@
     commentText.value = fallback;
     metaEl.textContent = '⚠️ Suggestion générique - personnalise avec ton expertise';
 
-    analyzeSection.style.display = 'none';
+    if (typeSection) typeSection.style.display = 'none';
     suggestionEl.style.display = 'block';
     trackEl.style.display = 'block';
   }
