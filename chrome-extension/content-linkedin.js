@@ -1006,7 +1006,7 @@
         btn.className = 'sos-feed-comment-btn';
         btn.innerHTML = '💬 SOS';
         btn.title = 'Générer un commentaire stratégique avec IA';
-        btn.style.cssText = 'margin-left: 8px; padding: 4px 12px; background: linear-gradient(135deg, #0077b5, #005582); color: white; border: none; border-radius: 16px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;';
+        btn.style.cssText = 'margin-left: 8px; padding: 4px 12px; background: linear-gradient(135deg, #E1306C, #C13584); color: white; border: none; border-radius: 16px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 6px rgba(225,48,108,0.3);';
         btn.addEventListener('click', function(e) {
           e.preventDefault();
           e.stopPropagation();
