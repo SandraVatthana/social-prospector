@@ -6,9 +6,17 @@ import Anthropic from '@anthropic-ai/sdk';
 
 const router = Router();
 
+// Check if API key is configured
+const apiKey = process.env.ANTHROPIC_API_KEY;
+if (!apiKey) {
+  console.warn('[Comments] WARNING: ANTHROPIC_API_KEY is not set! AI comments will use fallback.');
+} else {
+  console.log('[Comments] Anthropic API key configured (starts with:', apiKey.substring(0, 10) + '...)');
+}
+
 // Client Anthropic
 const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+  apiKey: apiKey || 'missing-key',
 });
 
 /**
@@ -224,6 +232,9 @@ RÈGLES STRICTES :
 - Ton naturel, pas corporate
 - Pas d'émojis excessifs (max 1)
 - Pas de hashtags dans le commentaire
+- JAMAIS de crochets [] ou de placeholders - le commentaire doit être COMPLET et prêt à poster
+- JAMAIS d'instructions entre crochets comme [ajoute ceci] ou [fais cela]
+- Invente des détails crédibles si nécessaire plutôt que de laisser des blancs
 
 STRUCTURE EFFICACE :
 1. Hook/Accroche (optionnel) - rebondir sur un point précis
@@ -247,9 +258,11 @@ MON PROFIL (pour personnaliser) :
 - Ton : ${voiceProfile.tone || 'Professionnel mais accessible'}
 ` : ''}
 
+IMPORTANT : Le commentaire doit être COMPLET et prêt à copier-coller. Pas de crochets [], pas de placeholders, pas d'instructions. Écris comme si TU étais la personne qui commente.
+
 Réponds en JSON avec ce format exact :
 {
-  "comment": "Le commentaire à poster (3-4 phrases max)",
+  "comment": "Le commentaire COMPLET à poster (3-4 phrases max, SANS crochets ni instructions)",
   "angle": "L'angle utilisé (ex: 'partage d'expérience', 'question expert', 'complément de perspective')",
   "strategy": "Pourquoi ce commentaire va marquer les esprits (1 phrase)"
 }`;
@@ -273,23 +286,40 @@ Réponds en JSON avec ce format exact :
 
     const result = JSON.parse(cleanedResponse);
 
+    // Clean up any remaining placeholders/brackets from the comment
+    let cleanComment = (result.comment || '')
+      .replace(/\s*\[[^\]]*\]\s*/g, ' ')  // Remove [anything in brackets]
+      .replace(/\s+/g, ' ')               // Normalize whitespace
+      .trim();
+
+    // If comment is too short after cleanup, it was mostly placeholders
+    if (cleanComment.length < 20) {
+      throw new Error('Comment was mostly placeholders');
+    }
+
     return {
-      comment: result.comment || '',
+      comment: cleanComment,
       angle: result.angle || 'apport de valeur',
       strategy: result.strategy || ''
     };
 
   } catch (error) {
-    console.error('[Comments] AI generation failed:', error);
+    console.error('[Comments] AI generation failed:', error.message || error);
+    console.error('[Comments] Error details:', JSON.stringify({
+      name: error.name,
+      status: error.status,
+      message: error.message,
+      apiKeySet: !!process.env.ANTHROPIC_API_KEY
+    }));
 
-    // Fallback response
+    // Fallback response - also clean!
     const firstName = (post.authorName || '').split(' ')[0];
     return {
       comment: firstName
-        ? `Point de vue intéressant ${firstName} ! [Ajoute ta perspective personnelle ici]`
-        : 'Réflexion pertinente ! [Ajoute ta perspective ou une question qui fait avancer le débat]',
-      angle: 'apport de valeur',
-      strategy: 'Personnalise ce commentaire avec ton expertise unique'
+        ? `Merci ${firstName} pour ce partage enrichissant. Cela me fait penser à une situation similaire que j'ai vécue récemment. Quel a été ton plus grand apprentissage dans ce contexte ?`
+        : 'Réflexion très pertinente qui résonne avec mon expérience. La clé est souvent dans les détails d\'exécution. Qu\'est-ce qui t\'a le plus surpris dans ce parcours ?',
+      angle: 'question engageante',
+      strategy: 'Commentaire de secours - personnalise si besoin'
     };
   }
 }
