@@ -123,10 +123,11 @@ async function apiCall(endpoint, method = 'GET', body = null) {
  * Import a single prospect to the app
  */
 async function importProspect(platform, profile, posts = []) {
-  sosLog(' Importing prospect:', { platform, profile });
+  console.log('[SOS] importProspect called with:', { platform, profile: JSON.stringify(profile).substring(0, 200), posts: posts.length });
 
   // First, store locally
   const { importedProspects = [] } = await chrome.storage.local.get('importedProspects');
+  console.log('[SOS] Current importedProspects count:', importedProspects.length);
 
   const prospectData = {
     id: `${platform}_${profile.username || profile.fullName}_${Date.now()}`,
@@ -153,14 +154,17 @@ async function importProspect(platform, profile, posts = []) {
   // Limit to last 100 imports to avoid storage bloat
   const limitedProspects = importedProspects.slice(-100);
   await chrome.storage.local.set({ importedProspects: limitedProspects });
+  console.log('[SOS] Saved to storage. New count:', limitedProspects.length, 'Last item:', JSON.stringify(limitedProspects[limitedProspects.length - 1]).substring(0, 200));
 
   // Then try to sync with backend
   try {
+    console.log('[SOS] Attempting API sync to /api/prospects/extension/import');
     const result = await apiCall('/api/prospects/extension/import', 'POST', {
       platform,
       profile,
       posts
     });
+    console.log('[SOS] API sync result:', JSON.stringify(result).substring(0, 200));
 
     // Update synced status
     prospectData.synced = true;
@@ -176,7 +180,7 @@ async function importProspect(platform, profile, posts = []) {
       synced: true
     };
   } catch (error) {
-    sosWarn(' Backend sync failed, stored locally:', error.message);
+    console.error('[SOS] Backend sync FAILED:', error.message);
     return {
       success: true,
       prospectId: prospectData.id,
