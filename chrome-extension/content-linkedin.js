@@ -766,6 +766,22 @@
     });
 
     document.getElementById('sos-comment-regen-btn').addEventListener('click', function() {
+      // Cycle to a different comment type for variety
+      var types = ['deepen', 'challenge', 'testimonial', 'resource'];
+      var currentType = commentPanelState.selectedType || 'deepen';
+      var currentIndex = types.indexOf(currentType);
+      var nextIndex = (currentIndex + 1) % types.length;
+      commentPanelState.selectedType = types[nextIndex];
+
+      // Update the UI to show the new type
+      document.querySelectorAll('.sos-comment-type-btn').forEach(function(b) {
+        b.classList.remove('active');
+        if (b.dataset.type === commentPanelState.selectedType) {
+          b.classList.add('active');
+        }
+      });
+
+      console.log('[SOS] Regenerating with different angle:', commentPanelState.selectedType);
       analyzePostForComment();
     });
 
