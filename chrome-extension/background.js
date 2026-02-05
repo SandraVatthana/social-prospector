@@ -491,34 +491,34 @@ function generateLocalComment(post) {
     case 'experience':
       angle = 'partage d\'expérience similaire';
       comment = firstName
-        ? `Merci ${firstName} pour ce retour d'expérience ! [Ajoute ton propre vécu sur le sujet ou pose une question de suivi]`
-        : `Retour d'expérience précieux ! [Ajoute ton propre vécu ou pose une question pertinente]`;
+        ? `Merci ${firstName} pour ce retour d'expérience ! J'ai vécu quelque chose de similaire récemment et ça m'a permis de confirmer l'importance de ce que tu décris. Quel a été ton plus grand apprentissage ?`
+        : `Retour d'expérience précieux qui résonne avec ce que j'observe dans mon domaine. La clé semble être dans l'exécution. Comment as-tu géré les obstacles ?`;
       break;
     case 'advice':
       angle = 'enrichissement du conseil';
       comment = firstName
-        ? `Super conseil ${firstName} ! [Ajoute un point complémentaire ou une nuance issue de ton expérience]`
-        : `Excellent point ! [Ajoute une perspective ou un exemple concret de ton côté]`;
+        ? `Excellent conseil ${firstName} ! J'ajouterais qu'un élément souvent sous-estimé est la régularité dans l'application. C'est ce qui fait la différence sur le long terme.`
+        : `Point très pertinent. Dans mon expérience, combiner cette approche avec une vision long terme amplifie vraiment les résultats.`;
       break;
     case 'question':
       angle = 'réponse expert';
-      comment = `Bonne question ! [Partage ta perspective d'expert sur le sujet avec un exemple concret]`;
+      comment = `Excellente question ! De mon côté, j'ai observé que la clé réside souvent dans la simplicité d'exécution plutôt que dans la complexité de la stratégie. Et toi, quelle approche privilégies-tu ?`;
       break;
     case 'achievement':
       angle = 'félicitations + connexion';
       comment = firstName
-        ? `Bravo ${firstName} ! [Félicite sincèrement et relie à un point commun ou à ton domaine d'expertise]`
-        : `Félicitations pour cette réussite ! [Fais le lien avec ton domaine ou pose une question sur les prochaines étapes]`;
+        ? `Bravo ${firstName} pour cette belle réussite ! Ce genre de parcours inspire. Quelle a été l'étape la plus décisive selon toi ?`
+        : `Félicitations pour cette réussite ! Le chemin compte autant que la destination. Quelle sera la prochaine étape ?`;
       break;
     case 'insight':
       angle = 'enrichissement du constat';
-      comment = `Observation pertinente ! [Ajoute un angle complémentaire ou des données de ton secteur]`;
+      comment = `Observation très juste. J'observe la même tendance dans mon secteur. Ce qui me frappe, c'est l'accélération de ce phénomène ces derniers mois.`;
       break;
     default:
       angle = 'apport de valeur';
       comment = firstName
-        ? `Merci ${firstName} pour ce partage ! [Ajoute une réflexion personnelle qui enrichit le sujet]`
-        : `Point de vue intéressant ! [Partage ta perspective unique ou une question qui fait réfléchir]`;
+        ? `Merci ${firstName} pour ce partage enrichissant. Cela me fait penser à une situation similaire que j'ai vécue. Quel a été ton déclic pour aborder ce sujet ?`
+        : `Réflexion intéressante qui résonne avec mon expérience. La nuance est souvent dans les détails d'exécution. Qu'est-ce qui t'a le plus surpris ?`;
   }
 
   return {
