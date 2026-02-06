@@ -386,8 +386,8 @@ function generateLocalConversationAnalysis(messages, prospect) {
     insight = 'Signal très positif ! Elle pose des questions et montre de l\'intérêt.';
     suggestion = {
       message: firstName ?
-        `Avec plaisir ${firstName} ! [Répondez à sa question et proposez un échange]` :
-        'Avec plaisir ! [Répondez à sa question et proposez un échange]',
+        `Avec plaisir ${firstName} ! Je serais ravi d'en discuter plus en détail. Seriez-vous disponible pour un échange de 15 minutes cette semaine ?` :
+        'Avec plaisir ! Je serais ravi d\'en discuter. Seriez-vous disponible pour un échange de 15 minutes ?',
       reason: 'Lead chaud - c\'est le moment de proposer un échange'
     };
   } else if (hasPositive) {
@@ -395,15 +395,15 @@ function generateLocalConversationAnalysis(messages, prospect) {
     insight = 'Réponse positive, mais pas encore d\'engagement fort.';
     suggestion = {
       message: firstName ?
-        `Merci ${firstName} ! [Posez une question ouverte sur son expérience]` :
-        'Merci ! [Posez une question ouverte sur son expérience]',
+        `Merci ${firstName} ! Au fait, comment gérez-vous actuellement ce sujet dans votre activité ?` :
+        'Merci ! Au fait, comment gérez-vous actuellement ce sujet dans votre activité ?',
       reason: 'Continuez à creuser pour comprendre ses besoins'
     };
   } else if (hasQuestion) {
     temperature = 'warm';
     insight = 'Elle pose des questions - signe de curiosité.';
     suggestion = {
-      message: '[Répondez à sa question de façon concise et rebondissez]',
+      message: 'Bonne question ! En fait, l\'approche dépend vraiment du contexte. Quel est votre principal défi actuellement sur ce sujet ?',
       reason: 'Les questions montrent un intérêt - répondez et engagez'
     };
   } else {
@@ -411,8 +411,8 @@ function generateLocalConversationAnalysis(messages, prospect) {
     insight = 'Réponse neutre. Essayez de relancer avec une question.';
     suggestion = {
       message: firstName ?
-        `${firstName}, [posez une question en lien avec son domaine]` :
-        '[Posez une question en lien avec son domaine]',
+        `${firstName}, j'ai vu que vous travaillez dans ce domaine. Quel est votre plus grand défi en ce moment ?` :
+        'J\'ai vu votre profil et je suis curieux : quel est votre plus grand défi en ce moment dans votre activité ?',
       reason: 'Une question ouverte peut relancer la conversation'
     };
   }
