@@ -302,24 +302,30 @@ Réponds en JSON avec ce format exact :
       throw new Error('Comment was mostly placeholders');
     }
 
+    console.log('[Comments] ✅ Claude API success! Generated comment for:', post.authorName);
+
     return {
       comment: cleanComment,
       angle: result.angle || 'apport de valeur',
-      strategy: result.strategy || ''
+      strategy: result.strategy || '',
+      fromClaude: true  // Flag to indicate real Claude response
     };
 
   } catch (error) {
-    console.error('[Comments] AI generation failed:', error.message || error);
+    console.error('[Comments] ❌ Claude API FAILED:', error.message || error);
     console.error('[Comments] Error details:', JSON.stringify({
       name: error.name,
       status: error.status,
       message: error.message,
-      apiKeySet: !!process.env.ANTHROPIC_API_KEY
+      apiKeySet: !!process.env.ANTHROPIC_API_KEY,
+      apiKeyPrefix: process.env.ANTHROPIC_API_KEY ? process.env.ANTHROPIC_API_KEY.substring(0, 10) : 'NOT SET'
     }));
 
     // Fallback response based on commentType - NO BRACKETS
     const firstName = (post.authorName || '').split(' ')[0];
-    return generateFallbackByType(firstName, commentType);
+    const fallback = generateFallbackByType(firstName, commentType);
+    fallback.fromClaude = false;  // Flag to indicate fallback
+    return fallback;
   }
 }
 

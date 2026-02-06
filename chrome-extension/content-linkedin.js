@@ -901,15 +901,21 @@
       console.log('[SOS] Strategic comment result for type:', selectedType);
       console.log('[SOS] Comment received:', result?.comment?.substring(0, 80) || 'NO COMMENT');
       console.log('[SOS] Angle received:', result?.angle || 'NO ANGLE');
-      console.log('[SOS] From API:', result?.fromAPI ? '✅ Oui (Claude)' : '❌ Non (fallback local)');
 
-      // Check if this is a fallback (local) comment
-      if (result?.fromAPI === false) {
-        console.warn('[SOS] ⚠️ API Claude non disponible - commentaire de secours utilisé');
+      // Check both fromAPI (background.js) and fromClaude (server)
+      var isRealClaude = result?.fromClaude === true;
+      var isLocalFallback = result?.fromAPI === false;
+
+      if (isRealClaude) {
+        console.log('[SOS] ✅ Commentaire généré par Claude AI');
+      } else if (isLocalFallback) {
+        console.warn('[SOS] ⚠️ Fallback LOCAL (extension) - API serveur non joignable');
         if (result?.apiError) {
           console.error('[SOS] Erreur:', result.apiError);
         }
-        console.warn('[SOS] 💡 Vérifiez sur Netlify: Site settings > Environment variables > ANTHROPIC_API_KEY');
+      } else {
+        console.warn('[SOS] ⚠️ Fallback SERVEUR - Claude API a échoué');
+        console.warn('[SOS] 💡 Vérifiez les logs Netlify Functions pour voir l\'erreur');
       }
 
       loadingEl.style.display = 'none';
