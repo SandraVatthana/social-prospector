@@ -25,6 +25,8 @@
     // Detect post pages
     if (url.indexOf('/feed/update/') > -1) return 'post';
     if (url.indexOf('/posts/') > -1) return 'post';
+    // Detect content search (shows posts) - treat like feed
+    if (url.indexOf('/search/results/content') > -1) return 'feed';
     // Detect feed with posts
     if (url.indexOf('/feed') > -1 && url.indexOf('/feed/update') === -1) return 'feed';
     return 'unknown';
