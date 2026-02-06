@@ -984,6 +984,78 @@
   }
 
   // ============================================
+  // ONBOARDING TOOLTIP
+  // ============================================
+
+  function showOnboardingTooltip() {
+    // Check if already shown
+    if (localStorage.getItem('sos_onboarding_shown')) return;
+
+    // Find a SOS button to point to
+    var sosBtn = document.querySelector('.sos-feed-comment-btn');
+    if (!sosBtn) return;
+
+    var tooltip = document.createElement('div');
+    tooltip.id = 'sos-onboarding-tooltip';
+    tooltip.innerHTML =
+      '<div class="sos-onboarding-content">' +
+        '<div class="sos-onboarding-header">' +
+          '<span class="sos-onboarding-icon">🎯</span>' +
+          '<span class="sos-onboarding-title">SOS Prospection</span>' +
+          '<button class="sos-onboarding-close" id="sos-onboarding-close">×</button>' +
+        '</div>' +
+        '<div class="sos-onboarding-body">' +
+          '<p><strong>Nouveau !</strong> Le bouton <span class="sos-highlight">💬 SOS</span> apparaît sur chaque post.</p>' +
+          '<p>Clique dessus pour générer un <strong>commentaire stratégique</strong> avec l\'IA :</p>' +
+          '<ul>' +
+            '<li>✨ Commentaire personnalisé et pertinent</li>' +
+            '<li>🎯 Plusieurs angles : approfondir, challenger, témoigner...</li>' +
+            '<li>📋 Copie en 1 clic et poste !</li>' +
+          '</ul>' +
+        '</div>' +
+        '<button class="sos-onboarding-btn" id="sos-onboarding-ok">J\'ai compris !</button>' +
+      '</div>';
+
+    tooltip.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10000; background: white; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); padding: 24px; max-width: 360px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;';
+
+    // Add styles
+    var style = document.createElement('style');
+    style.textContent =
+      '#sos-onboarding-tooltip .sos-onboarding-header { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }' +
+      '#sos-onboarding-tooltip .sos-onboarding-icon { font-size: 24px; }' +
+      '#sos-onboarding-tooltip .sos-onboarding-title { font-size: 18px; font-weight: 700; color: #262626; flex: 1; }' +
+      '#sos-onboarding-tooltip .sos-onboarding-close { background: none; border: none; font-size: 24px; color: #8e8e8e; cursor: pointer; padding: 0; line-height: 1; }' +
+      '#sos-onboarding-tooltip .sos-onboarding-close:hover { color: #262626; }' +
+      '#sos-onboarding-tooltip .sos-onboarding-body { color: #444; font-size: 14px; line-height: 1.6; }' +
+      '#sos-onboarding-tooltip .sos-onboarding-body p { margin: 0 0 12px 0; }' +
+      '#sos-onboarding-tooltip .sos-onboarding-body ul { margin: 0; padding-left: 0; list-style: none; }' +
+      '#sos-onboarding-tooltip .sos-onboarding-body li { padding: 4px 0; }' +
+      '#sos-onboarding-tooltip .sos-highlight { background: linear-gradient(135deg, #E1306C, #C13584); color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; }' +
+      '#sos-onboarding-tooltip .sos-onboarding-btn { width: 100%; margin-top: 16px; padding: 12px 24px; background: linear-gradient(135deg, #E1306C, #C13584); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }' +
+      '#sos-onboarding-tooltip .sos-onboarding-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(225,48,108,0.4); }' +
+      '.sos-onboarding-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; }';
+    document.head.appendChild(style);
+
+    // Add overlay
+    var overlay = document.createElement('div');
+    overlay.className = 'sos-onboarding-overlay';
+    overlay.id = 'sos-onboarding-overlay';
+    document.body.appendChild(overlay);
+    document.body.appendChild(tooltip);
+
+    // Close handlers
+    function closeOnboarding() {
+      localStorage.setItem('sos_onboarding_shown', 'true');
+      tooltip.remove();
+      overlay.remove();
+    }
+
+    document.getElementById('sos-onboarding-close').addEventListener('click', closeOnboarding);
+    document.getElementById('sos-onboarding-ok').addEventListener('click', closeOnboarding);
+    overlay.addEventListener('click', closeOnboarding);
+  }
+
+  // ============================================
   // FEED COMMENT BUTTONS (on feed page)
   // ============================================
 
@@ -1038,6 +1110,8 @@
 
     if (addedCount > 0) {
       console.log('[SOS] Added', addedCount, 'comment buttons to feed posts');
+      // Show onboarding tooltip on first use
+      setTimeout(showOnboardingTooltip, 500);
     }
   }
 
