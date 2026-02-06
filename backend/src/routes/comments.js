@@ -312,14 +312,14 @@ Réponds en JSON avec ce format exact :
       apiKeySet: !!process.env.ANTHROPIC_API_KEY
     }));
 
-    // Fallback response
+    // Fallback response - NO BRACKETS
     const firstName = (post.authorName || '').split(' ')[0];
     return {
       comment: firstName
-        ? `Point de vue intéressant ${firstName} ! [Ajoute ta perspective personnelle ici]`
-        : 'Réflexion pertinente ! [Ajoute ta perspective ou une question qui fait avancer le débat]',
-      angle: 'apport de valeur',
-      strategy: 'Personnalise ce commentaire avec ton expertise unique'
+        ? `Merci ${firstName} pour ce partage enrichissant. Cela me fait penser à une situation similaire que j'ai vécue récemment. Quel a été ton plus grand apprentissage dans ce contexte ?`
+        : 'Réflexion très pertinente qui résonne avec mon expérience. La clé est souvent dans les détails d\'exécution. Qu\'est-ce qui t\'a le plus surpris dans ce parcours ?',
+      angle: 'question engageante',
+      strategy: 'Commentaire de secours - personnalise si besoin'
     };
   }
 }

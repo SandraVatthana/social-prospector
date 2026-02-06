@@ -953,11 +953,11 @@
     // Generate a simple fallback
     var firstName = (postData.authorName || '').split(' ')[0];
     var fallback = firstName
-      ? 'Merci ' + firstName + ' pour ce partage ! [Ajoute ta perspective personnelle ici]'
-      : 'Point de vue intéressant ! [Ajoute ta perspective personnelle ici]';
+      ? 'Merci ' + firstName + ' pour ce partage enrichissant. Cela résonne avec mon expérience sur le sujet. Quel a été ton plus grand apprentissage ?'
+      : 'Réflexion très pertinente qui fait écho à ce que j\'observe dans mon domaine. La clé est souvent dans les détails d\'exécution. Qu\'est-ce qui t\'a le plus surpris ?';
 
     commentText.value = fallback;
-    metaEl.textContent = '⚠️ Suggestion générique - personnalise avec ton expertise';
+    metaEl.textContent = '⚠️ Commentaire de secours - personnalise si besoin';
 
     if (typeSection) typeSection.style.display = 'none';
     suggestionEl.style.display = 'block';
