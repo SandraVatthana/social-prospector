@@ -458,16 +458,70 @@ async function generateStrategicComment(platform, post, commentType = 'deepen') 
     sosError('generateStrategicComment API failed:', error);
 
     // Fallback: generate local comment suggestion
-    return generateLocalComment(post);
+    return generateLocalComment(post, commentType);
+  }
+}
+
+/**
+ * Generate comment based on selected type (for fallback)
+ */
+function generateCommentByType(firstName, commentType) {
+  switch (commentType) {
+    case 'challenge':
+      return {
+        success: true,
+        comment: firstName
+          ? `Intéressant ${firstName}, mais je me demande si on ne sous-estime pas l'importance du contexte dans cette approche. Dans certains cas, l'inverse pourrait aussi fonctionner. Qu'en penses-tu ?`
+          : `Point de vue intéressant, mais je me demande si cette approche fonctionne dans tous les contextes. Parfois, l'inverse peut aussi être vrai. Quel est ton retour d'expérience là-dessus ?`,
+        angle: 'challenger avec respect',
+        strategy: 'Nuancer pour créer un débat constructif',
+        icpMatch: false
+      };
+    case 'testimonial':
+      return {
+        success: true,
+        comment: firstName
+          ? `Ça me parle ${firstName} ! J'ai vécu une situation similaire il y a quelques mois. Ce qui m'a le plus marqué, c'est l'importance de rester flexible dans l'exécution. Tu as ressenti la même chose ?`
+          : `Ça résonne vraiment avec mon expérience. J'ai traversé quelque chose de similaire récemment et ça m'a appris l'importance de l'adaptabilité. C'est souvent là que tout se joue.`,
+        angle: 'témoignage personnel',
+        strategy: 'Créer une connexion par le partage d\'expérience',
+        icpMatch: false
+      };
+    case 'resource':
+      return {
+        success: true,
+        comment: firstName
+          ? `Merci ${firstName} pour cette réflexion ! Si le sujet t'intéresse, je recommande le livre "Deep Work" de Cal Newport qui approfondit vraiment cette thématique. Tu connais ?`
+          : `Réflexion pertinente ! Pour aller plus loin sur ce sujet, le livre "Atomic Habits" de James Clear apporte un éclairage complémentaire très concret. Une vraie pépite.`,
+        angle: 'partage de ressource',
+        strategy: 'Apporter de la valeur avec une ressource concrète',
+        icpMatch: false
+      };
+    default:
+      return {
+        success: true,
+        comment: firstName
+          ? `Merci ${firstName} pour ce partage enrichissant. Cela me fait penser à une situation similaire que j'ai vécue. Quel a été ton déclic pour aborder ce sujet ?`
+          : `Réflexion intéressante qui résonne avec mon expérience. La nuance est souvent dans les détails d'exécution. Qu'est-ce qui t'a le plus surpris ?`,
+        angle: 'apport de valeur',
+        strategy: 'Commentaire engageant et pertinent',
+        icpMatch: false
+      };
   }
 }
 
 /**
  * Generate a local comment suggestion when API is unavailable
  */
-function generateLocalComment(post) {
+function generateLocalComment(post, commentType = 'deepen') {
   const authorName = post?.authorName || '';
   const firstName = authorName.split(' ')[0];
+
+  // If user selected a specific comment type, use it directly
+  if (commentType && commentType !== 'deepen') {
+    return generateCommentByType(firstName, commentType);
+  }
+
   const content = (post?.content || '').toLowerCase();
 
   // Analyze content for themes
