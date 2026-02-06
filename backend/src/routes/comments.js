@@ -312,15 +312,49 @@ Réponds en JSON avec ce format exact :
       apiKeySet: !!process.env.ANTHROPIC_API_KEY
     }));
 
-    // Fallback response - NO BRACKETS
+    // Fallback response based on commentType - NO BRACKETS
     const firstName = (post.authorName || '').split(' ')[0];
-    return {
-      comment: firstName
-        ? `Merci ${firstName} pour ce partage enrichissant. Cela me fait penser à une situation similaire que j'ai vécue récemment. Quel a été ton plus grand apprentissage dans ce contexte ?`
-        : 'Réflexion très pertinente qui résonne avec mon expérience. La clé est souvent dans les détails d\'exécution. Qu\'est-ce qui t\'a le plus surpris dans ce parcours ?',
-      angle: 'question engageante',
-      strategy: 'Commentaire de secours - personnalise si besoin'
-    };
+    return generateFallbackByType(firstName, commentType);
+  }
+}
+
+/**
+ * Generate fallback comment based on type
+ */
+function generateFallbackByType(firstName, commentType) {
+  switch (commentType) {
+    case 'challenge':
+      return {
+        comment: firstName
+          ? `Intéressant ${firstName}, mais je me demande si on ne sous-estime pas l'importance du contexte. Dans certains cas, l'inverse pourrait fonctionner. Qu'en penses-tu ?`
+          : 'Point de vue intéressant. Je me demande toutefois si cette approche fonctionne dans tous les contextes. Parfois l\'inverse peut aussi être vrai.',
+        angle: 'challenger avec respect',
+        strategy: 'Commentaire de secours - personnalise si besoin'
+      };
+    case 'testimonial':
+      return {
+        comment: firstName
+          ? `Ça me parle ${firstName} ! J'ai vécu une situation similaire il y a quelques mois. Ce qui m'a le plus marqué, c'est l'importance de rester flexible. Tu as ressenti la même chose ?`
+          : 'Ça résonne vraiment avec mon expérience. J\'ai traversé quelque chose de similaire récemment et ça m\'a appris l\'importance de l\'adaptabilité.',
+        angle: 'témoignage personnel',
+        strategy: 'Commentaire de secours - personnalise si besoin'
+      };
+    case 'resource':
+      return {
+        comment: firstName
+          ? `Merci ${firstName} pour cette réflexion ! Si le sujet t'intéresse, je recommande le livre "Deep Work" de Cal Newport qui approfondit vraiment cette thématique.`
+          : 'Réflexion pertinente ! Pour aller plus loin, le livre "Atomic Habits" de James Clear apporte un éclairage complémentaire très concret.',
+        angle: 'partage de ressource',
+        strategy: 'Commentaire de secours - personnalise si besoin'
+      };
+    default: // deepen
+      return {
+        comment: firstName
+          ? `Merci ${firstName} pour ce partage enrichissant. Cela me fait penser à une situation similaire que j'ai vécue. Quel a été ton plus grand apprentissage ?`
+          : 'Réflexion très pertinente qui résonne avec mon expérience. La clé est souvent dans les détails d\'exécution. Qu\'est-ce qui t\'a le plus surpris ?',
+        angle: 'question engageante',
+        strategy: 'Commentaire de secours - personnalise si besoin'
+      };
   }
 }
 
