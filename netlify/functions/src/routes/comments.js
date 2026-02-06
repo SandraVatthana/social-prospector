@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, optionalAuth } from '../middleware/auth.js';
 import { formatResponse, formatError } from '../utils/helpers.js';
 import { supabaseAdmin } from '../utils/supabase.js';
 import Anthropic from '@anthropic-ai/sdk';
@@ -22,71 +22,76 @@ const anthropic = new Anthropic({
 /**
  * POST /api/comments/generate
  * Generate a strategic comment for a LinkedIn post
+ * Uses optionalAuth - works without login but personalized if logged in
  */
-router.post('/generate', requireAuth, async (req, res) => {
+router.post('/generate', optionalAuth, async (req, res) => {
   try {
     const { platform, post, commentType = 'deepen', campaignId } = req.body;
-    const userId = req.user.id;
+    const userId = req.user?.id;  // May be undefined if not logged in
 
     if (!post || !post.content) {
       return res.status(400).json(formatError('Contenu du post requis', 'MISSING_CONTENT'));
     }
 
-    console.log('[Comments] Generating strategic comment for:', post.authorName, 'type:', commentType);
+    console.log('[Comments] Generating strategic comment for:', post.authorName, 'type:', commentType, 'authenticated:', !!userId);
 
-    // Get voice profile - check campaign first (agency mode), then user default
+    // Get voice profile - only if user is authenticated
     let voiceProfile = null;
-    try {
-      // First, check if there's a campaign-specific voice profile
-      if (campaignId) {
-        const { data: campaignVoice } = await supabaseAdmin
-          .from('campaign_voice_profiles')
-          .select('*')
-          .eq('campaign_id', campaignId)
-          .single();
+    if (userId) {
+      try {
+        // First, check if there's a campaign-specific voice profile
+        if (campaignId) {
+          const { data: campaignVoice } = await supabaseAdmin
+            .from('campaign_voice_profiles')
+            .select('*')
+            .eq('campaign_id', campaignId)
+            .single();
 
-        if (campaignVoice) {
-          voiceProfile = campaignVoice;
-          console.log('[Comments] Using campaign voice profile');
+          if (campaignVoice) {
+            voiceProfile = campaignVoice;
+            console.log('[Comments] Using campaign voice profile');
+          }
         }
-      }
 
-      // Fallback to user's default voice profile
-      if (!voiceProfile) {
-        const { data: voiceData } = await supabaseAdmin
-          .from('voice_profiles')
-          .select('*')
-          .eq('user_id', userId)
-          .single();
-        voiceProfile = voiceData;
+        // Fallback to user's default voice profile
+        if (!voiceProfile) {
+          const { data: voiceData } = await supabaseAdmin
+            .from('voice_profiles')
+            .select('*')
+            .eq('user_id', userId)
+            .single();
+          voiceProfile = voiceData;
+        }
+      } catch (e) {
+        console.log('[Comments] No voice profile found');
       }
-    } catch (e) {
-      console.log('[Comments] No voice profile found');
     }
 
-    // Check if author matches ICP
+    // Check if author matches ICP - only if user is authenticated
     let icpMatch = false;
-    try {
-      const { data: campaigns } = await supabaseAdmin
-        .from('campaigns')
-        .select('target_description')
-        .eq('user_id', userId)
-        .eq('status', 'active');
+    if (userId) {
+      try {
+        const { data: campaigns } = await supabaseAdmin
+          .from('campaigns')
+          .select('target_description')
+          .eq('user_id', userId)
+          .eq('status', 'active');
 
-      if (campaigns && campaigns.length > 0) {
-        const icpKeywords = campaigns
-          .map(c => c.target_description || '')
-          .join(' ')
-          .toLowerCase();
+        if (campaigns && campaigns.length > 0) {
+          const icpKeywords = campaigns
+            .map(c => c.target_description || '')
+            .join(' ')
+            .toLowerCase();
 
-        const authorInfo = `${post.authorName || ''} ${post.authorHeadline || ''}`.toLowerCase();
+          const authorInfo = `${post.authorName || ''} ${post.authorHeadline || ''}`.toLowerCase();
 
-        // Simple ICP matching
-        const keywords = ['coach', 'consultant', 'entrepreneur', 'founder', 'ceo', 'freelance', 'formateur', 'expert'];
-        icpMatch = keywords.some(k => icpKeywords.includes(k) && authorInfo.includes(k));
+          // Simple ICP matching
+          const keywords = ['coach', 'consultant', 'entrepreneur', 'founder', 'ceo', 'freelance', 'formateur', 'expert'];
+          icpMatch = keywords.some(k => icpKeywords.includes(k) && authorInfo.includes(k));
+        }
+      } catch (e) {
+        console.log('[Comments] ICP check failed:', e.message);
       }
-    } catch (e) {
-      console.log('[Comments] ICP check failed:', e.message);
     }
 
     // Generate comment with AI

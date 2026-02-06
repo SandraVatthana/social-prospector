@@ -585,8 +585,8 @@
 
       var firstName = (prospect.fullName || '').split(' ')[0];
       var fallbackMsg = firstName ?
-        'Merci ' + firstName + ' pour votre retour. [Personnalisez votre réponse ici]' :
-        'Merci pour votre retour. [Personnalisez votre réponse ici]';
+        'Merci ' + firstName + ' pour votre retour ! Comment puis-je vous aider davantage sur ce sujet ?' :
+        'Merci pour votre retour ! Comment puis-je vous aider davantage sur ce sujet ?';
 
       suggestionText.value = fallbackMsg;
       suggestionMeta.textContent = '⚠️ Suggestion générique - personnalisez avant d\'envoyer';
@@ -883,6 +883,9 @@
       postData = commentPanelState.currentPost || {};
     }
 
+    var selectedType = commentPanelState.selectedType || 'deepen';
+    console.log('[SOS] Requesting comment with type:', selectedType);
+
     // Send to backend for AI analysis
     sosSendMessage('generateStrategicComment', {
       platform: PLATFORM,
@@ -892,18 +895,38 @@
         content: postData.content || '',
         url: postData.url || window.location.href
       },
-      commentType: commentPanelState.selectedType || 'deepen'
+      commentType: selectedType
     })
     .then(function(result) {
-      console.log('[SOS] Strategic comment generated:', result);
+      console.log('[SOS] Strategic comment result for type:', selectedType);
+      console.log('[SOS] Comment received:', result?.comment?.substring(0, 80) || 'NO COMMENT');
+      console.log('[SOS] Angle received:', result?.angle || 'NO ANGLE');
+      console.log('[SOS] From API:', result?.fromAPI ? '✅ Oui (Claude)' : '❌ Non (fallback local)');
+
+      // Check if this is a fallback (local) comment
+      if (result?.fromAPI === false) {
+        console.warn('[SOS] ⚠️ API Claude non disponible - commentaire de secours utilisé');
+        if (result?.apiError) {
+          console.error('[SOS] Erreur:', result.apiError);
+        }
+        console.warn('[SOS] 💡 Vérifiez sur Netlify: Site settings > Environment variables > ANTHROPIC_API_KEY');
+      }
+
       loadingEl.style.display = 'none';
-      displayCommentSuggestion(result);
+
+      // Check if we got an actual result
+      if (result && (result.comment || result.message)) {
+        displayCommentSuggestion(result);
+      } else {
+        console.log('[SOS] No valid comment in result, using fallback');
+        generateFallbackComment(postData);
+      }
     })
     .catch(function(err) {
       console.error('[SOS] Comment generation failed:', err);
       loadingEl.style.display = 'none';
 
-      // Fallback: show generic suggestion
+      // Fallback: show type-specific suggestion
       generateFallbackComment(postData);
     });
   }
@@ -950,14 +973,40 @@
     var commentText = document.getElementById('sos-comment-suggestion-text');
     var metaEl = document.getElementById('sos-comment-suggestion-meta');
 
-    // Generate a simple fallback
+    // Generate fallback based on selected comment type
     var firstName = (postData.authorName || '').split(' ')[0];
-    var fallback = firstName
-      ? 'Merci ' + firstName + ' pour ce partage enrichissant. Cela résonne avec mon expérience sur le sujet. Quel a été ton plus grand apprentissage ?'
-      : 'Réflexion très pertinente qui fait écho à ce que j\'observe dans mon domaine. La clé est souvent dans les détails d\'exécution. Qu\'est-ce qui t\'a le plus surpris ?';
+    var selectedType = commentPanelState.selectedType || 'deepen';
+    var fallback = '';
+    var angle = '';
+
+    switch (selectedType) {
+      case 'challenge':
+        fallback = firstName
+          ? 'Intéressant ' + firstName + ', mais je me demande si on ne sous-estime pas l\'importance du contexte dans cette approche. Dans certains cas, l\'inverse pourrait aussi fonctionner. Qu\'en penses-tu ?'
+          : 'Point de vue intéressant, mais je me demande si cette approche fonctionne dans tous les contextes. Parfois, l\'inverse peut aussi être vrai. Quel est ton retour d\'expérience là-dessus ?';
+        angle = 'challenger avec respect';
+        break;
+      case 'testimonial':
+        fallback = firstName
+          ? 'Ça me parle ' + firstName + ' ! J\'ai vécu une situation similaire il y a quelques mois. Ce qui m\'a le plus marqué, c\'est l\'importance de rester flexible dans l\'exécution. Tu as ressenti la même chose ?'
+          : 'Ça résonne vraiment avec mon expérience. J\'ai traversé quelque chose de similaire récemment et ça m\'a appris l\'importance de l\'adaptabilité. C\'est souvent là que tout se joue.';
+        angle = 'témoignage personnel';
+        break;
+      case 'resource':
+        fallback = firstName
+          ? 'Merci ' + firstName + ' pour cette réflexion ! Si le sujet t\'intéresse, je recommande le livre "Deep Work" de Cal Newport qui approfondit vraiment cette thématique. Tu connais ?'
+          : 'Réflexion pertinente ! Pour aller plus loin sur ce sujet, le livre "Atomic Habits" de James Clear apporte un éclairage complémentaire très concret. Une vraie pépite.';
+        angle = 'partage de ressource';
+        break;
+      default: // deepen
+        fallback = firstName
+          ? 'Merci ' + firstName + ' pour ce partage enrichissant. Cela me fait penser à une situation similaire que j\'ai vécue. Quel a été ton déclic pour aborder ce sujet ?'
+          : 'Réflexion intéressante qui résonne avec mon expérience. La nuance est souvent dans les détails d\'exécution. Qu\'est-ce qui t\'a le plus surpris ?';
+        angle = 'apport de valeur';
+    }
 
     commentText.value = fallback;
-    metaEl.textContent = '⚠️ Commentaire de secours - personnalise si besoin';
+    metaEl.textContent = '🎯 Angle: ' + angle + ' (mode hors-ligne)';
 
     if (typeSection) typeSection.style.display = 'none';
     suggestionEl.style.display = 'block';
@@ -988,8 +1037,8 @@
   // ============================================
 
   function showOnboardingTooltip() {
-    // Check if already shown
-    if (localStorage.getItem('sos_onboarding_shown')) return;
+    // Check if already shown this session
+    if (sessionStorage.getItem('sos_onboarding_shown_session')) return;
 
     // Find a SOS button to point to
     var sosBtn = document.querySelector('.sos-feed-comment-btn');
@@ -1005,15 +1054,18 @@
           '<button class="sos-onboarding-close" id="sos-onboarding-close">×</button>' +
         '</div>' +
         '<div class="sos-onboarding-body">' +
-          '<p><strong>Nouveau !</strong> Le bouton <span class="sos-highlight">💬 SOS</span> apparaît sur chaque post.</p>' +
-          '<p>Clique dessus pour générer un <strong>commentaire stratégique</strong> avec l\'IA :</p>' +
-          '<ul>' +
-            '<li>✨ Commentaire personnalisé et pertinent</li>' +
-            '<li>🎯 Plusieurs angles : approfondir, challenger, témoigner...</li>' +
-            '<li>📋 Copie en 1 clic et poste !</li>' +
-          '</ul>' +
+          '<p><strong>Tes assistants IA sont prêts !</strong></p>' +
+          '<div class="sos-feature-box">' +
+            '<p><span class="sos-highlight">💬 SOS</span> <strong>Commentaires stratégiques</strong></p>' +
+            '<p style="font-size: 12px; color: #666; margin-top: 4px;">Bouton rose sur chaque post du feed. Clique pour générer un commentaire IA adapté.</p>' +
+          '</div>' +
+          '<div class="sos-feature-box">' +
+            '<p><span class="sos-highlight-blue">🤖 Copilote DM</span> <strong>Assistant messagerie</strong></p>' +
+            '<p style="font-size: 12px; color: #666; margin-top: 4px;">Va dans Messagerie LinkedIn. Un panneau IA t\'aide à répondre à tes conversations.</p>' +
+          '</div>' +
+          '<p style="margin-top: 12px; font-size: 12px; color: #888;"><em>💡 Si tu fermes le panneau commentaire, clique à nouveau sur le bouton <strong>💬 SOS</strong> rose pour le rouvrir.</em></p>' +
         '</div>' +
-        '<button class="sos-onboarding-btn" id="sos-onboarding-ok">J\'ai compris !</button>' +
+        '<button class="sos-onboarding-btn" id="sos-onboarding-ok">C\'est parti !</button>' +
       '</div>';
 
     tooltip.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10000; background: white; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); padding: 24px; max-width: 360px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;';
@@ -1027,10 +1079,11 @@
       '#sos-onboarding-tooltip .sos-onboarding-close { background: none; border: none; font-size: 24px; color: #8e8e8e; cursor: pointer; padding: 0; line-height: 1; }' +
       '#sos-onboarding-tooltip .sos-onboarding-close:hover { color: #262626; }' +
       '#sos-onboarding-tooltip .sos-onboarding-body { color: #444; font-size: 14px; line-height: 1.6; }' +
-      '#sos-onboarding-tooltip .sos-onboarding-body p { margin: 0 0 12px 0; }' +
-      '#sos-onboarding-tooltip .sos-onboarding-body ul { margin: 0; padding-left: 0; list-style: none; }' +
-      '#sos-onboarding-tooltip .sos-onboarding-body li { padding: 4px 0; }' +
+      '#sos-onboarding-tooltip .sos-onboarding-body p { margin: 0 0 8px 0; }' +
+      '#sos-onboarding-tooltip .sos-feature-box { background: #f8f9fa; border-radius: 8px; padding: 12px; margin: 10px 0; border-left: 3px solid #E1306C; }' +
+      '#sos-onboarding-tooltip .sos-feature-box:last-of-type { border-left-color: #0077b5; }' +
       '#sos-onboarding-tooltip .sos-highlight { background: linear-gradient(135deg, #E1306C, #C13584); color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; }' +
+      '#sos-onboarding-tooltip .sos-highlight-blue { background: linear-gradient(135deg, #0077b5, #005582); color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; }' +
       '#sos-onboarding-tooltip .sos-onboarding-btn { width: 100%; margin-top: 16px; padding: 12px 24px; background: linear-gradient(135deg, #E1306C, #C13584); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }' +
       '#sos-onboarding-tooltip .sos-onboarding-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(225,48,108,0.4); }' +
       '.sos-onboarding-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; }';
@@ -1045,7 +1098,7 @@
 
     // Close handlers
     function closeOnboarding() {
-      localStorage.setItem('sos_onboarding_shown', 'true');
+      sessionStorage.setItem('sos_onboarding_shown_session', 'true');
       tooltip.remove();
       overlay.remove();
     }

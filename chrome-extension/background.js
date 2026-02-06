@@ -433,7 +433,7 @@ function generateLocalConversationAnalysis(messages, prospect) {
  * Generate a strategic comment for a LinkedIn post
  */
 async function generateStrategicComment(platform, post, commentType = 'deepen') {
-  sosLog('Generating strategic comment:', { platform, author: post?.authorName, type: commentType });
+  console.log('[SOS] generateStrategicComment called with type:', commentType);
 
   try {
     // Try API call first
@@ -443,22 +443,36 @@ async function generateStrategicComment(platform, post, commentType = 'deepen') 
       commentType
     });
 
+    console.log('[SOS] API response received:', JSON.stringify(result).substring(0, 200));
+
     if (result.data) {
-      return {
+      const response = {
         success: true,
         comment: result.data.comment || '',
         angle: result.data.angle || null,
         strategy: result.data.strategy || null,
-        icpMatch: result.data.icpMatch || false
+        icpMatch: result.data.icpMatch || false,
+        fromAPI: true  // Mark that this came from the real API
       };
+      console.log('[SOS] ✅ API Claude OK! Angle:', response.angle);
+      return response;
     }
 
     throw new Error('Réponse invalide');
   } catch (error) {
-    sosError('generateStrategicComment API failed:', error);
+    console.error('[SOS] ❌ API failed:', error.message);
+    console.error('[SOS] Error details:', {
+      name: error.name,
+      status: error.status,
+      message: error.message
+    });
 
     // Fallback: generate local comment suggestion
-    return generateLocalComment(post, commentType);
+    const fallback = generateLocalComment(post, commentType);
+    fallback.fromAPI = false;  // Mark as local fallback
+    fallback.apiError = error.message;  // Include error message
+    console.log('[SOS] Using local fallback, angle:', fallback.angle);
+    return fallback;
   }
 }
 
@@ -517,10 +531,15 @@ function generateLocalComment(post, commentType = 'deepen') {
   const authorName = post?.authorName || '';
   const firstName = authorName.split(' ')[0];
 
+  console.log('[SOS] generateLocalComment called with type:', commentType, 'firstName:', firstName);
+
   // If user selected a specific comment type, use it directly
   if (commentType && commentType !== 'deepen') {
+    console.log('[SOS] Using generateCommentByType for:', commentType);
     return generateCommentByType(firstName, commentType);
   }
+
+  console.log('[SOS] Using theme detection for deepen type');
 
   const content = (post?.content || '').toLowerCase();
 
@@ -1020,7 +1039,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => {
   // Verify the sender is from our app domain (strict origin check)
   const allowedOrigins = [
-    'https://sosprospection.com'
+    'https://sosprospection.com',
+    'https://sosprospection.netlify.app'
   ];
 
   let senderOrigin = null;
