@@ -1671,6 +1671,26 @@
    * Show a prospect's analysis in the panel
    */
   function showProspectAnalysis(prospect) {
+    // Helper function for category labels
+    function getCategoryLabel(category) {
+      var labels = {
+        'recherche': '🔍 Recherche active',
+        'recrutement': '👥 Recrutement en cours',
+        'problème': '⚠️ Problème évoqué',
+        'lancement': '🚀 Lancement/Nouveau projet',
+        'changement': '🔄 Changement récent',
+        'croissance': '📈 Phase de croissance',
+        'frustration': '😤 Frustration exprimée',
+        'intérêt': '👀 Intérêt manifesté',
+        'statut': '💼 Statut décisionnel',
+        'expertise': '🎯 Expertise/Spécialisation',
+        'audience': '📊 Audience établie',
+        'valeurs': '💡 Valeurs/Mission',
+        'profil': '👤 Information de profil'
+      };
+      return labels[category] || '📌 Signal détecté';
+    }
+
     // Store in panel state
     window._sosPanelState.analyzedData = prospect;
     window._sosPanelState.signals = prospect.signals || [];
