@@ -163,7 +163,7 @@
     var pageType = detectPageType();
 
     if (pageType !== 'profile') {
-      sosShowToast('Allez sur un profil TikTok pour ajouter un prospect', 'warning');
+      sosShowToast('Va sur un profil TikTok pour ajouter un prospect', 'warning');
       return;
     }
 
@@ -181,7 +181,7 @@
 
   function handlePrepareDM() {
     if (!isProfilePage()) {
-      sosShowToast('Allez sur un profil TikTok pour préparer un DM', 'warning');
+      sosShowToast('Va sur un profil TikTok pour préparer un DM', 'warning');
       return;
     }
 

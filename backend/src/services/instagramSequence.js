@@ -200,7 +200,7 @@ Exemples de style naturel :
 ✅ "hey j'ai vu ton post sur l'organisation, ça m'a trop parlé"
 ✅ "Ton dernier post m'a fait réfléchir ! t'as commencé y'a longtemps ?"
 ❌ "Slt, cv ? J'ai vu ton post c trop bien"
-❌ "Bonjour, j'ai vu votre publication concernant l'organisation."
+❌ "Bonjour, j'ai vu ta publication concernant l'organisation."
 
 ## FORMAT DE RÉPONSE (JSON)
 {
@@ -436,7 +436,7 @@ PROSPECT : @${prospect.username}
 OBJECTIF : ${OBJECTIVES[objective]?.name || 'Créer une relation'}
 
 CONTEXTE DE LA CONVERSATION :
-${conversationContext || 'Vous avez échangé plusieurs messages. Elle a répondu positivement à ton premier DM et vous avez eu une conversation authentique.'}
+${conversationContext || 'Tu as échangé plusieurs messages avec elle. Elle a répondu positivement à ton premier DM et vous avez eu une conversation authentique.'}
 
 ${voiceProfile?.business_context ? `
 TON ACTIVITÉ (à mentionner SEULEMENT si pertinent) :

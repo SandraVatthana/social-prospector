@@ -11,15 +11,15 @@ const FAQ_DATA = {
       questions: [
         {
           q: 'Comment lancer ma première recherche ?',
-          a: 'Cliquez sur "Nouvelle recherche" dans le menu ou le dashboard. Choisissez une source (compte, hashtag ou lieu), entrez votre critère et lancez la recherche. Les profils seront analysés automatiquement.',
+          a: 'Clique sur "Nouvelle recherche" dans le menu ou le dashboard. Choisis une source (compte, hashtag ou lieu), entre ton critère et lance la recherche. Les profils seront analysés automatiquement.',
         },
         {
           q: 'Comment configurer MA VOIX ?',
-          a: 'Rendez-vous dans la section "MA VOIX" du menu. Répondez aux questions pour définir votre ton, vos expressions favorites et votre style. Ces paramètres seront utilisés pour générer des messages personnalisés.',
+          a: 'Rends-toi dans la section "MA VOIX" du menu. Réponds aux questions pour définir ton style, tes expressions favorites et ta façon de parler. Ces paramètres seront utilisés pour générer des messages personnalisés.',
         },
         {
           q: 'Comment générer un message personnalisé ?',
-          a: 'Après une recherche, cliquez sur un prospect puis sur "Générer un message". L\'IA analysera le profil et créera un message adapté à votre voix.',
+          a: 'Après une recherche, clique sur un prospect puis sur "Générer un message". L\'IA analysera le profil et créera un message adapté à ta voix.',
         },
       ],
     },
@@ -34,11 +34,11 @@ const FAQ_DATA = {
         },
         {
           q: 'Comment fonctionne le filtre francophone ?',
-          a: 'Notre algorithme analyse les bios, noms et contenus pour identifier les profils francophones. Vous pouvez désactiver ce filtre dans les paramètres de recherche.',
+          a: 'Notre algorithme analyse les bios, noms et contenus pour identifier les profils francophones. Tu peux désactiver ce filtre dans les paramètres de recherche.',
         },
         {
           q: 'Puis-je exporter mes prospects ?',
-          a: 'Oui ! Allez dans "Mes prospects" puis cliquez sur "Exporter". Vous pouvez télécharger la liste en CSV ou Excel.',
+          a: 'Oui ! Va dans "Mes prospects" puis clique sur "Exporter". Tu peux télécharger la liste en CSV ou Excel.',
         },
       ],
     },
@@ -49,15 +49,15 @@ const FAQ_DATA = {
       questions: [
         {
           q: 'Comment voir mon quota restant ?',
-          a: 'Votre quota est affiché dans le dashboard (section "Usage ce mois") et également accessible dans les paramètres de votre compte.',
+          a: 'Ton quota est affiché dans le dashboard (section "Usage ce mois") et également accessible dans les paramètres de ton compte.',
         },
         {
           q: 'Comment changer de forfait ?',
-          a: 'Rendez-vous dans Paramètres > Abonnement pour voir les différents plans et effectuer une mise à niveau.',
+          a: 'Rends-toi dans Paramètres > Abonnement pour voir les différents plans et effectuer une mise à niveau.',
         },
         {
           q: 'Comment supprimer mon compte ?',
-          a: 'Contactez-nous à contact@sosprospection.com pour demander la suppression de votre compte et de vos données.',
+          a: 'Contacte-nous à contact@sosprospection.com pour demander la suppression de ton compte et de tes données.',
         },
       ],
     },
@@ -68,15 +68,15 @@ const FAQ_DATA = {
       questions: [
         {
           q: 'La recherche ne retourne aucun résultat',
-          a: 'Vérifiez l\'orthographe du hashtag ou du compte. Pour les hashtags, essayez sans le #. Si le problème persiste, le compte/hashtag n\'a peut-être pas assez de contenu récent.',
+          a: 'Vérifie l\'orthographe du hashtag ou du compte. Pour les hashtags, essaie sans le #. Si le problème persiste, le compte/hashtag n\'a peut-être pas assez de contenu récent.',
         },
         {
           q: 'Les images des profils ne s\'affichent pas',
-          a: 'C\'est un problème temporaire lié aux restrictions Instagram. Rafraîchissez la page ou attendez quelques minutes. Les données du profil restent accessibles.',
+          a: 'C\'est un problème temporaire lié aux restrictions Instagram. Rafraîchis la page ou attends quelques minutes. Les données du profil restent accessibles.',
         },
         {
           q: 'Je n\'arrive pas à me connecter',
-          a: 'Vérifiez votre email et mot de passe. Utilisez "Mot de passe oublié" si nécessaire. Si vous utilisez Google, assurez-vous d\'utiliser le même compte.',
+          a: 'Vérifie ton email et mot de passe. Utilise "Mot de passe oublié" si nécessaire. Si tu utilises Google, assure-toi d\'utiliser le même compte.',
         },
       ],
     },

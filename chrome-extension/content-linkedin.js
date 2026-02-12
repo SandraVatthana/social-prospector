@@ -20,6 +20,8 @@
   function detectPageType() {
     var url = window.location.href;
     if (url.indexOf('/search/results/people') > -1) return 'search';
+    // Detect recent activity pages (shows posts) - must be checked BEFORE /in/ profile check
+    if (url.indexOf('/recent-activity/') > -1) return 'feed';
     if (url.indexOf('/in/') > -1) return 'profile';
     if (url.indexOf('/messaging/') > -1) return 'messaging';
     // Detect post pages
@@ -172,7 +174,7 @@
       });
     } else {
       console.log('[SOS] Not on profile/search page, showing toast');
-      sosShowToast('Allez sur un profil LinkedIn pour ajouter un prospect', 'warning');
+      sosShowToast('Va sur un profil LinkedIn pour ajouter un prospect', 'warning');
     }
   }
 
@@ -180,7 +182,7 @@
     var username = getUsernameFromUrl();
 
     if (!username) {
-      sosShowToast('Allez sur un profil LinkedIn pour préparer un DM', 'warning');
+      sosShowToast('Va sur un profil LinkedIn pour préparer un DM', 'warning');
       return;
     }
 
@@ -206,7 +208,7 @@
       });
     } else {
       // No analyzed data - need to import first
-      sosShowToast('Cliquez d\'abord sur "Importer" et analysez le profil', 'warning');
+      sosShowToast('Clique d\'abord sur "Importer" et analyse le profil', 'warning');
     }
   }
 
@@ -270,7 +272,7 @@
             '<span class="sos-btn-icon">🔄</span>' +
             '<span>Synchroniser la conversation</span>' +
           '</button>' +
-          '<p class="sos-msg-hint">Cliquez pour analyser les derniers messages</p>' +
+          '<p class="sos-msg-hint">Clique pour analyser les derniers messages</p>' +
         '</div>' +
         '<!-- Analysis Section (hidden by default) -->' +
         '<div class="sos-msg-section sos-msg-analysis" id="sos-msg-analysis" style="display:none;">' +
@@ -585,8 +587,8 @@
 
       var firstName = (prospect.fullName || '').split(' ')[0];
       var fallbackMsg = firstName ?
-        'Merci ' + firstName + ' pour votre retour ! Comment puis-je vous aider davantage sur ce sujet ?' :
-        'Merci pour votre retour ! Comment puis-je vous aider davantage sur ce sujet ?';
+        'Merci ' + firstName + ' pour ton retour ! Comment puis-je t\'aider davantage sur ce sujet ?' :
+        'Merci pour ton retour ! Comment puis-je t\'aider davantage sur ce sujet ?';
 
       suggestionText.value = fallbackMsg;
       suggestionMeta.textContent = '⚠️ Suggestion générique - personnalisez avant d\'envoyer';

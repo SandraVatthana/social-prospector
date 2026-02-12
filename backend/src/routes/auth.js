@@ -225,11 +225,11 @@ router.post('/forgot-password', async (req, res) => {
     });
 
     // Toujours retourner succès pour ne pas révéler si l'email existe
-    res.json(formatResponse({ sent: true }, 'Si cet email existe, vous recevrez un lien de réinitialisation'));
+    res.json(formatResponse({ sent: true }, 'Si cet email existe, tu recevras un lien de réinitialisation'));
 
   } catch (error) {
     console.error('Forgot password error:', error);
-    res.json(formatResponse({ sent: true }, 'Si cet email existe, vous recevrez un lien de réinitialisation'));
+    res.json(formatResponse({ sent: true }, 'Si cet email existe, tu recevras un lien de réinitialisation'));
   }
 });
 

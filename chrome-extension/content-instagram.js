@@ -180,7 +180,7 @@
 
   function handleImport() {
     if (!isProfilePage()) {
-      sosShowToast('Allez sur un profil Instagram pour ajouter un prospect', 'warning');
+      sosShowToast('Va sur un profil Instagram pour ajouter un prospect', 'warning');
       return;
     }
 
@@ -198,7 +198,7 @@
 
   function handlePrepareDM() {
     if (!isProfilePage()) {
-      sosShowToast('Allez sur un profil Instagram pour préparer un DM', 'warning');
+      sosShowToast('Va sur un profil Instagram pour préparer un DM', 'warning');
       return;
     }
 

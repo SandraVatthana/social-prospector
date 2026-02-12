@@ -386,7 +386,7 @@ function setupEventListeners() {
   // Bouton d'ajout
   addAccountBtn.addEventListener('click', () => {
     if (!isLoggedIn) {
-      showToast('Connectez-vous d\'abord a Instagram', 'error');
+      showToast('Connecte-toi d\'abord à Instagram', 'error');
       return;
     }
     openAddModal();

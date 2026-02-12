@@ -415,7 +415,7 @@ function generateTips(stats) {
   if (stats.averageScore < 50) {
     tips.push({
       type: 'warning',
-      message: 'Score ICP moyen bas - Affinez vos critères de recherche ou votre ICP'
+      message: 'Score ICP moyen bas - Affine tes critères de recherche ou ton ICP'
     });
   }
 

@@ -416,7 +416,7 @@ export default function Dashboard() {
           <QuickAction
             icon={PenLine}
             title="Générer des messages"
-            description="Pour vos prospects en attente"
+            description="Pour tes prospects en attente"
             color="accent"
             onClick={() => navigate('/messages')}
           />

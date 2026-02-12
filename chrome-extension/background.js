@@ -100,7 +100,7 @@ async function apiCall(endpoint, method = 'GET', body = null) {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       if (response.status === 401) {
-        throw new Error('Non authentifié - connectez-vous à l\'app SOS Prospection');
+        throw new Error('Non authentifié - connecte-toi à l\'app SOS Prospection');
       }
       throw new Error(errorData.error?.message || `API error: ${response.status}`);
     }
@@ -109,7 +109,7 @@ async function apiCall(endpoint, method = 'GET', body = null) {
   } catch (error) {
     clearTimeout(timeoutId);
     if (error.name === 'AbortError') {
-      throw new Error('Requête timeout - vérifiez votre connexion');
+      throw new Error('Requête timeout - vérifie ta connexion');
     }
     throw error;
   }
@@ -378,7 +378,7 @@ function generateLocalConversationAnalysis(messages, prospect) {
     temperature = 'cold';
     insight = 'Réponse négative détectée. Mieux vaut ne pas insister.';
     suggestion = {
-      message: 'Pas de souci, merci pour votre retour. Bonne continuation !',
+      message: 'Pas de souci, merci pour ton retour. Bonne continuation !',
       reason: 'Réponse courtoise pour clôturer positivement'
     };
   } else if (hasPositive && hasQuestion) {
@@ -386,8 +386,8 @@ function generateLocalConversationAnalysis(messages, prospect) {
     insight = 'Signal très positif ! Elle pose des questions et montre de l\'intérêt.';
     suggestion = {
       message: firstName ?
-        `Avec plaisir ${firstName} ! Je serais ravi d'en discuter plus en détail. Seriez-vous disponible pour un échange de 15 minutes cette semaine ?` :
-        'Avec plaisir ! Je serais ravi d\'en discuter. Seriez-vous disponible pour un échange de 15 minutes ?',
+        `Avec plaisir ${firstName} ! Je serais ravi d'en discuter plus en détail. Serais-tu disponible pour un échange de 15 minutes cette semaine ?` :
+        'Avec plaisir ! Je serais ravi d\'en discuter. Serais-tu disponible pour un échange de 15 minutes ?',
       reason: 'Lead chaud - c\'est le moment de proposer un échange'
     };
   } else if (hasPositive) {
@@ -395,15 +395,15 @@ function generateLocalConversationAnalysis(messages, prospect) {
     insight = 'Réponse positive, mais pas encore d\'engagement fort.';
     suggestion = {
       message: firstName ?
-        `Merci ${firstName} ! Au fait, comment gérez-vous actuellement ce sujet dans votre activité ?` :
-        'Merci ! Au fait, comment gérez-vous actuellement ce sujet dans votre activité ?',
+        `Merci ${firstName} ! Au fait, comment gères-tu actuellement ce sujet dans ton activité ?` :
+        'Merci ! Au fait, comment gères-tu actuellement ce sujet dans ton activité ?',
       reason: 'Continuez à creuser pour comprendre ses besoins'
     };
   } else if (hasQuestion) {
     temperature = 'warm';
     insight = 'Elle pose des questions - signe de curiosité.';
     suggestion = {
-      message: 'Bonne question ! En fait, l\'approche dépend vraiment du contexte. Quel est votre principal défi actuellement sur ce sujet ?',
+      message: 'Bonne question ! En fait, l\'approche dépend vraiment du contexte. Quel est ton principal défi actuellement sur ce sujet ?',
       reason: 'Les questions montrent un intérêt - répondez et engagez'
     };
   } else {
@@ -411,8 +411,8 @@ function generateLocalConversationAnalysis(messages, prospect) {
     insight = 'Réponse neutre. Essayez de relancer avec une question.';
     suggestion = {
       message: firstName ?
-        `${firstName}, j'ai vu que vous travaillez dans ce domaine. Quel est votre plus grand défi en ce moment ?` :
-        'J\'ai vu votre profil et je suis curieux : quel est votre plus grand défi en ce moment dans votre activité ?',
+        `${firstName}, j'ai vu que tu travailles dans ce domaine. Quel est ton plus grand défi en ce moment ?` :
+        'J\'ai vu ton profil et je suis curieux : quel est ton plus grand défi en ce moment dans ton activité ?',
       reason: 'Une question ouverte peut relancer la conversation'
     };
   }
@@ -769,12 +769,12 @@ async function saveCurrentSession(accountName) {
   const cookies = await getInstagramCookies();
 
   if (!cookies || cookies.length === 0) {
-    throw new Error('Aucune session Instagram détectée. Connectez-vous d\'abord à Instagram.');
+    throw new Error('Aucune session Instagram détectée. Connecte-toi d\'abord à Instagram.');
   }
 
   const sessionCookie = cookies.find(c => c.name === 'sessionid');
   if (!sessionCookie || !sessionCookie.value) {
-    throw new Error('Vous n\'êtes pas connecté à Instagram. Connectez-vous d\'abord.');
+    throw new Error('Tu n\'es pas connecté à Instagram. Connecte-toi d\'abord.');
   }
 
   const userIdCookie = cookies.find(c => c.name === 'ds_user_id');

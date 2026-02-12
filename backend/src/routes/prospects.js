@@ -325,7 +325,7 @@ router.post('/', requireAuth, async (req, res) => {
     if (newProspects.length === 0) {
       return res.json(formatResponse({
         saved: 0,
-        message: 'Tous ces prospects sont déjà dans votre CRM'
+        message: 'Tous ces prospects sont déjà dans ton CRM'
       }));
     }
 

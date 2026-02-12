@@ -168,32 +168,32 @@ ${styleInstructions}
 
 ❌ STRICTEMENT INTERDITS :
 - Toute mention de ton activité / ton offre / tes services
-- "Je pourrais vous aider avec..."
-- "Seriez-vous intéressé(e) par..."
+- "Je pourrais t'aider avec..."
+- "Serais-tu intéressé(e) par..."
 - "On en discute ?"
-- "Je vous envoie plus d'infos ?"
-- "Réservez un créneau"
-- "Si cela vous intéresse..."
+- "Je t'envoie plus d'infos ?"
+- "Réserve un créneau"
+- "Si ça t'intéresse..."
 - "J'accompagne les [cible] à..."
 - Tout CTA, même soft
 - Tout ce qui ressemble à un pitch, même déguisé
-- "J'ai vu que vous étiez [poste]" (trop générique)
-- "J'espère que vous allez bien"
+- "J'ai vu que tu étais [poste]" (trop générique)
+- "J'espère que tu vas bien"
 - Demander une connexion LinkedIn dans le message
 
 ## BONNES QUESTIONS DE FIN (curieuses, professionnelles)
-- "C'est quelque chose que vous avez développé suite à une expérience précise ?"
-- "Vous êtes sur ce sujet depuis longtemps ?"
-- "Comment en êtes-vous arrivé(e) à cette conviction ?"
-- "Qu'est-ce qui vous a amené(e) vers [son domaine actuel] ?"
-- "C'est une évolution récente dans votre secteur ou c'est plus ancien ?"
-- "Vous avez constaté ça chez vos clients aussi ?"
+- "C'est quelque chose que tu as développé suite à une expérience précise ?"
+- "Tu es sur ce sujet depuis longtemps ?"
+- "Comment en es-tu arrivé(e) à cette conviction ?"
+- "Qu'est-ce qui t'a amené(e) vers [son domaine actuel] ?"
+- "C'est une évolution récente dans ton secteur ou c'est plus ancien ?"
+- "Tu as constaté ça chez tes clients aussi ?"
 
 ## MAUVAISES QUESTIONS (commerciales déguisées) - INTERDITES
-- "Comment faites-vous pour trouver de nouveaux clients ?"
-- "Avez-vous déjà pensé à automatiser ça ?"
-- "Ça vous dirait d'en discuter ?"
-- "Seriez-vous ouvert(e) à découvrir une solution ?"
+- "Comment fais-tu pour trouver de nouveaux clients ?"
+- "As-tu déjà pensé à automatiser ça ?"
+- "Ça te dirait d'en discuter ?"
+- "Serais-tu ouvert(e) à découvrir une solution ?"
 
 ## TON GLOBAL
 Comme si tu parlais à un futur partenaire ou pair, pas à un prospect.
@@ -250,7 +250,7 @@ function buildLinkedInTransitionSystemPrompt(voiceProfile, objective) {
 - Glisse naturellement ce que tu fais
 - "D'ailleurs, c'est justement mon domaine d'expertise, j'accompagne les [cible] sur [sujet]"
 - Propose SEULEMENT si il/elle montre de l'intérêt
-- CTA soft : "Si vous voulez, je peux vous partager quelques pistes en 10 min"`;
+- CTA soft : "Si tu veux, je peux te partager quelques pistes en 10 min"`;
       break;
     case 'call':
       transitionGuide = `
@@ -341,7 +341,7 @@ Réponds UNIQUEMENT avec le JSON demandé.`;
     if (!parsed || !parsed.comment) {
       const commentMatch = response.match(/"comment"\s*:\s*"([^"]+)"/);
       return {
-        comment: commentMatch ? commentMatch[1] : "Très pertinent votre analyse. J'ai rencontré une situation similaire et votre approche m'éclaire sur certains aspects.",
+        comment: commentMatch ? commentMatch[1] : "Très pertinent ton analyse. J'ai rencontré une situation similaire et ton approche m'éclaire sur certains aspects.",
         hook_element: 'contenu général',
         value_added: 'perspective personnelle',
       };
@@ -415,7 +415,7 @@ Réponds UNIQUEMENT avec le JSON demandé.`;
       const messageMatch = response.match(/"message"\s*:\s*"([^"]+)"/);
       const firstName = prospect.firstName || prospect.fullName?.split(' ')[0] || '';
       return {
-        message: messageMatch ? messageMatch[1] : `Bonjour${firstName ? ' ' + firstName : ''}, j'ai lu votre dernier post avec intérêt. Vous êtes sur ce sujet depuis longtemps ?`,
+        message: messageMatch ? messageMatch[1] : `Bonjour${firstName ? ' ' + firstName : ''}, j'ai lu ton dernier post avec intérêt. Tu es sur ce sujet depuis longtemps ?`,
         hook_element: 'profil général',
         question_type: 'expertise',
         authenticity_check: {
@@ -473,7 +473,7 @@ TITRE : ${prospect.headline || prospect.title || 'Non spécifié'}
 OBJECTIF : ${OBJECTIVES[objective]?.name || 'Connexion professionnelle'}
 
 CONTEXTE DE LA CONVERSATION :
-${conversationContext || 'Vous avez échangé plusieurs messages. Il/Elle a répondu positivement à votre premier DM et vous avez eu une conversation authentique sur son expertise.'}
+${conversationContext || 'Tu as échangé plusieurs messages avec cette personne. Elle a répondu positivement à ton premier DM et vous avez eu une conversation authentique sur son expertise.'}
 
 ${voiceProfile?.business_context ? `
 TON ACTIVITÉ (à mentionner SEULEMENT si pertinent) :
@@ -545,7 +545,7 @@ export async function generateFullSequence(prospect, voiceProfile, objective = '
           'Poser une question sur un défi actuel qu\'il/elle rencontre',
           'Partager un insight ou une ressource pertinente',
           'Rester dans l\'échange, ZÉRO pitch',
-          'Mentionner un point commun dans vos parcours si pertinent',
+          'Mentionner un point commun dans vos parcours respectifs si pertinent',
         ],
       },
       day5_plus: {
@@ -577,10 +577,10 @@ export async function generateDirectDM(prospect, voiceProfile, objective = 'netw
     message: firstDM.message,
     metadata: firstDM,
     tips: [
-      'Ce prospect a déjà interagi avec vous',
-      'Vous pouvez aller un peu plus vite dans la conversation',
-      'Mais restez professionnel et sans pression',
-      'Pensez à mentionner le contexte de votre première interaction',
+      'Ce prospect a déjà interagi avec toi',
+      'Tu peux aller un peu plus vite dans la conversation',
+      'Mais reste professionnel et sans pression',
+      'Pense à mentionner le contexte de ta première interaction',
     ],
   };
 }

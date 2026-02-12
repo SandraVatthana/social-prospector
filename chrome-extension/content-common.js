@@ -95,9 +95,9 @@
             // Provide better error messages for common issues
             var errorMsg = response.error;
             if (errorMsg.includes('401') || errorMsg.includes('Unauthorized') || errorMsg.includes('non authentifié')) {
-              errorMsg = 'Connectez-vous à l\'app SOS Prospection d\'abord';
+              errorMsg = 'Connecte-toi à l\'app SOS Prospection d\'abord';
             } else if (errorMsg.includes('timeout') || errorMsg.includes('network')) {
-              errorMsg = 'Erreur de connexion - vérifiez votre internet';
+              errorMsg = 'Erreur de connexion - vérifie ta connexion internet';
             }
             reject(new Error(errorMsg));
           } else {
@@ -447,7 +447,7 @@
           '<div class="sos-paste-zone" id="sos-paste-zone">' +
             '<div class="sos-paste-placeholder" id="sos-paste-placeholder">' +
               '<span class="sos-paste-icon">📋</span>' +
-              '<span>Cliquez ici puis Ctrl+V</span>' +
+              '<span>Clique ici puis Ctrl+V</span>' +
               '<span class="sos-paste-hint">Profil, posts, commentaires...</span>' +
             '</div>' +
             '<textarea id="sos-paste-input" placeholder="Ctrl+V pour coller..."></textarea>' +
@@ -559,7 +559,7 @@
             '<!-- Notes -->' +
             '<div class="sos-form-group">' +
               '<label>Notes personnelles</label>' +
-              '<textarea id="sos-result-notes" rows="2" placeholder="Ajouter vos notes..."></textarea>' +
+              '<textarea id="sos-result-notes" rows="2" placeholder="Ajoute tes notes..."></textarea>' +
             '</div>' +
 
             '<!-- Raw Content Toggle -->' +
@@ -1138,8 +1138,14 @@
       var currentOnConfirm = window._sosPanelState.onConfirm;
       if (currentOnConfirm) {
         currentOnConfirm(profileData)
-          .then(function() {
-            sosShowToast('Prospect ajouté !', 'success');
+          .then(function(result) {
+            if (result && result.synced) {
+              sosShowToast('Prospect ajouté et synchronisé !', 'success');
+            } else if (result && result.success) {
+              sosShowToast('Prospect sauvegardé localement. Connecte-toi à l\'app pour synchroniser.', 'warning');
+            } else {
+              sosShowToast('Prospect ajouté !', 'success');
+            }
             // Reset for next prospect
             resetPanel();
             confirmBtn.innerHTML = 'Ajouter au CRM';
